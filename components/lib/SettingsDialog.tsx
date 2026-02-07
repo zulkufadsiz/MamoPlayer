@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
-import React from 'react';
+import React, { useState } from 'react';
 import {
     Modal,
+    Pressable,
     ScrollView,
     StyleSheet,
     Switch,
@@ -26,6 +27,8 @@ interface SettingsDialogProps {
 const playbackSpeeds = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
 const videoQualities = ['Auto', '1080p', '720p', '480p', '360p'];
 
+type SettingsMenuItem = 'playbackSpeed' | 'quality' | 'preferences' | null;
+
 export default function SettingsDialog({
   visible,
   onClose,
@@ -38,113 +41,225 @@ export default function SettingsDialog({
   showSubtitles,
   onShowSubtitlesChange,
 }: SettingsDialogProps) {
+  const [activeMenu, setActiveMenu] = useState<SettingsMenuItem>(null);
+
+  const handleClose = () => {
+    setActiveMenu(null);
+    onClose();
+  };
+
+  const handleMenuItemPress = (menu: SettingsMenuItem) => {
+    setActiveMenu(menu);
+  };
+
+  const handleBackToMenu = () => {
+    setActiveMenu(null);
+  };
+
+  const renderMainMenu = () => (
+    <>
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Settings</Text>
+        <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
+          <Ionicons name="close" size={24} color="#333" />
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.menuList}>
+        <TouchableOpacity
+          style={styles.menuItem}
+          onPress={() => handleMenuItemPress('playbackSpeed')}
+        >
+          <View style={styles.menuItemLeft}>
+            <Ionicons name="speedometer-outline" size={24} color="#007AFF" />
+            <Text style={styles.menuItemTitle}>Playback Speed</Text>
+          </View>
+          <View style={styles.menuItemRight}>
+            <Text style={styles.menuItemValue}>{playbackSpeed}x</Text>
+            <Ionicons name="chevron-forward" size={20} color="#999" />
+          </View>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.menuItem}
+          onPress={() => handleMenuItemPress('quality')}
+        >
+          <View style={styles.menuItemLeft}>
+            <Ionicons name="videocam-outline" size={24} color="#007AFF" />
+            <Text style={styles.menuItemTitle}>Video Quality</Text>
+          </View>
+          <View style={styles.menuItemRight}>
+            <Text style={styles.menuItemValue}>{quality}</Text>
+            <Ionicons name="chevron-forward" size={20} color="#999" />
+          </View>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.menuItem}
+          onPress={() => handleMenuItemPress('preferences')}
+        >
+          <View style={styles.menuItemLeft}>
+            <Ionicons name="options-outline" size={24} color="#007AFF" />
+            <Text style={styles.menuItemTitle}>Preferences</Text>
+          </View>
+          <View style={styles.menuItemRight}>
+            <Ionicons name="chevron-forward" size={20} color="#999" />
+          </View>
+        </TouchableOpacity>
+      </View>
+    </>
+  );
+
+  const renderPlaybackSpeedSheet = () => (
+    <>
+      <View style={styles.sheetHeader}>
+        <TouchableOpacity onPress={handleBackToMenu} style={styles.backButton}>
+          <Ionicons name="chevron-back" size={24} color="#007AFF" />
+        </TouchableOpacity>
+        <Text style={styles.sheetTitle}>Playback Speed</Text>
+        <View style={{ width: 24 }} />
+      </View>
+
+      <ScrollView style={styles.sheetContent}>
+        <View style={styles.optionsGrid}>
+          {playbackSpeeds.map((speed) => (
+            <TouchableOpacity
+              key={speed}
+              style={[
+                styles.speedButton,
+                playbackSpeed === speed && styles.speedButtonActive,
+              ]}
+              onPress={() => {
+                onPlaybackSpeedChange(speed);
+                setTimeout(handleBackToMenu, 300);
+              }}
+            >
+              <Text
+                style={[
+                  styles.speedText,
+                  playbackSpeed === speed && styles.speedTextActive,
+                ]}
+              >
+                {speed}x
+              </Text>
+              {playbackSpeed === speed && (
+                <Ionicons name="checkmark-circle" size={20} color="#007AFF" />
+              )}
+            </TouchableOpacity>
+          ))}
+        </View>
+      </ScrollView>
+    </>
+  );
+
+  const renderQualitySheet = () => (
+    <>
+      <View style={styles.sheetHeader}>
+        <TouchableOpacity onPress={handleBackToMenu} style={styles.backButton}>
+          <Ionicons name="chevron-back" size={24} color="#007AFF" />
+        </TouchableOpacity>
+        <Text style={styles.sheetTitle}>Video Quality</Text>
+        <View style={{ width: 24 }} />
+      </View>
+
+      <ScrollView style={styles.sheetContent}>
+        <View style={styles.qualityList}>
+          {videoQualities.map((q) => (
+            <TouchableOpacity
+              key={q}
+              style={[
+                styles.qualityItem,
+                quality === q && styles.qualityItemActive,
+              ]}
+              onPress={() => {
+                onQualityChange(q);
+                setTimeout(handleBackToMenu, 300);
+              }}
+            >
+              <Text
+                style={[
+                  styles.qualityText,
+                  quality === q && styles.qualityTextActive,
+                ]}
+              >
+                {q}
+              </Text>
+              {quality === q && (
+                <Ionicons name="checkmark-circle" size={24} color="#007AFF" />
+              )}
+            </TouchableOpacity>
+          ))}
+        </View>
+      </ScrollView>
+    </>
+  );
+
+  const renderPreferencesSheet = () => (
+    <>
+      <View style={styles.sheetHeader}>
+        <TouchableOpacity onPress={handleBackToMenu} style={styles.backButton}>
+          <Ionicons name="chevron-back" size={24} color="#007AFF" />
+        </TouchableOpacity>
+        <Text style={styles.sheetTitle}>Preferences</Text>
+        <View style={{ width: 24 }} />
+      </View>
+
+      <View style={styles.sheetContent}>
+        <View style={styles.preferencesList}>
+          <View style={styles.preferenceItem}>
+            <View style={styles.preferenceInfo}>
+              <Text style={styles.preferenceTitle}>AutoPlay</Text>
+              <Text style={styles.preferenceDescription}>
+                Automatically play videos when loaded
+              </Text>
+            </View>
+            <Switch
+              value={autoPlay}
+              onValueChange={onAutoPlayChange}
+              trackColor={{ false: '#D1D1D6', true: '#34C759' }}
+              thumbColor="#FFFFFF"
+            />
+          </View>
+
+          <View style={styles.preferenceItem}>
+            <View style={styles.preferenceInfo}>
+              <Text style={styles.preferenceTitle}>Show Subtitles</Text>
+              <Text style={styles.preferenceDescription}>
+                Display subtitles when available
+              </Text>
+            </View>
+            <Switch
+              value={showSubtitles}
+              onValueChange={onShowSubtitlesChange}
+              trackColor={{ false: '#D1D1D6', true: '#34C759' }}
+              thumbColor="#FFFFFF"
+            />
+          </View>
+        </View>
+      </View>
+    </>
+  );
+
   return (
     <Modal
       visible={visible}
-      transparent={true}
-      animationType="fade"
-      onRequestClose={onClose}
+      transparent
+      animationType="slide"
+      onRequestClose={handleClose}
     >
-      <TouchableOpacity
-        style={styles.overlay}
-        activeOpacity={1}
-        onPress={onClose}
-      >
-        <TouchableOpacity
-          style={styles.dialogContainer}
-          activeOpacity={1}
+      <Pressable style={styles.overlay} onPress={handleClose}>
+        <Pressable
+          style={styles.container}
           onPress={(e) => e.stopPropagation()}
         >
-          <View style={styles.header}>
-            <Text style={styles.title}>Settings</Text>
-            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-              <Ionicons name="close" size={24} color="#333" />
-            </TouchableOpacity>
-          </View>
-
-          <ScrollView style={styles.content}>
-            {/* Playback Speed */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Playback Speed</Text>
-              <View style={styles.optionsGrid}>
-                {playbackSpeeds.map((speed) => (
-                  <TouchableOpacity
-                    key={speed}
-                    style={[
-                      styles.optionButton,
-                      playbackSpeed === speed && styles.optionButtonActive,
-                    ]}
-                    onPress={() => onPlaybackSpeedChange(speed)}
-                  >
-                    <Text
-                      style={[
-                        styles.optionText,
-                        playbackSpeed === speed && styles.optionTextActive,
-                      ]}
-                    >
-                      {speed}x
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-
-            {/* Video Quality */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Video Quality</Text>
-              <View style={styles.optionsList}>
-                {videoQualities.map((q) => (
-                  <TouchableOpacity
-                    key={q}
-                    style={[
-                      styles.listItem,
-                      quality === q && styles.listItemActive,
-                    ]}
-                    onPress={() => onQualityChange(q)}
-                  >
-                    <Text
-                      style={[
-                        styles.listItemText,
-                        quality === q && styles.listItemTextActive,
-                      ]}
-                    >
-                      {q}
-                    </Text>
-                    {quality === q && (
-                      <Ionicons name="checkmark" size={20} color="#007AFF" />
-                    )}
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-
-            {/* Toggle Options */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Preferences</Text>
-              
-              <View style={styles.toggleItem}>
-                <Text style={styles.toggleLabel}>AutoPlay</Text>
-                <Switch
-                  value={autoPlay}
-                  onValueChange={onAutoPlayChange}
-                  trackColor={{ false: '#D1D1D6', true: '#34C759' }}
-                  thumbColor="#FFFFFF"
-                />
-              </View>
-
-              <View style={styles.toggleItem}>
-                <Text style={styles.toggleLabel}>Show Subtitles</Text>
-                <Switch
-                  value={showSubtitles}
-                  onValueChange={onShowSubtitlesChange}
-                  trackColor={{ false: '#D1D1D6', true: '#34C759' }}
-                  thumbColor="#FFFFFF"
-                />
-              </View>
-            </View>
-          </ScrollView>
-        </TouchableOpacity>
-      </TouchableOpacity>
+          <View style={styles.dragHandle} />
+          
+          {!activeMenu && renderMainMenu()}
+          {activeMenu === 'playbackSpeed' && renderPlaybackSpeedSheet()}
+          {activeMenu === 'quality' && renderQualitySheet()}
+          {activeMenu === 'preferences' && renderPreferencesSheet()}
+        </Pressable>
+      </Pressable>
     </Modal>
   );
 }
@@ -153,104 +268,172 @@ const styles = StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: 'flex-end',
   },
-  dialogContainer: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    width: '85%',
-    maxWidth: 400,
-    maxHeight: '80%',
-    overflow: 'hidden',
+  container: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '70%',
+    paddingBottom: 34,
+  },
+  dragHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: '#ddd',
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginTop: 12,
+    marginBottom: 8,
   },
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 16,
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E5EA',
+    borderBottomColor: '#f0f0f0',
   },
-  title: {
+  headerTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#000',
+    color: '#333',
   },
   closeButton: {
     padding: 4,
   },
-  content: {
-    padding: 16,
+  menuList: {
+    paddingVertical: 8,
   },
-  section: {
-    marginBottom: 24,
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f5f5f5',
   },
-  sectionTitle: {
+  menuItemLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  menuItemTitle: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#000',
-    marginBottom: 12,
+    fontWeight: '500',
+    color: '#333',
+  },
+  menuItemRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  menuItemValue: {
+    fontSize: 14,
+    color: '#999',
+  },
+  sheetHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  backButton: {
+    padding: 4,
+  },
+  sheetTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#333',
+  },
+  sheetContent: {
+    padding: 20,
   },
   optionsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: 12,
   },
-  optionButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#D1D1D6',
-    backgroundColor: '#F9F9F9',
-    minWidth: 60,
+  speedButton: {
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#e0e0e0',
+    backgroundColor: '#f9f9f9',
+    minWidth: 90,
   },
-  optionButtonActive: {
-    backgroundColor: '#007AFF',
+  speedButtonActive: {
+    backgroundColor: '#E3F2FD',
     borderColor: '#007AFF',
   },
-  optionText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#333',
+  speedText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#666',
   },
-  optionTextActive: {
-    color: '#FFFFFF',
+  speedTextActive: {
+    color: '#007AFF',
   },
-  optionsList: {
-    gap: 8,
+  qualityList: {
+    gap: 12,
   },
-  listItem: {
+  qualityItem: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 12,
-    borderRadius: 8,
-    backgroundColor: '#F9F9F9',
+    justifyContent: 'space-between',
+    padding: 16,
+    borderRadius: 12,
+    backgroundColor: '#f9f9f9',
+    borderWidth: 2,
+    borderColor: '#e0e0e0',
   },
-  listItemActive: {
+  qualityItemActive: {
     backgroundColor: '#E3F2FD',
+    borderColor: '#007AFF',
   },
-  listItemText: {
-    fontSize: 15,
-    color: '#333',
+  qualityText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#666',
   },
-  listItemTextActive: {
+  qualityTextActive: {
     color: '#007AFF',
     fontWeight: '600',
   },
-  toggleItem: {
+  preferencesList: {
+    gap: 20,
+  },
+  preferenceItem: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    justifyContent: 'space-between',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E5EA',
+    borderBottomColor: '#f0f0f0',
   },
-  toggleLabel: {
-    fontSize: 15,
-    color: '#000',
+  preferenceInfo: {
+    flex: 1,
+    marginRight: 16,
+  },
+  preferenceTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 4,
+  },
+  preferenceDescription: {
+    fontSize: 13,
+    color: '#999',
   },
 });
