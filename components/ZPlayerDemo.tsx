@@ -1,5 +1,5 @@
 import React from 'react';
-import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import ZPlayer from './ZPlayer';
 
 export const ZPlayerDemo: React.FC = () => {
@@ -18,53 +18,51 @@ export const ZPlayerDemo: React.FC = () => {
   ];
 
   const handleSettingsPress = () => {
-    Alert.alert('Settings', 'Settings menu will be implemented here');
+    console.log('Settings button pressed');
+  };
+
+  const handleLike = () => {
+    console.log('Liked!');
+  };
+
+  const handleComment = () => {
+    console.log('Comment button pressed');
+  };
+
+  const handleShare = () => {
+    console.log('Share button pressed');
   };
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.section}>
-        <Text style={styles.title}>Video Player Demo</Text>
-        
+    <View style={styles.container}>
         <ZPlayer
           source={videoSource}
-          autoPlay={false}
-          allowsFullscreen={true}
+          autoPlay={true}
           style={styles.player}
           subtitles={subtitles}
           onSettingsPress={handleSettingsPress}
+          playerType="vertical"
+          title="Big Buck Bunny"
+          description="A fun animated short film about a giant rabbit and his adventures"
+          author="blender_foundation"
+          likes={125300}
+          comments={3450}
+          shares={8920}
+          onLike={handleLike}
+          onComment={handleComment}
+          onShare={handleShare}
         />
-      </View>
-    </ScrollView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
-  section: {
-    padding: 16,
-    gap: 12,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 16,
+    backgroundColor: '#000',
   },
   player: {
-    marginVertical: 16,
-  },
-  description: {
-    fontSize: 14,
-    color: '#666',
-    marginTop: 8,
-  },
-  featureItem: {
-    fontSize: 13,
-    color: '#555',
-    marginLeft: 8,
+    flex: 1,
   },
 });
 
