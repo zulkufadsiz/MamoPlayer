@@ -12,10 +12,27 @@ import {
 import Timeline from './Timeline';
 
 interface Subtitle {
-  start: number;
-  end: number;
+  start: number | string;
+  end: number | string;
   text: string;
 }
+
+const parseTimeToSeconds = (value: number | string): number => {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value !== 'string') return 0;
+
+  const parts = value.trim().split(':').map(Number);
+  if (parts.some((part) => Number.isNaN(part))) return 0;
+  if (parts.length === 3) {
+    const [hrs, mins, secs] = parts;
+    return Math.max(0, hrs * 3600 + mins * 60 + secs);
+  }
+  if (parts.length === 2) {
+    const [mins, secs] = parts;
+    return Math.max(0, mins * 60 + secs);
+  }
+  return 0;
+};
 
 interface PlaybackControlsProps {
   isPlaying: boolean;
@@ -69,7 +86,11 @@ export default function PlaybackControls({
     const interval = setInterval(() => {
       const currentTime = player.currentTime || 0;
       const subtitle = subtitles.find(
-        (sub) => currentTime >= sub.start && currentTime <= sub.end
+        (sub) => {
+          const start = parseTimeToSeconds(sub.start);
+          const end = parseTimeToSeconds(sub.end);
+          return currentTime >= start && currentTime <= end;
+        }
       );
       setCurrentSubtitle(subtitle ? subtitle.text : '');
     }, 100);

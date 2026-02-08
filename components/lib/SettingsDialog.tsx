@@ -22,6 +22,13 @@ interface SettingsDialogProps {
   onAutoPlayChange: (value: boolean) => void;
   showSubtitles: boolean;
   onShowSubtitlesChange: (value: boolean) => void;
+  audioTracks?: Array<{
+    id: string;
+    label: string;
+    language?: string;
+  }>;
+  selectedAudioTrackId?: string | null;
+  onAudioTrackChange?: (trackId: string | null) => void;
   subtitleTracks?: Array<{
     id: string;
     label: string;
@@ -34,7 +41,13 @@ interface SettingsDialogProps {
 const playbackSpeeds = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
 const videoQualities = ['Auto', '1080p', '720p', '480p', '360p'];
 
-type SettingsMenuItem = 'playbackSpeed' | 'quality' | 'subtitles' | 'preferences' | null;
+type SettingsMenuItem =
+  | 'playbackSpeed'
+  | 'quality'
+  | 'audio'
+  | 'subtitles'
+  | 'preferences'
+  | null;
 
 export default function SettingsDialog({
   visible,
@@ -47,15 +60,23 @@ export default function SettingsDialog({
   onAutoPlayChange,
   showSubtitles,
   onShowSubtitlesChange,
+  audioTracks = [],
+  selectedAudioTrackId = null,
+  onAudioTrackChange,
   subtitleTracks = [],
   selectedSubtitleTrackId = null,
   onSubtitleTrackChange,
 }: SettingsDialogProps) {
   const [activeMenu, setActiveMenu] = useState<SettingsMenuItem>(null);
+  const hasAudioTracks = audioTracks.length > 0;
   const hasSubtitleTracks = subtitleTracks.length > 0;
+  const selectedAudioLabel = audioTracks.find(
+    (track) => track.id === selectedAudioTrackId
+  )?.label;
   const selectedSubtitleLabel = subtitleTracks.find(
     (track) => track.id === selectedSubtitleTrackId
   )?.label;
+  const audioValue = selectedAudioLabel || 'Auto';
   const subtitlesValue = showSubtitles
     ? selectedSubtitleLabel || 'On'
     : 'Off';
@@ -110,6 +131,22 @@ export default function SettingsDialog({
             <Ionicons name="chevron-forward" size={20} color="#999" />
           </View>
         </TouchableOpacity>
+
+        {hasAudioTracks && (
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => handleMenuItemPress('audio')}
+          >
+            <View style={styles.menuItemLeft}>
+              <Ionicons name="volume-medium-outline" size={24} color="#007AFF" />
+              <Text style={styles.menuItemTitle}>Audio</Text>
+            </View>
+            <View style={styles.menuItemRight}>
+              <Text style={styles.menuItemValue}>{audioValue}</Text>
+              <Ionicons name="chevron-forward" size={20} color="#999" />
+            </View>
+          </TouchableOpacity>
+        )}
 
         {hasSubtitleTracks && (
           <TouchableOpacity
@@ -337,6 +374,45 @@ export default function SettingsDialog({
     </>
   );
 
+  const renderAudioSheet = () => (
+    <>
+      <View style={styles.sheetHeader}>
+        <TouchableOpacity onPress={handleBackToMenu} style={styles.backButton}>
+          <Ionicons name="chevron-back" size={24} color="#007AFF" />
+        </TouchableOpacity>
+        <Text style={styles.sheetTitle}>Audio</Text>
+        <View style={{ width: 24 }} />
+      </View>
+
+      <ScrollView style={styles.sheetContent}>
+        <View style={styles.qualityList}>
+          {audioTracks.map((track) => {
+            const isActive = selectedAudioTrackId === track.id;
+            return (
+              <TouchableOpacity
+                key={track.id}
+                style={[styles.qualityItem, isActive && styles.qualityItemActive]}
+                onPress={() => {
+                  onAudioTrackChange?.(track.id);
+                  setTimeout(handleBackToMenu, 200);
+                }}
+              >
+                <Text
+                  style={[styles.qualityText, isActive && styles.qualityTextActive]}
+                >
+                  {track.label}
+                </Text>
+                {isActive && (
+                  <Ionicons name="checkmark-circle" size={24} color="#007AFF" />
+                )}
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      </ScrollView>
+    </>
+  );
+
   return (
     <Modal
       visible={visible}
@@ -354,6 +430,7 @@ export default function SettingsDialog({
           {!activeMenu && renderMainMenu()}
           {activeMenu === 'playbackSpeed' && renderPlaybackSpeedSheet()}
           {activeMenu === 'quality' && renderQualitySheet()}
+          {activeMenu === 'audio' && renderAudioSheet()}
           {activeMenu === 'subtitles' && renderSubtitlesSheet()}
           {activeMenu === 'preferences' && renderPreferencesSheet()}
         </Pressable>

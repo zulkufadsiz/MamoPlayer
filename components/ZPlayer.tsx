@@ -5,8 +5,8 @@ import SimplePlayer from './SimplePlayer';
 import VerticalPlayer from './VerticalPlayer';
 
 interface Subtitle {
-  start: number;
-  end: number;
+  start: number | string;
+  end: number | string;
   text: string;
 }
 
@@ -19,6 +19,13 @@ interface SubtitleTrack {
 
 interface ZPlayerProps {
   source: VideoSource;
+  videoSourcesByLanguage?: Record<string, VideoSource>;
+  audioTracks?: Array<{
+    id: string;
+    label: string;
+    language?: string;
+  }>;
+  defaultAudioTrackId?: string | null;
   style?: any;
   autoPlay?: boolean;
   startAt?: number;

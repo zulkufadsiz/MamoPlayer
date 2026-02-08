@@ -4,23 +4,40 @@ import { useEventListener } from 'expo';
 import { VideoView, useVideoPlayer, type VideoSource } from 'expo-video';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-    Animated,
-    Pressable,
-    StatusBar,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
-    useWindowDimensions,
+  Animated,
+  Pressable,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+  useWindowDimensions,
 } from 'react-native';
 import CommentsSheet, { type Comment } from './lib/CommentsSheet';
 import SettingsDialog from './lib/SettingsDialog';
 
 interface Subtitle {
-  start: number;
-  end: number;
+  start: number | string;
+  end: number | string;
   text: string;
 }
+
+const parseTimeToSeconds = (value: number | string): number => {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value !== 'string') return 0;
+
+  const parts = value.trim().split(':').map(Number);
+  if (parts.some((part) => Number.isNaN(part))) return 0;
+  if (parts.length === 3) {
+    const [hrs, mins, secs] = parts;
+    return Math.max(0, hrs * 3600 + mins * 60 + secs);
+  }
+  if (parts.length === 2) {
+    const [mins, secs] = parts;
+    return Math.max(0, mins * 60 + secs);
+  }
+  return 0;
+};
 
 interface SubtitleTrack {
   id: string;
@@ -29,8 +46,17 @@ interface SubtitleTrack {
   subtitles: Subtitle[];
 }
 
+interface AudioTrack {
+  id: string;
+  label: string;
+  language?: string;
+}
+
 interface VerticalPlayerProps {
   source: VideoSource;
+  videoSourcesByLanguage?: Record<string, VideoSource>;
+  audioTracks?: AudioTrack[];
+  defaultAudioTrackId?: string | null;
   style?: any;
   autoPlay?: boolean;
   startAt?: number;
@@ -55,6 +81,9 @@ interface VerticalPlayerProps {
 
 export const VerticalPlayer: React.FC<VerticalPlayerProps> = ({ 
   source, 
+  videoSourcesByLanguage,
+  audioTracks,
+  defaultAudioTrackId = null,
   autoPlay = true,
   startAt,
   subtitles = [],
@@ -73,7 +102,65 @@ export const VerticalPlayer: React.FC<VerticalPlayerProps> = ({
   onSwipeUp,
   onSwipeDown,
 }) => {
-  const player = useVideoPlayer(source, player => {
+  const [selectedSubtitleTrackId, setSelectedSubtitleTrackId] = useState<string | null>(
+    defaultSubtitleTrackId
+  );
+  const [selectedAudioTrackId, setSelectedAudioTrackId] = useState<string | null>(
+    defaultAudioTrackId
+  );
+
+  const resolvedSubtitleTracks: SubtitleTrack[] = useMemo(() => {
+    if (subtitleTracks.length) return subtitleTracks;
+    if (subtitles.length) {
+      return [
+        {
+          id: 'default',
+          label: 'Default',
+          subtitles,
+        },
+      ];
+    }
+    return [];
+  }, [subtitleTracks, subtitles]);
+
+  const resolvedAudioTracks: AudioTrack[] = useMemo(() => {
+    if (audioTracks?.length) return audioTracks;
+    if (!videoSourcesByLanguage) return [];
+    return Object.keys(videoSourcesByLanguage).map((key) => {
+      const subtitleTrack = resolvedSubtitleTracks.find(
+        (track) => track.language === key || track.id === key
+      );
+      return {
+        id: key,
+        label: subtitleTrack?.label ?? key,
+        language: subtitleTrack?.language ?? key,
+      };
+    });
+  }, [audioTracks, resolvedSubtitleTracks, videoSourcesByLanguage]);
+
+  const resolvedSource = useMemo(() => {
+    if (!videoSourcesByLanguage) return source;
+    const audioTrackId = selectedAudioTrackId ?? resolvedAudioTracks[0]?.id;
+    if (audioTrackId && videoSourcesByLanguage[audioTrackId]) {
+      return videoSourcesByLanguage[audioTrackId];
+    }
+    const selectedTrack = resolvedSubtitleTracks.find(
+      (track) => track.id === selectedSubtitleTrackId
+    );
+    const languageKey = selectedTrack?.language ?? selectedSubtitleTrackId;
+    if (languageKey && videoSourcesByLanguage[languageKey]) {
+      return videoSourcesByLanguage[languageKey];
+    }
+    return source;
+  }, [
+    resolvedSubtitleTracks,
+    selectedAudioTrackId,
+    selectedSubtitleTrackId,
+    source,
+    videoSourcesByLanguage,
+  ]);
+
+  const player = useVideoPlayer(resolvedSource, player => {
     player.loop = true;
     player.volume = 1;
   });
@@ -91,7 +178,7 @@ export const VerticalPlayer: React.FC<VerticalPlayerProps> = ({
   };
 
   useEventListener(player, 'statusChange', ({ status, error }) => {
-    console.log('Player status changed: ', status);
+    console.log('Player status changed: ', status, error ?? '');
     if (status === 'readyToPlay') {
       applyStartAt();
       if (autoPlay) {
@@ -140,13 +227,9 @@ export const VerticalPlayer: React.FC<VerticalPlayerProps> = ({
   const [isLiked, setIsLiked] = useState(false);
   const [currentSubtitle, setCurrentSubtitle] = useState<string>('');
   const [controlsOpacity] = useState(new Animated.Value(1));
-  const [selectedSubtitleTrackId, setSelectedSubtitleTrackId] = useState<string | null>(
-    defaultSubtitleTrackId
-  );
-
   useEffect(() => {
     hasAppliedStartAt.current = false;
-  }, [source, startAt]);
+  }, [resolvedSource, startAt]);
 
   useEffect(() => {
     if (typeof startAt !== 'number' || Number.isNaN(startAt)) return;
@@ -168,20 +251,6 @@ export const VerticalPlayer: React.FC<VerticalPlayerProps> = ({
     return () => clearInterval(interval);
   }, [autoPlay, player, startAt]);
 
-  const resolvedSubtitleTracks: SubtitleTrack[] = useMemo(() => {
-    if (subtitleTracks.length) return subtitleTracks;
-    if (subtitles.length) {
-      return [
-        {
-          id: 'default',
-          label: 'Default',
-          subtitles,
-        },
-      ];
-    }
-    return [];
-  }, [subtitleTracks, subtitles]);
-
   useEffect(() => {
     if (resolvedSubtitleTracks.length === 0) {
       setSelectedSubtitleTrackId(null);
@@ -199,6 +268,23 @@ export const VerticalPlayer: React.FC<VerticalPlayerProps> = ({
     }
   }, [defaultSubtitleTrackId, resolvedSubtitleTracks, selectedSubtitleTrackId]);
 
+  useEffect(() => {
+    if (resolvedAudioTracks.length === 0) {
+      setSelectedAudioTrackId(null);
+      return;
+    }
+
+    if (!selectedAudioTrackId) {
+      setSelectedAudioTrackId(defaultAudioTrackId ?? resolvedAudioTracks[0].id);
+      return;
+    }
+
+    const exists = resolvedAudioTracks.some((track) => track.id === selectedAudioTrackId);
+    if (!exists) {
+      setSelectedAudioTrackId(resolvedAudioTracks[0].id);
+    }
+  }, [defaultAudioTrackId, resolvedAudioTracks, selectedAudioTrackId]);
+
   const activeSubtitleTrack = resolvedSubtitleTracks.find(
     (track) => track.id === selectedSubtitleTrackId
   );
@@ -214,7 +300,11 @@ export const VerticalPlayer: React.FC<VerticalPlayerProps> = ({
     const interval = setInterval(() => {
       const currentTime = player.currentTime || 0;
       const subtitle = activeSubtitles.find(
-        (sub) => currentTime >= sub.start && currentTime <= sub.end
+        (sub) => {
+          const start = parseTimeToSeconds(sub.start);
+          const end = parseTimeToSeconds(sub.end);
+          return currentTime >= start && currentTime <= end;
+        }
       );
       setCurrentSubtitle(subtitle ? subtitle.text : '');
     }, 100);
@@ -423,6 +513,9 @@ export const VerticalPlayer: React.FC<VerticalPlayerProps> = ({
         onAutoPlayChange={setAutoPlayEnabled}
         showSubtitles={showSubtitles}
         onShowSubtitlesChange={setShowSubtitles}
+        audioTracks={resolvedAudioTracks}
+        selectedAudioTrackId={selectedAudioTrackId}
+        onAudioTrackChange={setSelectedAudioTrackId}
         subtitleTracks={resolvedSubtitleTracks}
         selectedSubtitleTrackId={selectedSubtitleTrackId}
         onSubtitleTrackChange={setSelectedSubtitleTrackId}

@@ -29,12 +29,16 @@ export default function Timeline({
 
   const formatTime = (seconds: number) => {
     if (isNaN(seconds) || !isFinite(seconds)) {
-      return '0:00';
+      return '00:00:00';
     }
-    
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
+
+    const totalSeconds = Math.max(0, Math.floor(seconds));
+    const hrs = Math.floor(totalSeconds / 3600);
+    const mins = Math.floor((totalSeconds % 3600) / 60);
+    const secs = totalSeconds % 60;
+    return `${hrs.toString().padStart(2, '0')}:${mins
+      .toString()
+      .padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
   const handleSlidingStart = () => {
