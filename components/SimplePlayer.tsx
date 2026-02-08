@@ -45,10 +45,12 @@ export const SimplePlayer: React.FC<SimplePlayerProps> = ({
   autoPlay = false,
   allowsFullscreen = true,
   allowsPictureInPicture = true,
+  contentFit = 'contain',
   subtitles = [],
   subtitleTracks = [],
   defaultSubtitleTrackId = null,
   onSettingsPress,
+  style,
 }) => {
     const player = useVideoPlayer(videoSource, player => {
     player.loop = true;
@@ -134,17 +136,34 @@ export const SimplePlayer: React.FC<SimplePlayerProps> = ({
   };
   
   return (
-    <View style={[
-      styles.contentContainer,
-      isFullscreen && { height: width, width: height },
-    ]}>
-      <PlaybackControls 
+    <View
+      style={[
+        styles.container,
+        style,
+        isFullscreen && styles.fullscreenContainer,
+        isFullscreen && { width, height },
+      ]}
+    >
+      <VideoView
+        style={[
+          styles.video,
+          isFullscreen && styles.fullscreenVideo,
+          isFullscreen && { width, height },
+        ]}
+        player={player}
+        nativeControls={false}
+        allowsFullscreen={allowsFullscreen}
+        allowsPictureInPicture={allowsPictureInPicture}
+        contentFit={contentFit}
+      />
+
+      <PlaybackControls
         isPlaying={isPlaying}
         player={player}
         duration={player.duration || 0}
         onPlayPause={handlePlayPause}
         onSeek={(time) => {
-          player.setPosition(time);
+          player.currentTime = time;
         }}
         isFullscreen={isFullscreen}
         onFullscreenChange={setIsFullscreen}
@@ -152,12 +171,11 @@ export const SimplePlayer: React.FC<SimplePlayerProps> = ({
         showSubtitles={showSubtitles}
         onSubtitlesToggle={() => setShowSubtitles(!showSubtitles)}
         onSettingsPress={handleSettingsPress}
+        hasSubtitles={resolvedSubtitleTracks.length > 0}
+        autoHideControls
+        autoHideDelayMs={3000}
       />
-      <VideoView style={[
-        styles.video,
-        isFullscreen && { height: width, width: height },
-      ]} player={player} nativeControls={false} allowsFullscreen allowsPictureInPicture />
-      
+
       <SettingsDialog
         visible={showSettings}
         onClose={() => setShowSettings(false)}
@@ -178,19 +196,29 @@ export const SimplePlayer: React.FC<SimplePlayerProps> = ({
 }
 
 const styles = StyleSheet.create({
-  contentContainer: {
-    flex: 1,
-    padding: 0,
-    alignItems: 'center',
-    justifyContent: 'center',
+  container: {
     width: '100%',
-    height: 275,
+    backgroundColor: '#000',
     position: 'relative',
+  },
+  fullscreenContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: '100%',
+    height: '100%',
+    zIndex: 1000,
   },
   video: {
     width: '100%',
-    height: 275,
-    position: 'relative',
+    height: '100%',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+  },
+  fullscreenVideo: {
+    width: '100%',
+    height: '100%',
   },
 });
 
