@@ -15,7 +15,7 @@ import {
   View,
   useWindowDimensions,
 } from 'react-native';
-import SettingsDialog from './lib/SettingsDialog';
+import LandscapeSettingsDialog from './lib/LandscapeSettingsDialog';
 
 interface Subtitle {
   start: number;
@@ -227,7 +227,10 @@ export const LandscapePlayer: React.FC<LandscapePlayerProps> = ({
               <View style={styles.topRightButtons}>
                 <TouchableOpacity
                   style={styles.iconButton}
-                  onPress={() => setShowSubtitles(!showSubtitles)}
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    setShowSubtitles(!showSubtitles);
+                  }}
                 >
                   <Ionicons
                     name={showSubtitles ? 'chatbox' : 'chatbox-outline'}
@@ -237,7 +240,10 @@ export const LandscapePlayer: React.FC<LandscapePlayerProps> = ({
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.iconButton}
-                  onPress={handleSettingsPress}
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    handleSettingsPress();
+                  }}
                 >
                   <Ionicons name="settings-outline" size={24} color="#fff" />
                 </TouchableOpacity>
@@ -310,7 +316,7 @@ export const LandscapePlayer: React.FC<LandscapePlayerProps> = ({
         )}
       </Pressable>
 
-      <SettingsDialog
+      <LandscapeSettingsDialog
         visible={showSettings}
         onClose={() => setShowSettings(false)}
         playbackSpeed={playbackSpeed}
