@@ -214,9 +214,6 @@ export const LandscapePlayer: React.FC<LandscapePlayerProps> = ({
           >
             {/* Top Bar */}
             <View style={styles.topBar}>
-              <TouchableOpacity style={styles.backButton} onPress={onBack}>
-                <Ionicons name="arrow-back" size={28} color="#fff" />
-              </TouchableOpacity>
               <View style={styles.titleContainer}>
                 <Text style={styles.title}>{title}</Text>
                 {(season || episode) && (
@@ -301,46 +298,6 @@ export const LandscapePlayer: React.FC<LandscapePlayerProps> = ({
                 />
                 <Text style={styles.timeText}>{formatTime(duration)}</Text>
               </View>
-
-              {/* Bottom Controls */}
-              <View style={styles.bottomControls}>
-                <View style={styles.volumeContainer}>
-                  <TouchableOpacity
-                    style={styles.iconButton}
-                    onPress={() => setShowVolumeSlider(!showVolumeSlider)}
-                  >
-                    <Ionicons
-                      name={
-                        volume === 0
-                          ? 'volume-mute'
-                          : volume < 0.5
-                          ? 'volume-low'
-                          : 'volume-high'
-                      }
-                      size={24}
-                      color="#fff"
-                    />
-                  </TouchableOpacity>
-                  {showVolumeSlider && (
-                    <Slider
-                      style={styles.volumeSlider}
-                      minimumValue={0}
-                      maximumValue={1}
-                      value={volume}
-                      onValueChange={handleVolumeChange}
-                      minimumTrackTintColor="#fff"
-                      maximumTrackTintColor="rgba(255,255,255,0.3)"
-                      thumbTintColor="#fff"
-                    />
-                  )}
-                </View>
-
-                <View style={styles.rightControls}>
-                  <TouchableOpacity style={styles.iconButton}>
-                    <Ionicons name="expand" size={24} color="#fff" />
-                  </TouchableOpacity>
-                </View>
-              </View>
             </View>
           </Animated.View>
         )}
@@ -403,9 +360,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 20,
     paddingBottom: 10,
-  },
-  backButton: {
-    padding: 8,
   },
   titleContainer: {
     flex: 1,
@@ -478,27 +432,9 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     minWidth: 50,
   },
-  bottomControls: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  volumeContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  volumeSlider: {
-    width: 100,
-    height: 40,
-  },
-  rightControls: {
-    flexDirection: 'row',
-    gap: 12,
-  },
   subtitleContainer: {
     position: 'absolute',
-    bottom: 120,
+    bottom: 40,
     left: 0,
     right: 0,
     alignItems: 'center',
