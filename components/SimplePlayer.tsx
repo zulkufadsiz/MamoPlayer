@@ -1,11 +1,11 @@
 
 import { useEventListener } from 'expo';
 import { VideoView, useVideoPlayer, type VideoSource } from 'expo-video';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  StyleSheet,
-  View,
-  useWindowDimensions,
+    StyleSheet,
+    View,
+    useWindowDimensions,
 } from 'react-native';
 import PlaybackControls from './lib/PlaybackControls';
 import SettingsDialog from './lib/SettingsDialog';
@@ -27,6 +27,7 @@ interface SimplePlayerProps {
   source: VideoSource;
   style?: any;
   autoPlay?: boolean;
+  startAt?: number;
   nativeControls?: boolean;
   contentFit?: 'contain' | 'cover' | 'fill';
   allowsFullscreen?: boolean;
@@ -37,12 +38,11 @@ interface SimplePlayerProps {
   defaultSubtitleTrackId?: string | null;
   onSettingsPress?: () => void;
 }
-const videoSource =
-  'http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4';
 
 export const SimplePlayer: React.FC<SimplePlayerProps> = ({
   source,
   autoPlay = false,
+  startAt,
   allowsFullscreen = true,
   allowsPictureInPicture = true,
   contentFit = 'contain',
@@ -52,19 +52,56 @@ export const SimplePlayer: React.FC<SimplePlayerProps> = ({
   onSettingsPress,
   style,
 }) => {
-    const player = useVideoPlayer(videoSource, player => {
+    const player = useVideoPlayer(source, player => {
     player.loop = true;
     player.volume = 0;
   });
   const { width, height } = useWindowDimensions();
+  const hasAppliedStartAt = useRef(false);
+
+    const applyStartAt = () => {
+      if (hasAppliedStartAt.current) return false;
+      if (typeof startAt !== 'number' || Number.isNaN(startAt)) return false;
+      const duration = player.duration ?? 0;
+      const clampedTime = duration > 0 ? Math.min(duration, startAt) : startAt;
+      player.currentTime = Math.max(0, clampedTime);
+      hasAppliedStartAt.current = true;
+      return true;
+    };
 
   useEventListener(player, 'statusChange', ({ status, error }) => {
-  console.log('Player status changed: ', status);
-  if (status === 'readyToPlay') {
-    player.play();
-  }
-});
-  const [isPlaying, setIsPlaying] = useState(true);
+    console.log('Player status changed: ', status);
+    if (status === 'readyToPlay') {
+      applyStartAt();
+      if (autoPlay) {
+        player.play();
+      }
+    }
+  });
+  const [isPlaying, setIsPlaying] = useState(autoPlay);
+  useEffect(() => {
+    hasAppliedStartAt.current = false;
+  }, [source, startAt]);
+
+  useEffect(() => {
+    if (typeof startAt !== 'number' || Number.isNaN(startAt)) return;
+
+    const interval = setInterval(() => {
+      if (hasAppliedStartAt.current) {
+        clearInterval(interval);
+        return;
+      }
+      if ((player.duration ?? 0) > 0) {
+        applyStartAt();
+        if (autoPlay) {
+          player.play();
+        }
+        clearInterval(interval);
+      }
+    }, 100);
+
+    return () => clearInterval(interval);
+  }, [autoPlay, player, startAt]);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showSubtitles, setShowSubtitles] = useState(true);
   const [showSettings, setShowSettings] = useState(false);

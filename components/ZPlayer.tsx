@@ -21,6 +21,7 @@ interface ZPlayerProps {
   source: VideoSource;
   style?: any;
   autoPlay?: boolean;
+  startAt?: number;
   nativeControls?: boolean;
   contentFit?: 'contain' | 'cover' | 'fill';
   allowsFullscreen?: boolean;
