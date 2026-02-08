@@ -1,7 +1,7 @@
 
 import { useEventListener } from 'expo';
 import { VideoView, useVideoPlayer, type VideoSource } from 'expo-video';
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   StyleSheet,
   View,
@@ -16,6 +16,13 @@ interface Subtitle {
   text: string;
 }
 
+interface SubtitleTrack {
+  id: string;
+  label: string;
+  language?: string;
+  subtitles: Subtitle[];
+}
+
 interface SimplePlayerProps {
   source: VideoSource;
   style?: any;
@@ -26,12 +33,23 @@ interface SimplePlayerProps {
   allowsPictureInPicture?: boolean;
   onPlayingChange?: (isPlaying: boolean) => void;
   subtitles?: Subtitle[];
+  subtitleTracks?: SubtitleTrack[];
+  defaultSubtitleTrackId?: string | null;
   onSettingsPress?: () => void;
 }
 const videoSource =
   'http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4';
 
-export const SimplePlayer: React.FC<SimplePlayerProps> = ({ source, autoPlay = false, allowsFullscreen = true, allowsPictureInPicture = true, subtitles = [], onSettingsPress }) => {
+export const SimplePlayer: React.FC<SimplePlayerProps> = ({
+  source,
+  autoPlay = false,
+  allowsFullscreen = true,
+  allowsPictureInPicture = true,
+  subtitles = [],
+  subtitleTracks = [],
+  defaultSubtitleTrackId = null,
+  onSettingsPress,
+}) => {
     const player = useVideoPlayer(videoSource, player => {
     player.loop = true;
     player.volume = 0;
@@ -51,6 +69,45 @@ export const SimplePlayer: React.FC<SimplePlayerProps> = ({ source, autoPlay = f
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
   const [quality, setQuality] = useState('Auto');
   const [autoPlayEnabled, setAutoPlayEnabled] = useState(autoPlay);
+  const [selectedSubtitleTrackId, setSelectedSubtitleTrackId] = useState<string | null>(
+    defaultSubtitleTrackId
+  );
+
+  const resolvedSubtitleTracks: SubtitleTrack[] = useMemo(() => {
+    if (subtitleTracks.length) return subtitleTracks;
+    if (subtitles.length) {
+      return [
+        {
+          id: 'default',
+          label: 'Default',
+          subtitles,
+        },
+      ];
+    }
+    return [];
+  }, [subtitleTracks, subtitles]);
+
+  useEffect(() => {
+    if (resolvedSubtitleTracks.length === 0) {
+      setSelectedSubtitleTrackId(null);
+      return;
+    }
+
+    if (!selectedSubtitleTrackId) {
+      setSelectedSubtitleTrackId(defaultSubtitleTrackId ?? resolvedSubtitleTracks[0].id);
+      return;
+    }
+
+    const exists = resolvedSubtitleTracks.some((track) => track.id === selectedSubtitleTrackId);
+    if (!exists) {
+      setSelectedSubtitleTrackId(resolvedSubtitleTracks[0].id);
+    }
+  }, [defaultSubtitleTrackId, resolvedSubtitleTracks, selectedSubtitleTrackId]);
+
+  const activeSubtitleTrack = resolvedSubtitleTracks.find(
+    (track) => track.id === selectedSubtitleTrackId
+  );
+  const activeSubtitles = showSubtitles && activeSubtitleTrack ? activeSubtitleTrack.subtitles : [];
 
   const handlePlayPause = () => {
     if (isPlaying) {
@@ -91,7 +148,7 @@ export const SimplePlayer: React.FC<SimplePlayerProps> = ({ source, autoPlay = f
         }}
         isFullscreen={isFullscreen}
         onFullscreenChange={setIsFullscreen}
-        subtitles={subtitles}
+        subtitles={activeSubtitles}
         showSubtitles={showSubtitles}
         onSubtitlesToggle={() => setShowSubtitles(!showSubtitles)}
         onSettingsPress={handleSettingsPress}
@@ -112,6 +169,9 @@ export const SimplePlayer: React.FC<SimplePlayerProps> = ({ source, autoPlay = f
         onAutoPlayChange={setAutoPlayEnabled}
         showSubtitles={showSubtitles}
         onShowSubtitlesChange={setShowSubtitles}
+        subtitleTracks={resolvedSubtitleTracks}
+        selectedSubtitleTrackId={selectedSubtitleTrackId}
+        onSubtitleTrackChange={setSelectedSubtitleTrackId}
       />
     </View>
   );

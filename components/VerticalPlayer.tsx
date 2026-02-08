@@ -2,16 +2,16 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useEventListener } from 'expo';
 import { VideoView, useVideoPlayer, type VideoSource } from 'expo-video';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
-  Animated,
-  Pressable,
-  StatusBar,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-  useWindowDimensions,
+    Animated,
+    Pressable,
+    StatusBar,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+    useWindowDimensions,
 } from 'react-native';
 import CommentsSheet, { type Comment } from './lib/CommentsSheet';
 import SettingsDialog from './lib/SettingsDialog';
@@ -22,6 +22,13 @@ interface Subtitle {
   text: string;
 }
 
+interface SubtitleTrack {
+  id: string;
+  label: string;
+  language?: string;
+  subtitles: Subtitle[];
+}
+
 interface VerticalPlayerProps {
   source: VideoSource;
   style?: any;
@@ -29,6 +36,8 @@ interface VerticalPlayerProps {
   contentFit?: 'contain' | 'cover' | 'fill';
   onPlayingChange?: (isPlaying: boolean) => void;
   subtitles?: Subtitle[];
+  subtitleTracks?: SubtitleTrack[];
+  defaultSubtitleTrackId?: string | null;
   onSettingsPress?: () => void;
   title?: string;
   description?: string;
@@ -49,7 +58,9 @@ const videoSource =
 export const VerticalPlayer: React.FC<VerticalPlayerProps> = ({ 
   source, 
   autoPlay = true,
-  subtitles = [], 
+  subtitles = [],
+  subtitleTracks = [],
+  defaultSubtitleTrackId = null,
   onSettingsPress,
   title,
   description,
@@ -116,21 +127,63 @@ export const VerticalPlayer: React.FC<VerticalPlayerProps> = ({
   const [isLiked, setIsLiked] = useState(false);
   const [currentSubtitle, setCurrentSubtitle] = useState<string>('');
   const [controlsOpacity] = useState(new Animated.Value(1));
+  const [selectedSubtitleTrackId, setSelectedSubtitleTrackId] = useState<string | null>(
+    defaultSubtitleTrackId
+  );
+
+  const resolvedSubtitleTracks: SubtitleTrack[] = useMemo(() => {
+    if (subtitleTracks.length) return subtitleTracks;
+    if (subtitles.length) {
+      return [
+        {
+          id: 'default',
+          label: 'Default',
+          subtitles,
+        },
+      ];
+    }
+    return [];
+  }, [subtitleTracks, subtitles]);
+
+  useEffect(() => {
+    if (resolvedSubtitleTracks.length === 0) {
+      setSelectedSubtitleTrackId(null);
+      return;
+    }
+
+    if (!selectedSubtitleTrackId) {
+      setSelectedSubtitleTrackId(defaultSubtitleTrackId ?? resolvedSubtitleTracks[0].id);
+      return;
+    }
+
+    const exists = resolvedSubtitleTracks.some((track) => track.id === selectedSubtitleTrackId);
+    if (!exists) {
+      setSelectedSubtitleTrackId(resolvedSubtitleTracks[0].id);
+    }
+  }, [defaultSubtitleTrackId, resolvedSubtitleTracks, selectedSubtitleTrackId]);
+
+  const activeSubtitleTrack = resolvedSubtitleTracks.find(
+    (track) => track.id === selectedSubtitleTrackId
+  );
+  const activeSubtitles = showSubtitles && activeSubtitleTrack ? activeSubtitleTrack.subtitles : [];
 
   // Track current subtitle
   useEffect(() => {
-    if (!player || subtitles.length === 0) return;
+    if (!player || activeSubtitles.length === 0) {
+      setCurrentSubtitle('');
+      return;
+    }
 
     const interval = setInterval(() => {
       const currentTime = player.currentTime || 0;
-      const subtitle = subtitles.find(
+      const subtitle = activeSubtitles.find(
         (sub) => currentTime >= sub.start && currentTime <= sub.end
       );
       setCurrentSubtitle(subtitle ? subtitle.text : '');
     }, 100);
 
     return () => clearInterval(interval);
-  }, [player, subtitles]);
+  }, [player, activeSubtitles]);
 
   // Auto-hide controls
   useEffect(() => {
@@ -333,6 +386,9 @@ export const VerticalPlayer: React.FC<VerticalPlayerProps> = ({
         onAutoPlayChange={setAutoPlayEnabled}
         showSubtitles={showSubtitles}
         onShowSubtitlesChange={setShowSubtitles}
+        subtitleTracks={resolvedSubtitleTracks}
+        selectedSubtitleTrackId={selectedSubtitleTrackId}
+        onSubtitleTrackChange={setSelectedSubtitleTrackId}
       />
 
       <CommentsSheet

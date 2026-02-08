@@ -4,7 +4,7 @@ import Slider from '@react-native-community/slider';
 import { useEventListener } from 'expo';
 import * as ScreenOrientation from 'expo-screen-orientation';
 import { VideoView, useVideoPlayer, type VideoSource } from 'expo-video';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Animated,
   Pressable,
@@ -23,6 +23,13 @@ interface Subtitle {
   text: string;
 }
 
+interface SubtitleTrack {
+  id: string;
+  label: string;
+  language?: string;
+  subtitles: Subtitle[];
+}
+
 interface LandscapePlayerProps {
   source: VideoSource;
   style?: any;
@@ -33,6 +40,8 @@ interface LandscapePlayerProps {
   allowsPictureInPicture?: boolean;
   onPlayingChange?: (isPlaying: boolean) => void;
   subtitles?: Subtitle[];
+  subtitleTracks?: SubtitleTrack[];
+  defaultSubtitleTrackId?: string | null;
   onSettingsPress?: () => void;
   title?: string;
   episode?: string;
@@ -43,10 +52,45 @@ interface LandscapePlayerProps {
 const videoSource =
   'http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4';
 
+const demoSubtitleTracks: SubtitleTrack[] = [
+  {
+    id: 'en',
+    label: 'English',
+    language: 'en',
+    subtitles: [
+      { start: 1, end: 4, text: 'Welcome to the demo video.' },
+      { start: 5, end: 9, text: 'These are English subtitles.' },
+      { start: 10, end: 14, text: 'Switch languages in settings.' },
+    ],
+  },
+  {
+    id: 'tr',
+    label: 'Türkçe',
+    language: 'tr',
+    subtitles: [
+      { start: 1, end: 4, text: 'Demo videoya hoş geldiniz.' },
+      { start: 5, end: 9, text: 'Bunlar Türkçe altyazılar.' },
+      { start: 10, end: 14, text: 'Ayarlar bölümünden dili değiştirin.' },
+    ],
+  },
+  {
+    id: 'es',
+    label: 'Español',
+    language: 'es',
+    subtitles: [
+      { start: 1, end: 4, text: 'Bienvenido al video de демонстрация.' },
+      { start: 5, end: 9, text: 'Estos son subtítulos en español.' },
+      { start: 10, end: 14, text: 'Cambia el idioma en ajustes.' },
+    ],
+  },
+];
+
 export const LandscapePlayer: React.FC<LandscapePlayerProps> = ({
   source,
   autoPlay = true,
   subtitles = [],
+  subtitleTracks = demoSubtitleTracks,
+  defaultSubtitleTrackId = null,
   onSettingsPress,
   title = 'Video Title',
   episode,
@@ -80,6 +124,23 @@ export const LandscapePlayer: React.FC<LandscapePlayerProps> = ({
   const [showVolumeSlider, setShowVolumeSlider] = useState(false);
   const [currentSubtitle, setCurrentSubtitle] = useState<string>('');
   const [controlsOpacity] = useState(new Animated.Value(1));
+  const [selectedSubtitleTrackId, setSelectedSubtitleTrackId] = useState<string | null>(
+    defaultSubtitleTrackId
+  );
+
+  const resolvedSubtitleTracks: SubtitleTrack[] = useMemo(() => {
+    if (subtitleTracks.length) return subtitleTracks;
+    if (subtitles.length) {
+      return [
+        {
+          id: 'default',
+          label: 'Default',
+          subtitles,
+        },
+      ];
+    }
+    return [];
+  }, [subtitleTracks, subtitles]);
 
   // Lock screen orientation to landscape
   useEffect(() => {
@@ -109,15 +170,41 @@ export const LandscapePlayer: React.FC<LandscapePlayerProps> = ({
     return () => clearInterval(interval);
   }, [player, isSeeking]);
 
+  // Ensure a valid subtitle track is selected
+  useEffect(() => {
+    if (resolvedSubtitleTracks.length === 0) {
+      setSelectedSubtitleTrackId(null);
+      return;
+    }
+
+    if (!selectedSubtitleTrackId) {
+      setSelectedSubtitleTrackId(defaultSubtitleTrackId ?? resolvedSubtitleTracks[0].id);
+      return;
+    }
+
+    const exists = resolvedSubtitleTracks.some((track) => track.id === selectedSubtitleTrackId);
+    if (!exists) {
+      setSelectedSubtitleTrackId(resolvedSubtitleTracks[0].id);
+    }
+  }, [defaultSubtitleTrackId, resolvedSubtitleTracks, selectedSubtitleTrackId]);
+
+  const activeSubtitleTrack = resolvedSubtitleTracks.find(
+    (track) => track.id === selectedSubtitleTrackId
+  );
+  const activeSubtitles = showSubtitles && activeSubtitleTrack ? activeSubtitleTrack.subtitles : [];
+
   // Track current subtitle
   useEffect(() => {
-    if (!player || subtitles.length === 0) return;
+    if (!player || activeSubtitles.length === 0) {
+      setCurrentSubtitle('');
+      return;
+    }
 
-    const subtitle = subtitles.find(
+    const subtitle = activeSubtitles.find(
       (sub) => currentTime >= sub.start && currentTime <= sub.end
     );
     setCurrentSubtitle(subtitle ? subtitle.text : '');
-  }, [currentTime, subtitles]);
+  }, [currentTime, activeSubtitles, player]);
 
   // Auto-hide controls
   useEffect(() => {
@@ -327,6 +414,9 @@ export const LandscapePlayer: React.FC<LandscapePlayerProps> = ({
         onAutoPlayChange={setAutoPlayEnabled}
         showSubtitles={showSubtitles}
         onShowSubtitlesChange={setShowSubtitles}
+        subtitleTracks={resolvedSubtitleTracks}
+        selectedSubtitleTrackId={selectedSubtitleTrackId}
+        onSubtitleTrackChange={setSelectedSubtitleTrackId}
       />
     </View>
   );
