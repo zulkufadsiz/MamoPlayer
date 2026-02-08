@@ -10,6 +10,13 @@ interface Subtitle {
   text: string;
 }
 
+interface SubtitleTrack {
+  id: string;
+  label: string;
+  language?: string;
+  subtitles: Subtitle[];
+}
+
 interface ZPlayerProps {
   source: VideoSource;
   style?: any;
@@ -20,6 +27,8 @@ interface ZPlayerProps {
   allowsPictureInPicture?: boolean;
   onPlayingChange?: (isPlaying: boolean) => void;
   subtitles?: Subtitle[];
+  subtitleTracks?: SubtitleTrack[];
+  defaultSubtitleTrackId?: string | null;
   onSettingsPress?: () => void;
   playerType?: 'simple' | 'vertical' | 'landscape';
   // VerticalPlayer specific props

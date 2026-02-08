@@ -1,14 +1,14 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import {
-    Modal,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Switch,
-    Text,
-    TouchableOpacity,
-    View,
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 interface SettingsDialogProps {
@@ -22,12 +22,19 @@ interface SettingsDialogProps {
   onAutoPlayChange: (value: boolean) => void;
   showSubtitles: boolean;
   onShowSubtitlesChange: (value: boolean) => void;
+  subtitleTracks?: Array<{
+    id: string;
+    label: string;
+    language?: string;
+  }>;
+  selectedSubtitleTrackId?: string | null;
+  onSubtitleTrackChange?: (trackId: string | null) => void;
 }
 
 const playbackSpeeds = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
 const videoQualities = ['Auto', '1080p', '720p', '480p', '360p'];
 
-type SettingsMenuItem = 'playbackSpeed' | 'quality' | 'preferences' | null;
+type SettingsMenuItem = 'playbackSpeed' | 'quality' | 'subtitles' | 'preferences' | null;
 
 export default function SettingsDialog({
   visible,
@@ -40,8 +47,18 @@ export default function SettingsDialog({
   onAutoPlayChange,
   showSubtitles,
   onShowSubtitlesChange,
+  subtitleTracks = [],
+  selectedSubtitleTrackId = null,
+  onSubtitleTrackChange,
 }: SettingsDialogProps) {
   const [activeMenu, setActiveMenu] = useState<SettingsMenuItem>(null);
+  const hasSubtitleTracks = subtitleTracks.length > 0;
+  const selectedSubtitleLabel = subtitleTracks.find(
+    (track) => track.id === selectedSubtitleTrackId
+  )?.label;
+  const subtitlesValue = showSubtitles
+    ? selectedSubtitleLabel || 'On'
+    : 'Off';
 
   const handleClose = () => {
     setActiveMenu(null);
@@ -93,6 +110,22 @@ export default function SettingsDialog({
             <Ionicons name="chevron-forward" size={20} color="#999" />
           </View>
         </TouchableOpacity>
+
+        {hasSubtitleTracks && (
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => handleMenuItemPress('subtitles')}
+          >
+            <View style={styles.menuItemLeft}>
+              <Ionicons name="chatbox-ellipses-outline" size={24} color="#007AFF" />
+              <Text style={styles.menuItemTitle}>Subtitles</Text>
+            </View>
+            <View style={styles.menuItemRight}>
+              <Text style={styles.menuItemValue}>{subtitlesValue}</Text>
+              <Ionicons name="chevron-forward" size={20} color="#999" />
+            </View>
+          </TouchableOpacity>
+        )}
 
         <TouchableOpacity
           style={styles.menuItem}
@@ -240,6 +273,70 @@ export default function SettingsDialog({
     </>
   );
 
+  const renderSubtitlesSheet = () => (
+    <>
+      <View style={styles.sheetHeader}>
+        <TouchableOpacity onPress={handleBackToMenu} style={styles.backButton}>
+          <Ionicons name="chevron-back" size={24} color="#007AFF" />
+        </TouchableOpacity>
+        <Text style={styles.sheetTitle}>Subtitles</Text>
+        <View style={{ width: 24 }} />
+      </View>
+
+      <ScrollView style={styles.sheetContent}>
+        <View style={styles.qualityList}>
+          <TouchableOpacity
+            style={[
+              styles.qualityItem,
+              !showSubtitles && styles.qualityItemActive,
+            ]}
+            onPress={() => {
+              onShowSubtitlesChange(false);
+              onSubtitleTrackChange?.(null);
+              setTimeout(handleBackToMenu, 200);
+            }}
+          >
+            <Text
+              style={[
+                styles.qualityText,
+                !showSubtitles && styles.qualityTextActive,
+              ]}
+            >
+              Off
+            </Text>
+            {!showSubtitles && (
+              <Ionicons name="checkmark-circle" size={24} color="#007AFF" />
+            )}
+          </TouchableOpacity>
+
+          {subtitleTracks.map((track) => {
+            const isActive = showSubtitles && selectedSubtitleTrackId === track.id;
+            return (
+              <TouchableOpacity
+                key={track.id}
+                style={[styles.qualityItem, isActive && styles.qualityItemActive]}
+                onPress={() => {
+                  onShowSubtitlesChange(true);
+                  onSubtitleTrackChange?.(track.id);
+                  setTimeout(handleBackToMenu, 200);
+                }}
+              >
+                <Text
+                  style={[styles.qualityText, isActive && styles.qualityTextActive]}
+                >
+                  {track.label}
+                </Text>
+                {isActive && (
+                  <Ionicons name="checkmark-circle" size={24} color="#007AFF" />
+                )}
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      </ScrollView>
+    </>
+  );
+
   return (
     <Modal
       visible={visible}
@@ -257,6 +354,7 @@ export default function SettingsDialog({
           {!activeMenu && renderMainMenu()}
           {activeMenu === 'playbackSpeed' && renderPlaybackSpeedSheet()}
           {activeMenu === 'quality' && renderQualitySheet()}
+          {activeMenu === 'subtitles' && renderSubtitlesSheet()}
           {activeMenu === 'preferences' && renderPreferencesSheet()}
         </Pressable>
       </Pressable>

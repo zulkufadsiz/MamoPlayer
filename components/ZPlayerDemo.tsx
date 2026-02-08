@@ -8,13 +8,44 @@ export const ZPlayerDemo: React.FC = () => {
     uri: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
   };
 
-  // Sample subtitles (adjust timing for your video)
-  const subtitles = [
-    { start: 0, end: 5, text: "Welcome to Big Buck Bunny" },
-    { start: 5, end: 10, text: "A short animated film" },
-    { start: 10, end: 15, text: "Featuring a giant rabbit" },
-    { start: 15, end: 20, text: "And some mischievous rodents" },
-    { start: 20, end: 25, text: "Enjoy the show!" },
+  // Sample subtitle tracks (adjust timing for your video)
+  const subtitleTracks = [
+    {
+      id: 'en',
+      label: 'English',
+      language: 'en',
+      subtitles: [
+        { start: 0, end: 5, text: 'Welcome to Big Buck Bunny' },
+        { start: 5, end: 10, text: 'A short animated film' },
+        { start: 10, end: 15, text: 'Featuring a giant rabbit' },
+        { start: 15, end: 20, text: 'And some mischievous rodents' },
+        { start: 20, end: 25, text: 'Enjoy the show!' },
+      ],
+    },
+    {
+      id: 'tr',
+      label: 'Türkçe',
+      language: 'tr',
+      subtitles: [
+        { start: 0, end: 5, text: 'Big Buck Bunny’ye hoş geldiniz' },
+        { start: 5, end: 10, text: 'Kısa bir animasyon film' },
+        { start: 10, end: 15, text: 'Kocaman bir tavşanla' },
+        { start: 15, end: 20, text: 'Ve yaramaz kemirgenlerle' },
+        { start: 20, end: 25, text: 'İyi seyirler!' },
+      ],
+    },
+    {
+      id: 'es',
+      label: 'Español',
+      language: 'es',
+      subtitles: [
+        { start: 0, end: 5, text: 'Bienvenido a Big Buck Bunny' },
+        { start: 5, end: 10, text: 'Un corto animado' },
+        { start: 10, end: 15, text: 'Con un conejo gigante' },
+        { start: 15, end: 20, text: 'Y unos roedores traviesos' },
+        { start: 20, end: 25, text: '¡Disfruta el show!' },
+      ],
+    },
   ];
 
   const handleSettingsPress = () => {
@@ -39,9 +70,10 @@ export const ZPlayerDemo: React.FC = () => {
           source={videoSource}
           autoPlay={true}
           style={styles.player}
-          subtitles={subtitles}
+          subtitleTracks={subtitleTracks}
+          defaultSubtitleTrackId="en"
           onSettingsPress={handleSettingsPress}
-          playerType="landscape"
+          playerType="simple"
           title="Big Buck Bunny"
           description="A fun animated short film about a giant rabbit and his adventures"
           author="blender_foundation"

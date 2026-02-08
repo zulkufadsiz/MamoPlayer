@@ -20,6 +20,13 @@ interface LandscapeSettingsDialogProps {
   onAutoPlayChange: (enabled: boolean) => void;
   showSubtitles: boolean;
   onShowSubtitlesChange: (enabled: boolean) => void;
+  subtitleTracks?: Array<{
+    id: string;
+    label: string;
+    language?: string;
+  }>;
+  selectedSubtitleTrackId?: string | null;
+  onSubtitleTrackChange?: (trackId: string | null) => void;
 }
 
 export const LandscapeSettingsDialog: React.FC<LandscapeSettingsDialogProps> = ({
@@ -33,11 +40,15 @@ export const LandscapeSettingsDialog: React.FC<LandscapeSettingsDialogProps> = (
   onAutoPlayChange,
   showSubtitles,
   onShowSubtitlesChange,
+  subtitleTracks = [],
+  selectedSubtitleTrackId = null,
+  onSubtitleTrackChange,
 }) => {
-  type SectionKey = 'playback' | 'quality' | 'preferences';
+  type SectionKey = 'playback' | 'quality' | 'subtitles' | 'preferences';
   const playbackSpeeds = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
   const qualities = ['Auto', '4K', '1080p', '720p', '480p', '360p'];
   const [openSection, setOpenSection] = React.useState<SectionKey | null>('playback');
+  const hasSubtitleTracks = subtitleTracks.length > 0;
 
   const toggleSection = (section: SectionKey) => {
     setOpenSection((current) => (current === section ? null : section));
@@ -224,6 +235,83 @@ export const LandscapeSettingsDialog: React.FC<LandscapeSettingsDialogProps> = (
                 </View>
               )}
             </View>
+
+            {/* Subtitles Section */}
+            {hasSubtitleTracks && (
+              <View style={styles.section}>
+                <TouchableOpacity
+                  style={styles.sectionHeader}
+                  onPress={() => toggleSection('subtitles')}
+                >
+                  <View style={styles.sectionHeaderLeft}>
+                    <Ionicons name="chatbox-ellipses-outline" size={24} color="#fff" />
+                    <Text style={styles.sectionTitle}>Subtitles</Text>
+                  </View>
+                  <Ionicons
+                    name={openSection === 'subtitles' ? 'chevron-down' : 'chevron-forward'}
+                    size={22}
+                    color="#fff"
+                  />
+                </TouchableOpacity>
+                {openSection === 'subtitles' && (
+                  <View style={styles.optionsContainer}>
+                    <View style={styles.optionsList}>
+                      <TouchableOpacity
+                        style={[
+                          styles.qualityOption,
+                          !showSubtitles && styles.qualityOptionActive,
+                        ]}
+                        onPress={() => {
+                          onShowSubtitlesChange(false);
+                          onSubtitleTrackChange?.(null);
+                        }}
+                      >
+                        <Text
+                          style={[
+                            styles.qualityText,
+                            !showSubtitles && styles.qualityTextActive,
+                          ]}
+                        >
+                          Off
+                        </Text>
+                        {!showSubtitles && (
+                          <Ionicons name="checkmark" size={20} color="#E50914" />
+                        )}
+                      </TouchableOpacity>
+
+                      {subtitleTracks.map((track) => {
+                        const isActive = showSubtitles && selectedSubtitleTrackId === track.id;
+                        return (
+                          <TouchableOpacity
+                            key={track.id}
+                            style={[
+                              styles.qualityOption,
+                              isActive && styles.qualityOptionActive,
+                            ]}
+                            onPress={() => {
+                              onShowSubtitlesChange(true);
+                              onSubtitleTrackChange?.(track.id);
+                            }}
+                          >
+                            <Text
+                              style={[
+                                styles.qualityText,
+                                isActive && styles.qualityTextActive,
+                              ]}
+                            >
+                              {track.label}
+                            </Text>
+                            {isActive && (
+                              <Ionicons name="checkmark" size={20} color="#E50914" />
+                            )}
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  </View>
+                )}
+              </View>
+            )}
           </ScrollView>
         </View>
       </View>
