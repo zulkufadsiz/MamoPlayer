@@ -20,6 +20,13 @@ interface LandscapeSettingsDialogProps {
   onAutoPlayChange: (enabled: boolean) => void;
   showSubtitles: boolean;
   onShowSubtitlesChange: (enabled: boolean) => void;
+  audioTracks?: Array<{
+    id: string;
+    label: string;
+    language?: string;
+  }>;
+  selectedAudioTrackId?: string | null;
+  onAudioTrackChange?: (trackId: string | null) => void;
   subtitleTracks?: Array<{
     id: string;
     label: string;
@@ -40,14 +47,18 @@ export const LandscapeSettingsDialog: React.FC<LandscapeSettingsDialogProps> = (
   onAutoPlayChange,
   showSubtitles,
   onShowSubtitlesChange,
+  audioTracks = [],
+  selectedAudioTrackId = null,
+  onAudioTrackChange,
   subtitleTracks = [],
   selectedSubtitleTrackId = null,
   onSubtitleTrackChange,
 }) => {
-  type SectionKey = 'playback' | 'quality' | 'subtitles' | 'preferences';
+  type SectionKey = 'playback' | 'quality' | 'audio' | 'subtitles' | 'preferences';
   const playbackSpeeds = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
   const qualities = ['Auto', '4K', '1080p', '720p', '480p', '360p'];
   const [openSection, setOpenSection] = React.useState<SectionKey | null>('playback');
+  const hasAudioTracks = audioTracks.length > 0;
   const hasSubtitleTracks = subtitleTracks.length > 0;
 
   const toggleSection = (section: SectionKey) => {
@@ -235,6 +246,57 @@ export const LandscapeSettingsDialog: React.FC<LandscapeSettingsDialogProps> = (
                 </View>
               )}
             </View>
+
+            {/* Audio Section */}
+            {hasAudioTracks && (
+              <View style={styles.section}>
+                <TouchableOpacity
+                  style={styles.sectionHeader}
+                  onPress={() => toggleSection('audio')}
+                >
+                  <View style={styles.sectionHeaderLeft}>
+                    <Ionicons name="volume-medium-outline" size={24} color="#fff" />
+                    <Text style={styles.sectionTitle}>Audio</Text>
+                  </View>
+                  <Ionicons
+                    name={openSection === 'audio' ? 'chevron-down' : 'chevron-forward'}
+                    size={22}
+                    color="#fff"
+                  />
+                </TouchableOpacity>
+                {openSection === 'audio' && (
+                  <View style={styles.optionsContainer}>
+                    <View style={styles.optionsList}>
+                      {audioTracks.map((track) => {
+                        const isActive = selectedAudioTrackId === track.id;
+                        return (
+                          <TouchableOpacity
+                            key={track.id}
+                            style={[
+                              styles.qualityOption,
+                              isActive && styles.qualityOptionActive,
+                            ]}
+                            onPress={() => onAudioTrackChange?.(track.id)}
+                          >
+                            <Text
+                              style={[
+                                styles.qualityText,
+                                isActive && styles.qualityTextActive,
+                              ]}
+                            >
+                              {track.label}
+                            </Text>
+                            {isActive && (
+                              <Ionicons name="checkmark" size={20} color="#E50914" />
+                            )}
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  </View>
+                )}
+              </View>
+            )}
 
             {/* Subtitles Section */}
             {hasSubtitleTracks && (

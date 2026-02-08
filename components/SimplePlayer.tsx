@@ -3,9 +3,9 @@ import { useEventListener } from 'expo';
 import { VideoView, useVideoPlayer, type VideoSource } from 'expo-video';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-    StyleSheet,
-    View,
-    useWindowDimensions,
+  StyleSheet,
+  View,
+  useWindowDimensions,
 } from 'react-native';
 import PlaybackControls from './lib/PlaybackControls';
 import SettingsDialog from './lib/SettingsDialog';
@@ -23,8 +23,17 @@ interface SubtitleTrack {
   subtitles: Subtitle[];
 }
 
+interface AudioTrack {
+  id: string;
+  label: string;
+  language?: string;
+}
+
 interface SimplePlayerProps {
   source: VideoSource;
+  videoSourcesByLanguage?: Record<string, VideoSource>;
+  audioTracks?: AudioTrack[];
+  defaultAudioTrackId?: string | null;
   style?: any;
   autoPlay?: boolean;
   startAt?: number;
@@ -41,6 +50,9 @@ interface SimplePlayerProps {
 
 export const SimplePlayer: React.FC<SimplePlayerProps> = ({
   source,
+  videoSourcesByLanguage,
+  audioTracks,
+  defaultAudioTrackId = null,
   autoPlay = false,
   startAt,
   allowsFullscreen = true,
@@ -52,7 +64,65 @@ export const SimplePlayer: React.FC<SimplePlayerProps> = ({
   onSettingsPress,
   style,
 }) => {
-    const player = useVideoPlayer(source, player => {
+  const [selectedSubtitleTrackId, setSelectedSubtitleTrackId] = useState<string | null>(
+    defaultSubtitleTrackId
+  );
+  const [selectedAudioTrackId, setSelectedAudioTrackId] = useState<string | null>(
+    defaultAudioTrackId
+  );
+
+  const resolvedSubtitleTracks: SubtitleTrack[] = useMemo(() => {
+    if (subtitleTracks.length) return subtitleTracks;
+    if (subtitles.length) {
+      return [
+        {
+          id: 'default',
+          label: 'Default',
+          subtitles,
+        },
+      ];
+    }
+    return [];
+  }, [subtitleTracks, subtitles]);
+
+  const resolvedAudioTracks: AudioTrack[] = useMemo(() => {
+    if (audioTracks?.length) return audioTracks;
+    if (!videoSourcesByLanguage) return [];
+    return Object.keys(videoSourcesByLanguage).map((key) => {
+      const subtitleTrack = resolvedSubtitleTracks.find(
+        (track) => track.language === key || track.id === key
+      );
+      return {
+        id: key,
+        label: subtitleTrack?.label ?? key,
+        language: subtitleTrack?.language ?? key,
+      };
+    });
+  }, [audioTracks, resolvedSubtitleTracks, videoSourcesByLanguage]);
+
+  const resolvedSource = useMemo(() => {
+    if (!videoSourcesByLanguage) return source;
+    const audioTrackId = selectedAudioTrackId ?? resolvedAudioTracks[0]?.id;
+    if (audioTrackId && videoSourcesByLanguage[audioTrackId]) {
+      return videoSourcesByLanguage[audioTrackId];
+    }
+    const selectedTrack = resolvedSubtitleTracks.find(
+      (track) => track.id === selectedSubtitleTrackId
+    );
+    const languageKey = selectedTrack?.language ?? selectedSubtitleTrackId;
+    if (languageKey && videoSourcesByLanguage[languageKey]) {
+      return videoSourcesByLanguage[languageKey];
+    }
+    return source;
+  }, [
+    resolvedSubtitleTracks,
+    selectedAudioTrackId,
+    selectedSubtitleTrackId,
+    source,
+    videoSourcesByLanguage,
+  ]);
+
+  const player = useVideoPlayer(resolvedSource, player => {
     player.loop = true;
     player.volume = 0;
   });
@@ -70,7 +140,7 @@ export const SimplePlayer: React.FC<SimplePlayerProps> = ({
     };
 
   useEventListener(player, 'statusChange', ({ status, error }) => {
-    console.log('Player status changed: ', status);
+    console.log('Player status changed: ', status, error ?? '');
     if (status === 'readyToPlay') {
       applyStartAt();
       if (autoPlay) {
@@ -81,7 +151,7 @@ export const SimplePlayer: React.FC<SimplePlayerProps> = ({
   const [isPlaying, setIsPlaying] = useState(autoPlay);
   useEffect(() => {
     hasAppliedStartAt.current = false;
-  }, [source, startAt]);
+  }, [resolvedSource, startAt]);
 
   useEffect(() => {
     if (typeof startAt !== 'number' || Number.isNaN(startAt)) return;
@@ -108,23 +178,6 @@ export const SimplePlayer: React.FC<SimplePlayerProps> = ({
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
   const [quality, setQuality] = useState('Auto');
   const [autoPlayEnabled, setAutoPlayEnabled] = useState(autoPlay);
-  const [selectedSubtitleTrackId, setSelectedSubtitleTrackId] = useState<string | null>(
-    defaultSubtitleTrackId
-  );
-
-  const resolvedSubtitleTracks: SubtitleTrack[] = useMemo(() => {
-    if (subtitleTracks.length) return subtitleTracks;
-    if (subtitles.length) {
-      return [
-        {
-          id: 'default',
-          label: 'Default',
-          subtitles,
-        },
-      ];
-    }
-    return [];
-  }, [subtitleTracks, subtitles]);
 
   useEffect(() => {
     if (resolvedSubtitleTracks.length === 0) {
@@ -142,6 +195,23 @@ export const SimplePlayer: React.FC<SimplePlayerProps> = ({
       setSelectedSubtitleTrackId(resolvedSubtitleTracks[0].id);
     }
   }, [defaultSubtitleTrackId, resolvedSubtitleTracks, selectedSubtitleTrackId]);
+
+  useEffect(() => {
+    if (resolvedAudioTracks.length === 0) {
+      setSelectedAudioTrackId(null);
+      return;
+    }
+
+    if (!selectedAudioTrackId) {
+      setSelectedAudioTrackId(defaultAudioTrackId ?? resolvedAudioTracks[0].id);
+      return;
+    }
+
+    const exists = resolvedAudioTracks.some((track) => track.id === selectedAudioTrackId);
+    if (!exists) {
+      setSelectedAudioTrackId(resolvedAudioTracks[0].id);
+    }
+  }, [defaultAudioTrackId, resolvedAudioTracks, selectedAudioTrackId]);
 
   const activeSubtitleTrack = resolvedSubtitleTracks.find(
     (track) => track.id === selectedSubtitleTrackId
@@ -224,6 +294,9 @@ export const SimplePlayer: React.FC<SimplePlayerProps> = ({
         onAutoPlayChange={setAutoPlayEnabled}
         showSubtitles={showSubtitles}
         onShowSubtitlesChange={setShowSubtitles}
+        audioTracks={resolvedAudioTracks}
+        selectedAudioTrackId={selectedAudioTrackId}
+        onAudioTrackChange={setSelectedAudioTrackId}
         subtitleTracks={resolvedSubtitleTracks}
         selectedSubtitleTrackId={selectedSubtitleTrackId}
         onSubtitleTrackChange={setSelectedSubtitleTrackId}

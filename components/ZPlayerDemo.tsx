@@ -8,6 +8,18 @@ export const ZPlayerDemo: React.FC = () => {
     uri: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
   };
 
+  const videoSourcesByLanguage = {
+    en: {
+      uri: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+    },
+    tr: {
+      uri: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4',
+    },
+    es: {
+      uri: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4',
+    },
+  };
+
   // Sample subtitle tracks (adjust timing for your video)
   const subtitleTracks = [
     {
@@ -68,13 +80,14 @@ export const ZPlayerDemo: React.FC = () => {
     <View style={styles.container}>
         <ZPlayer
           source={videoSource}
+          videoSourcesByLanguage={videoSourcesByLanguage}
           autoPlay={true}
           startAt={12}
           style={styles.player}
           subtitleTracks={subtitleTracks}
           defaultSubtitleTrackId="en"
           onSettingsPress={handleSettingsPress}
-          playerType="simple"
+          playerType="landscape"
           title="Big Buck Bunny"
           description="A fun animated short film about a giant rabbit and his adventures"
           author="blender_foundation"

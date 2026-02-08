@@ -19,6 +19,13 @@ interface SubtitleTrack {
 
 interface ZPlayerProps {
   source: VideoSource;
+  videoSourcesByLanguage?: Record<string, VideoSource>;
+  audioTracks?: Array<{
+    id: string;
+    label: string;
+    language?: string;
+  }>;
+  defaultAudioTrackId?: string | null;
   style?: any;
   autoPlay?: boolean;
   startAt?: number;
