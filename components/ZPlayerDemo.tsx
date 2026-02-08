@@ -90,8 +90,8 @@ export const ZPlayerDemo: React.FC = () => {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
     backgroundColor: '#000',
+    flex: 1,
   },
   player: {
     flex: 1,

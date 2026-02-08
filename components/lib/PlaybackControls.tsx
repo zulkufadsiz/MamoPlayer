@@ -2,11 +2,12 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ScreenOrientation from 'expo-screen-orientation';
 import React, { useEffect, useState } from 'react';
 import {
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  useWindowDimensions,
-  View,
+    Pressable,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    useWindowDimensions,
+    View,
 } from 'react-native';
 import Timeline from './Timeline';
 
@@ -28,6 +29,9 @@ interface PlaybackControlsProps {
   showSubtitles?: boolean;
   onSubtitlesToggle?: () => void;
   onSettingsPress?: () => void;
+  hasSubtitles?: boolean;
+  autoHideControls?: boolean;
+  autoHideDelayMs?: number;
 }
 
 export default function PlaybackControls({
@@ -41,9 +45,13 @@ export default function PlaybackControls({
   showSubtitles = true,
   onSubtitlesToggle,
   onSettingsPress,
+  hasSubtitles,
+  autoHideControls = false,
+  autoHideDelayMs = 3000,
 }: PlaybackControlsProps) {
   const { width, height } = useWindowDimensions();
   const [currentSubtitle, setCurrentSubtitle] = useState<string>('');
+  const [controlsVisible, setControlsVisible] = useState(true);
 
   useEffect(() => {
     return () => {
@@ -73,6 +81,10 @@ export default function PlaybackControls({
     onPlayPause();
   };
 
+  const showControls = () => {
+    setControlsVisible(true);
+  };
+
   const handleFullscreen = async () => {
     if (!isFullscreen) {
       // Enter fullscreen and lock to landscape
@@ -85,6 +97,24 @@ export default function PlaybackControls({
     }
   };
 
+  useEffect(() => {
+    if (!autoHideControls) {
+      setControlsVisible(true);
+      return;
+    }
+
+    if (!isPlaying) {
+      setControlsVisible(true);
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      setControlsVisible(false);
+    }, autoHideDelayMs);
+
+    return () => clearTimeout(timer);
+  }, [autoHideControls, autoHideDelayMs, isPlaying, controlsVisible]);
+
   return (
     <View
       style={[
@@ -92,7 +122,15 @@ export default function PlaybackControls({
         isFullscreen && styles.fullscreenContainer,
       ]}
     >
-      <View style={styles.controlsOverlay}>
+      {!controlsVisible && autoHideControls && (
+        <Pressable
+          style={styles.tapToShow}
+          onPress={showControls}
+        />
+      )}
+
+      {controlsVisible && (
+        <View style={styles.controlsOverlay}>
         {/* Center Play/Pause Button */}
         <TouchableOpacity
           style={styles.playButton}
@@ -121,7 +159,7 @@ export default function PlaybackControls({
               />
             </TouchableOpacity>
           )}
-          {onSubtitlesToggle && subtitles.length > 0 && (
+          {onSubtitlesToggle && (hasSubtitles ?? subtitles.length > 0) && (
             <TouchableOpacity
               style={styles.fullscreenButton}
               onPress={onSubtitlesToggle}
@@ -147,6 +185,17 @@ export default function PlaybackControls({
           </TouchableOpacity>
         </View>
       </View>
+      )}
+
+      {isFullscreen && controlsVisible && (
+        <TouchableOpacity
+          style={styles.fullscreenExitButton}
+          onPress={handleFullscreen}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="contract" size={24} color="#FFFFFF" />
+        </TouchableOpacity>
+      )}
 
       {/* Subtitle Display */}
       {showSubtitles && currentSubtitle && (
@@ -155,11 +204,16 @@ export default function PlaybackControls({
         </View>
       )}
 
-       <Timeline isPlaying={isPlaying}
-            player={player}
-            onSeek={(time) => {
-              player.setPosition(time);
-            } } duration={0}      />
+       {controlsVisible && (
+         <Timeline
+              isPlaying={isPlaying}
+              player={player}
+              onSeek={(time) => {
+                player.currentTime = time;
+              }}
+              duration={0}
+            />
+       )}
     </View>
   );
 }
@@ -169,8 +223,10 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 0,
     left: 0,
+    right: 0,
+    bottom: 0,
     width: '100%',
-    height: 275,
+    height: '100%',
     zIndex: 10,
   },
   fullscreenContainer: {
@@ -182,6 +238,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: 'rgba(0, 0, 0, 0.2)',
+  },
+  tapToShow: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 5,
   },
   playButton: {
     width: 80,
@@ -197,6 +261,18 @@ const styles = StyleSheet.create({
     right: 12,
     flexDirection: 'row',
     gap: 10,
+  },
+  fullscreenExitButton: {
+    position: 'absolute',
+    top: 12,
+    left: 12,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 50,
   },
   fullscreenButton: {
     width: 50,
