@@ -11,8 +11,8 @@ import PlaybackControls from './lib/PlaybackControls';
 import SettingsDialog from './lib/SettingsDialog';
 
 interface Subtitle {
-  start: number;
-  end: number;
+  start: number | string;
+  end: number | string;
   text: string;
 }
 

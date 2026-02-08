@@ -5,8 +5,8 @@ import SimplePlayer from './SimplePlayer';
 import VerticalPlayer from './VerticalPlayer';
 
 interface Subtitle {
-  start: number;
-  end: number;
+  start: number | string;
+  end: number | string;
   text: string;
 }
 

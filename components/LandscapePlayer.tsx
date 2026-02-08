@@ -18,10 +18,27 @@ import {
 import LandscapeSettingsDialog from './lib/LandscapeSettingsDialog';
 
 interface Subtitle {
-  start: number;
-  end: number;
+  start: number | string;
+  end: number | string;
   text: string;
 }
+
+const parseTimeToSeconds = (value: number | string): number => {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value !== 'string') return 0;
+
+  const parts = value.trim().split(':').map(Number);
+  if (parts.some((part) => Number.isNaN(part))) return 0;
+  if (parts.length === 3) {
+    const [hrs, mins, secs] = parts;
+    return Math.max(0, hrs * 3600 + mins * 60 + secs);
+  }
+  if (parts.length === 2) {
+    const [mins, secs] = parts;
+    return Math.max(0, mins * 60 + secs);
+  }
+  return 0;
+};
 
 interface SubtitleTrack {
   id: string;
@@ -65,9 +82,9 @@ const demoSubtitleTracks: SubtitleTrack[] = [
     label: 'English',
     language: 'en',
     subtitles: [
-      { start: 1, end: 4, text: 'Welcome to the demo video.' },
-      { start: 5, end: 9, text: 'These are English subtitles.' },
-      { start: 10, end: 14, text: 'Switch languages in settings.' },
+      { start: '00:00:01', end: '00:00:04', text: 'Welcome to the demo video.' },
+      { start: '00:00:05', end: '00:00:09', text: 'These are English subtitles.' },
+      { start: '00:00:10', end: '00:00:14', text: 'Switch languages in settings.' },
     ],
   },
   {
@@ -75,9 +92,9 @@ const demoSubtitleTracks: SubtitleTrack[] = [
     label: 'Türkçe',
     language: 'tr',
     subtitles: [
-      { start: 1, end: 4, text: 'Demo videoya hoş geldiniz.' },
-      { start: 5, end: 9, text: 'Bunlar Türkçe altyazılar.' },
-      { start: 10, end: 14, text: 'Ayarlar bölümünden dili değiştirin.' },
+      { start: '00:00:01', end: '00:00:04', text: 'Demo videoya hoş geldiniz.' },
+      { start: '00:00:05', end: '00:00:09', text: 'Bunlar Türkçe altyazılar.' },
+      { start: '00:00:10', end: '00:00:14', text: 'Ayarlar bölümünden dili değiştirin.' },
     ],
   },
   {
@@ -85,9 +102,9 @@ const demoSubtitleTracks: SubtitleTrack[] = [
     label: 'Español',
     language: 'es',
     subtitles: [
-      { start: 1, end: 4, text: 'Bienvenido al video de демонстрация.' },
-      { start: 5, end: 9, text: 'Estos son subtítulos en español.' },
-      { start: 10, end: 14, text: 'Cambia el idioma en ajustes.' },
+      { start: '00:00:01', end: '00:00:04', text: 'Bienvenido al video de демонстрация.' },
+      { start: '00:00:05', end: '00:00:09', text: 'Estos son subtítulos en español.' },
+      { start: '00:00:10', end: '00:00:14', text: 'Cambia el idioma en ajustes.' },
     ],
   },
 ];
@@ -307,7 +324,11 @@ export const LandscapePlayer: React.FC<LandscapePlayerProps> = ({
     }
 
     const subtitle = activeSubtitles.find(
-      (sub) => currentTime >= sub.start && currentTime <= sub.end
+      (sub) => {
+        const start = parseTimeToSeconds(sub.start);
+        const end = parseTimeToSeconds(sub.end);
+        return currentTime >= start && currentTime <= end;
+      }
     );
     setCurrentSubtitle(subtitle ? subtitle.text : '');
   }, [currentTime, activeSubtitles, player]);
