@@ -4,16 +4,16 @@ import Slider from '@react-native-community/slider';
 import { useEventListener } from 'expo';
 import * as ScreenOrientation from 'expo-screen-orientation';
 import { VideoView, useVideoPlayer, type VideoSource } from 'expo-video';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Animated,
-  Pressable,
-  StatusBar,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-  useWindowDimensions,
+    Animated,
+    Pressable,
+    StatusBar,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+    useWindowDimensions,
 } from 'react-native';
 import LandscapeSettingsDialog from './lib/LandscapeSettingsDialog';
 
@@ -34,6 +34,7 @@ interface LandscapePlayerProps {
   source: VideoSource;
   style?: any;
   autoPlay?: boolean;
+  startAt?: number;
   nativeControls?: boolean;
   contentFit?: 'contain' | 'cover' | 'fill';
   allowsFullscreen?: boolean;
@@ -48,9 +49,6 @@ interface LandscapePlayerProps {
   season?: string;
   onBack?: () => void;
 }
-
-const videoSource =
-  'http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4';
 
 const demoSubtitleTracks: SubtitleTrack[] = [
   {
@@ -88,6 +86,7 @@ const demoSubtitleTracks: SubtitleTrack[] = [
 export const LandscapePlayer: React.FC<LandscapePlayerProps> = ({
   source,
   autoPlay = true,
+  startAt,
   subtitles = [],
   subtitleTracks = demoSubtitleTracks,
   defaultSubtitleTrackId = null,
@@ -97,16 +96,30 @@ export const LandscapePlayer: React.FC<LandscapePlayerProps> = ({
   season,
   onBack,
 }) => {
-  const player = useVideoPlayer(videoSource, (player) => {
+  const player = useVideoPlayer(source, (player) => {
     player.loop = false;
     player.volume = 1;
   });
   const { width, height } = useWindowDimensions();
+  const hasAppliedStartAt = useRef(false);
+
+  const applyStartAt = () => {
+    if (hasAppliedStartAt.current) return false;
+    if (typeof startAt !== 'number' || Number.isNaN(startAt)) return false;
+    const duration = player.duration ?? 0;
+    const clampedTime = duration > 0 ? Math.min(duration, startAt) : startAt;
+    player.currentTime = Math.max(0, clampedTime);
+    hasAppliedStartAt.current = true;
+    return true;
+  };
 
   useEventListener(player, 'statusChange', ({ status, error }) => {
     console.log('Player status changed: ', status);
-    if (status === 'readyToPlay' && autoPlay) {
-      player.play();
+    if (status === 'readyToPlay') {
+      applyStartAt();
+      if (autoPlay) {
+        player.play();
+      }
     }
   });
 
@@ -127,6 +140,30 @@ export const LandscapePlayer: React.FC<LandscapePlayerProps> = ({
   const [selectedSubtitleTrackId, setSelectedSubtitleTrackId] = useState<string | null>(
     defaultSubtitleTrackId
   );
+
+  useEffect(() => {
+    hasAppliedStartAt.current = false;
+  }, [source, startAt]);
+
+  useEffect(() => {
+    if (typeof startAt !== 'number' || Number.isNaN(startAt)) return;
+
+    const interval = setInterval(() => {
+      if (hasAppliedStartAt.current) {
+        clearInterval(interval);
+        return;
+      }
+      if ((player.duration ?? 0) > 0) {
+        applyStartAt();
+        if (autoPlay) {
+          player.play();
+        }
+        clearInterval(interval);
+      }
+    }, 100);
+
+    return () => clearInterval(interval);
+  }, [autoPlay, player, startAt]);
 
   const resolvedSubtitleTracks: SubtitleTrack[] = useMemo(() => {
     if (subtitleTracks.length) return subtitleTracks;

@@ -69,6 +69,7 @@ export const ZPlayerDemo: React.FC = () => {
         <ZPlayer
           source={videoSource}
           autoPlay={true}
+          startAt={12}
           style={styles.player}
           subtitleTracks={subtitleTracks}
           defaultSubtitleTrackId="en"

@@ -2,7 +2,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useEventListener } from 'expo';
 import { VideoView, useVideoPlayer, type VideoSource } from 'expo-video';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
     Animated,
     Pressable,
@@ -33,6 +33,7 @@ interface VerticalPlayerProps {
   source: VideoSource;
   style?: any;
   autoPlay?: boolean;
+  startAt?: number;
   contentFit?: 'contain' | 'cover' | 'fill';
   onPlayingChange?: (isPlaying: boolean) => void;
   subtitles?: Subtitle[];
@@ -52,12 +53,10 @@ interface VerticalPlayerProps {
   onSwipeDown?: () => void;
 }
 
-const videoSource =
-  'http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4';
-
 export const VerticalPlayer: React.FC<VerticalPlayerProps> = ({ 
   source, 
   autoPlay = true,
+  startAt,
   subtitles = [],
   subtitleTracks = [],
   defaultSubtitleTrackId = null,
@@ -74,16 +73,30 @@ export const VerticalPlayer: React.FC<VerticalPlayerProps> = ({
   onSwipeUp,
   onSwipeDown,
 }) => {
-  const player = useVideoPlayer(videoSource, player => {
+  const player = useVideoPlayer(source, player => {
     player.loop = true;
     player.volume = 1;
   });
   const { width, height } = useWindowDimensions();
+  const hasAppliedStartAt = useRef(false);
+
+  const applyStartAt = () => {
+    if (hasAppliedStartAt.current) return false;
+    if (typeof startAt !== 'number' || Number.isNaN(startAt)) return false;
+    const duration = player.duration ?? 0;
+    const clampedTime = duration > 0 ? Math.min(duration, startAt) : startAt;
+    player.currentTime = Math.max(0, clampedTime);
+    hasAppliedStartAt.current = true;
+    return true;
+  };
 
   useEventListener(player, 'statusChange', ({ status, error }) => {
     console.log('Player status changed: ', status);
-    if (status === 'readyToPlay' && autoPlay) {
-      player.play();
+    if (status === 'readyToPlay') {
+      applyStartAt();
+      if (autoPlay) {
+        player.play();
+      }
     }
   });
 
@@ -130,6 +143,30 @@ export const VerticalPlayer: React.FC<VerticalPlayerProps> = ({
   const [selectedSubtitleTrackId, setSelectedSubtitleTrackId] = useState<string | null>(
     defaultSubtitleTrackId
   );
+
+  useEffect(() => {
+    hasAppliedStartAt.current = false;
+  }, [source, startAt]);
+
+  useEffect(() => {
+    if (typeof startAt !== 'number' || Number.isNaN(startAt)) return;
+
+    const interval = setInterval(() => {
+      if (hasAppliedStartAt.current) {
+        clearInterval(interval);
+        return;
+      }
+      if ((player.duration ?? 0) > 0) {
+        applyStartAt();
+        if (autoPlay) {
+          player.play();
+        }
+        clearInterval(interval);
+      }
+    }, 100);
+
+    return () => clearInterval(interval);
+  }, [autoPlay, player, startAt]);
 
   const resolvedSubtitleTracks: SubtitleTrack[] = useMemo(() => {
     if (subtitleTracks.length) return subtitleTracks;
