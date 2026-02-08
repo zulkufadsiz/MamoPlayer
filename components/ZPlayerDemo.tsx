@@ -41,7 +41,7 @@ export const ZPlayerDemo: React.FC = () => {
           style={styles.player}
           subtitles={subtitles}
           onSettingsPress={handleSettingsPress}
-          playerType="vertical"
+          playerType="landscape"
           title="Big Buck Bunny"
           description="A fun animated short film about a giant rabbit and his adventures"
           author="blender_foundation"

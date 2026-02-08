@@ -34,6 +34,10 @@ interface ZPlayerProps {
   onShare?: () => void;
   onSwipeUp?: () => void;
   onSwipeDown?: () => void;
+  // LandscapePlayer specific props
+  episode?: string;
+  season?: string;
+  onBack?: () => void;
 }
 
 export const ZPlayer: React.FC<ZPlayerProps> = ({ 
