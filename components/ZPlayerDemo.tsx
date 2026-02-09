@@ -5,18 +5,18 @@ import ZPlayer from './ZPlayer';
 export const ZPlayerDemo: React.FC = () => {
   // Example video URL (replace with your own)
   const videoSource = {
-    uri: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+    uri: 'https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
   };
 
   const videoSourcesByLanguage = {
     en: {
-      uri: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+      uri: 'https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
     },
     tr: {
-      uri: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4',
+      uri: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4',
     },
     es: {
-      uri: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4',
+      uri: 'https://storage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4',
     },
   };
 
