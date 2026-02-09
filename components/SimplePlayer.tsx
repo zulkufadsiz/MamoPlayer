@@ -4,9 +4,12 @@ import { VideoView, useVideoPlayer, type VideoSource } from 'expo-video';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   StyleSheet,
+  Text,
+  TouchableOpacity,
   View,
   useWindowDimensions,
 } from 'react-native';
+import LoadingIndicator from './lib/LoadingIndicator';
 import PlaybackControls from './lib/PlaybackControls';
 import SettingsDialog from './lib/SettingsDialog';
 
@@ -139,8 +142,20 @@ export const SimplePlayer: React.FC<SimplePlayerProps> = ({
       return true;
     };
 
+  const [playerStatus, setPlayerStatus] = useState<string>('idle');
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
   useEventListener(player, 'statusChange', ({ status, error }) => {
     console.log('Player status changed: ', status, error ?? '');
+    setPlayerStatus(status);
+    if (error) {
+      const message = typeof error === 'string' ? error : error.message;
+      setErrorMessage(message || 'Playback error');
+      return;
+    }
+    if (status !== 'error') {
+      setErrorMessage(null);
+    }
     if (status === 'readyToPlay') {
       applyStartAt();
       if (autoPlay) {
@@ -178,6 +193,8 @@ export const SimplePlayer: React.FC<SimplePlayerProps> = ({
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
   const [quality, setQuality] = useState('Auto');
   const [autoPlayEnabled, setAutoPlayEnabled] = useState(autoPlay);
+  const isBuffering = playerStatus === 'loading' || playerStatus === 'buffering';
+  const isError = !!errorMessage || playerStatus === 'error';
 
   useEffect(() => {
     if (resolvedSubtitleTracks.length === 0) {
@@ -241,6 +258,12 @@ export const SimplePlayer: React.FC<SimplePlayerProps> = ({
       onSettingsPress();
     }
   };
+
+  const handleRetry = () => {
+    setErrorMessage(null);
+    setPlayerStatus('loading');
+    player.play();
+  };
   
   return (
     <View
@@ -263,6 +286,26 @@ export const SimplePlayer: React.FC<SimplePlayerProps> = ({
         allowsPictureInPicture={allowsPictureInPicture}
         contentFit={contentFit}
       />
+
+      {(isBuffering || isError) && (
+        <View style={styles.overlay} pointerEvents={isError ? 'auto' : 'none'}>
+          {isBuffering && !isError && (
+            <View style={styles.overlayCard}>
+              <LoadingIndicator size={52} variant="dots" color="#4CFDFF" />
+              <Text style={styles.overlayText}>Loading...</Text>
+            </View>
+          )}
+          {isError && (
+            <View style={styles.overlayCard}>
+              <Text style={styles.overlayTitle}>Playback error</Text>
+              <Text style={styles.overlayText}>{errorMessage ?? 'Unable to play video'}</Text>
+              <TouchableOpacity style={styles.retryButton} onPress={handleRetry}>
+                <Text style={styles.retryButtonText}>Retry</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+      )}
 
       <PlaybackControls
         isPlaying={isPlaying}
@@ -310,6 +353,50 @@ const styles = StyleSheet.create({
     width: '100%',
     backgroundColor: '#000',
     position: 'relative',
+  },
+  overlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+  },
+  overlayCard: {
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderRadius: 12,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    alignItems: 'center',
+    maxWidth: '80%',
+  },
+  overlayTitle: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: 6,
+    textAlign: 'center',
+  },
+  overlayText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    textAlign: 'center',
+    marginTop: 8,
+  },
+  retryButton: {
+    marginTop: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
+  },
+  retryButtonText: {
+    color: '#000000',
+    fontWeight: '700',
+    fontSize: 14,
   },
   fullscreenContainer: {
     position: 'absolute',
