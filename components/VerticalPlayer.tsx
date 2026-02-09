@@ -85,6 +85,8 @@ interface VerticalPlayerProps {
   subtitleTracks?: SubtitleTrack[];
   defaultSubtitleTrackId?: string | null;
   onSettingsPress?: () => void;
+  skipSeconds?: number;
+  showSkipButtons?: boolean;
   title?: string;
   description?: string;
   author?: string;
@@ -109,6 +111,8 @@ export const VerticalPlayer: React.FC<VerticalPlayerProps> = ({
   subtitleTracks = [],
   defaultSubtitleTrackId = null,
   onSettingsPress,
+  skipSeconds = 10,
+  showSkipButtons = true,
   title,
   description,
   author = 'User',
@@ -389,6 +393,15 @@ export const VerticalPlayer: React.FC<VerticalPlayerProps> = ({
     }
   };
 
+  const handleSkip = (seconds: number) => {
+    const duration = player.duration ?? 0;
+    const currentTime = player.currentTime ?? 0;
+    const nextTime = duration > 0
+      ? Math.max(0, Math.min(duration, currentTime + seconds))
+      : Math.max(0, currentTime + seconds);
+    player.currentTime = nextTime;
+  };
+
   const handleSettingsPress = () => {
     setShowSettings(true);
     if (onSettingsPress) {
@@ -495,11 +508,23 @@ export const VerticalPlayer: React.FC<VerticalPlayerProps> = ({
         {/* Center Play/Pause Icon */}
         {showControls && (
           <Animated.View style={[styles.centerPlayPause, { opacity: controlsOpacity }]}>
+            {showSkipButtons && (
+              <TouchableOpacity style={styles.skipButton} onPress={() => handleSkip(-skipSeconds)}>
+                <Ionicons name="play-back" size={32} color="#FFFFFF" />
+                <Text style={styles.skipText}>{skipSeconds}</Text>
+              </TouchableOpacity>
+            )}
             <Ionicons
               name={isPlaying ? 'pause' : 'play'}
               size={80}
               color="rgba(255, 255, 255, 0.9)"
             />
+            {showSkipButtons && (
+              <TouchableOpacity style={styles.skipButton} onPress={() => handleSkip(skipSeconds)}>
+                <Ionicons name="play-forward" size={32} color="#FFFFFF" />
+                <Text style={styles.skipText}>{skipSeconds}</Text>
+              </TouchableOpacity>
+            )}
           </Animated.View>
         )}
       </Pressable>
@@ -638,6 +663,23 @@ const styles = StyleSheet.create({
   centerPlayPause: {
     justifyContent: 'center',
     alignItems: 'center',
+    flexDirection: 'row',
+    gap: 24,
+  },
+  skipButton: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: 'rgba(0, 0, 0, 0.55)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  skipText: {
+    position: 'absolute',
+    bottom: 10,
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
   rightActions: {
     position: 'absolute',

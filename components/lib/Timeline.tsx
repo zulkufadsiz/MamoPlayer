@@ -12,20 +12,21 @@ interface TimelineProps {
 export default function Timeline({
   isPlaying,
   player,
+  duration,
   onSeek,
 }: TimelineProps) {
   const [isSeeking, setIsSeeking] = useState(false);
   const [seekPosition, setSeekPosition] = useState(0);
 
   useEffect(() => {
-    if (isPlaying) {
-      const interval = setInterval(() => {
-        setSeekPosition(player.currentTime);
-      }, 500); // Update every 500ms for smooth updates
-      
-      return () => clearInterval(interval);
-    }
-  }, [isPlaying]);
+    const interval = setInterval(() => {
+      if (isSeeking) return;
+      const currentTime = player?.currentTime ?? 0;
+      setSeekPosition(Number.isFinite(currentTime) ? currentTime : 0);
+    }, isPlaying ? 250 : 500);
+
+    return () => clearInterval(interval);
+  }, [isPlaying, isSeeking, player]);
 
   const formatTime = (seconds: number) => {
     if (isNaN(seconds) || !isFinite(seconds)) {
@@ -63,7 +64,7 @@ export default function Timeline({
           style={styles.slider}
           value={seekPosition}
           minimumValue={0}
-          maximumValue={player.duration || 1}
+          maximumValue={duration > 0 ? duration : player?.duration || 1}
           onSlidingStart={handleSlidingStart}
           onSlidingComplete={handleSlidingComplete}
           onValueChange={handleValueChange}
@@ -71,7 +72,7 @@ export default function Timeline({
           maximumTrackTintColor="#404040"
           thumbTintColor="#FFFFFF"
         />
-        <Text style={styles.timeText}>{formatTime(player.duration)}</Text>
+        <Text style={styles.timeText}>{formatTime(duration > 0 ? duration : player?.duration || 0)}</Text>
       </View>
     </View>
   );
