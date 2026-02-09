@@ -40,6 +40,9 @@ interface PlaybackControlsProps {
   duration: number;
   onPlayPause: () => void;
   onSeek: (time: number) => void;
+  onSkipBackward?: () => void;
+  onSkipForward?: () => void;
+  skipSeconds?: number;
   isFullscreen: boolean;
   onFullscreenChange: (isFullscreen: boolean) => void;
   subtitles?: Subtitle[];
@@ -56,6 +59,9 @@ export default function PlaybackControls({
   player,
   onPlayPause,
   onSeek,
+  onSkipBackward,
+  onSkipForward,
+  skipSeconds = 10,
   isFullscreen,
   onFullscreenChange,
   subtitles = [],
@@ -153,17 +159,39 @@ export default function PlaybackControls({
       {controlsVisible && (
         <View style={styles.controlsOverlay}>
         {/* Center Play/Pause Button */}
-        <TouchableOpacity
-          style={styles.playButton}
-          onPress={handlePlayPause}
-          activeOpacity={0.7}
-        >
-          <Ionicons
-            name={isPlaying ? 'pause' : 'play'}
-            size={48}
-            color="#FFFFFF"
-          />
-        </TouchableOpacity>
+        <View style={styles.centerControls}>
+          {onSkipBackward && (
+            <TouchableOpacity
+              style={styles.skipButton}
+              onPress={onSkipBackward}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="play-back" size={28} color="#FFFFFF" />
+              <Text style={styles.skipText}>{skipSeconds}</Text>
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity
+            style={styles.playButton}
+            onPress={handlePlayPause}
+            activeOpacity={0.7}
+          >
+            <Ionicons
+              name={isPlaying ? 'pause' : 'play'}
+              size={48}
+              color="#FFFFFF"
+            />
+          </TouchableOpacity>
+          {onSkipForward && (
+            <TouchableOpacity
+              style={styles.skipButton}
+              onPress={onSkipForward}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="play-forward" size={28} color="#FFFFFF" />
+              <Text style={styles.skipText}>{skipSeconds}</Text>
+            </TouchableOpacity>
+          )}
+        </View>
 
         {/* Bottom Controls */}
         <View style={styles.bottomControls}>
@@ -229,10 +257,8 @@ export default function PlaybackControls({
          <Timeline
               isPlaying={isPlaying}
               player={player}
-              onSeek={(time) => {
-                player.currentTime = time;
-              }}
-              duration={0}
+              duration={player?.duration ?? 0}
+              onSeek={onSeek}
             />
        )}
     </View>
@@ -260,6 +286,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: 'rgba(0, 0, 0, 0.2)',
   },
+  centerControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 24,
+  },
   tapToShow: {
     position: 'absolute',
     top: 0,
@@ -275,6 +306,22 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.6)',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  skipButton: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  skipText: {
+    position: 'absolute',
+    bottom: 10,
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
   bottomControls: {
     position: 'absolute',

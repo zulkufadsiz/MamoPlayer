@@ -38,6 +38,8 @@ interface ZPlayerProps {
   subtitleTracks?: SubtitleTrack[];
   defaultSubtitleTrackId?: string | null;
   onSettingsPress?: () => void;
+  skipSeconds?: number;
+  showSkipButtons?: boolean;
   playerType?: 'simple' | 'vertical' | 'landscape';
   // VerticalPlayer specific props
   title?: string;

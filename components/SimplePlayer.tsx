@@ -49,6 +49,8 @@ interface SimplePlayerProps {
   subtitleTracks?: SubtitleTrack[];
   defaultSubtitleTrackId?: string | null;
   onSettingsPress?: () => void;
+  skipSeconds?: number;
+  showSkipButtons?: boolean;
 }
 
 export const SimplePlayer: React.FC<SimplePlayerProps> = ({
@@ -65,6 +67,8 @@ export const SimplePlayer: React.FC<SimplePlayerProps> = ({
   subtitleTracks = [],
   defaultSubtitleTrackId = null,
   onSettingsPress,
+  skipSeconds = 10,
+  showSkipButtons = true,
   style,
 }) => {
   const [selectedSubtitleTrackId, setSelectedSubtitleTrackId] = useState<string | null>(
@@ -252,6 +256,15 @@ export const SimplePlayer: React.FC<SimplePlayerProps> = ({
     }
   };
 
+  const handleSkip = (seconds: number) => {
+    const duration = player.duration ?? 0;
+    const currentTime = player.currentTime ?? 0;
+    const nextTime = duration > 0
+      ? Math.max(0, Math.min(duration, currentTime + seconds))
+      : Math.max(0, currentTime + seconds);
+    player.currentTime = nextTime;
+  };
+
   const handleSettingsPress = () => {
     setShowSettings(true);
     if (onSettingsPress) {
@@ -315,6 +328,9 @@ export const SimplePlayer: React.FC<SimplePlayerProps> = ({
         onSeek={(time) => {
           player.currentTime = time;
         }}
+        onSkipBackward={showSkipButtons ? () => handleSkip(-skipSeconds) : undefined}
+        onSkipForward={showSkipButtons ? () => handleSkip(skipSeconds) : undefined}
+        skipSeconds={skipSeconds}
         isFullscreen={isFullscreen}
         onFullscreenChange={setIsFullscreen}
         subtitles={activeSubtitles}

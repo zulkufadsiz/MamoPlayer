@@ -71,6 +71,8 @@ interface LandscapePlayerProps {
   subtitleTracks?: SubtitleTrack[];
   defaultSubtitleTrackId?: string | null;
   onSettingsPress?: () => void;
+  skipSeconds?: number;
+  showSkipButtons?: boolean;
   title?: string;
   episode?: string;
   season?: string;
@@ -121,6 +123,8 @@ export const LandscapePlayer: React.FC<LandscapePlayerProps> = ({
   subtitleTracks = demoSubtitleTracks,
   defaultSubtitleTrackId = null,
   onSettingsPress,
+  skipSeconds = 10,
+  showSkipButtons = true,
   title = 'Video Title',
   episode,
   season,
@@ -507,13 +511,15 @@ export const LandscapePlayer: React.FC<LandscapePlayerProps> = ({
 
             {/* Center Play/Pause Button */}
             <View style={styles.centerControls}>
-              <TouchableOpacity
-                style={styles.skipButton}
-                onPress={() => handleSkip(-10)}
-              >
-                <Ionicons name="play-back" size={36} color="#fff" />
-                <Text style={styles.skipText}>10</Text>
-              </TouchableOpacity>
+              {showSkipButtons && (
+                <TouchableOpacity
+                  style={styles.skipButton}
+                  onPress={() => handleSkip(-skipSeconds)}
+                >
+                  <Ionicons name="play-back" size={36} color="#fff" />
+                  <Text style={styles.skipText}>{skipSeconds}</Text>
+                </TouchableOpacity>
+              )}
 
               <TouchableOpacity
                 style={styles.playPauseButton}
@@ -526,13 +532,15 @@ export const LandscapePlayer: React.FC<LandscapePlayerProps> = ({
                 />
               </TouchableOpacity>
 
-              <TouchableOpacity
-                style={styles.skipButton}
-                onPress={() => handleSkip(10)}
-              >
-                <Ionicons name="play-forward" size={36} color="#fff" />
-                <Text style={styles.skipText}>10</Text>
-              </TouchableOpacity>
+              {showSkipButtons && (
+                <TouchableOpacity
+                  style={styles.skipButton}
+                  onPress={() => handleSkip(skipSeconds)}
+                >
+                  <Ionicons name="play-forward" size={36} color="#fff" />
+                  <Text style={styles.skipText}>{skipSeconds}</Text>
+                </TouchableOpacity>
+              )}
             </View>
 
             {/* Bottom Bar */}
