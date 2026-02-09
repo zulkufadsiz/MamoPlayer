@@ -28,17 +28,35 @@ const parseTimeToSeconds = (value: number | string): number => {
   if (typeof value === 'number' && Number.isFinite(value)) return value;
   if (typeof value !== 'string') return 0;
 
-  const parts = value.trim().split(':').map(Number);
-  if (parts.some((part) => Number.isNaN(part))) return 0;
+  const normalized = value.trim().replace(',', '.');
+  if (!normalized) return 0;
+
+  const parts = normalized.split(':');
+  if (parts.length > 3) return 0;
+
+  const toNumber = (input: string) => Number.parseFloat(input);
+  const parsePart = (input: string) => {
+    const parsed = toNumber(input);
+    return Number.isFinite(parsed) ? parsed : NaN;
+  };
+
   if (parts.length === 3) {
-    const [hrs, mins, secs] = parts;
+    const hrs = parsePart(parts[0]);
+    const mins = parsePart(parts[1]);
+    const secs = parsePart(parts[2]);
+    if ([hrs, mins, secs].some((part) => Number.isNaN(part))) return 0;
     return Math.max(0, hrs * 3600 + mins * 60 + secs);
   }
   if (parts.length === 2) {
-    const [mins, secs] = parts;
+    const mins = parsePart(parts[0]);
+    const secs = parsePart(parts[1]);
+    if ([mins, secs].some((part) => Number.isNaN(part))) return 0;
     return Math.max(0, mins * 60 + secs);
   }
-  return 0;
+
+  const secondsOnly = parsePart(parts[0]);
+  if (Number.isNaN(secondsOnly)) return 0;
+  return Math.max(0, secondsOnly);
 };
 
 interface SubtitleTrack {
