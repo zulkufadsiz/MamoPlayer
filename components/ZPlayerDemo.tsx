@@ -108,7 +108,7 @@ export const ZPlayerDemo: React.FC = () => {
           subtitleTracks={subtitleTracks}
           defaultSubtitleTrackId="en"
           onSettingsPress={handleSettingsPress}
-          playerType="landscape"
+          playerType="simple"
           title="Big Buck Bunny"
           description="A fun animated short film about a giant rabbit and his adventures"
           author="blender_foundation"
@@ -126,7 +126,7 @@ export const ZPlayerDemo: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     backgroundColor: '#000',
-    flex: 1,
+    height: 300,
   },
   player: {
     flex: 1,
