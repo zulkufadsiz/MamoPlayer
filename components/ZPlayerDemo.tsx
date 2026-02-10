@@ -5,18 +5,18 @@ import ZPlayer from './ZPlayer';
 export const ZPlayerDemo: React.FC = () => {
   // Example video URL (replace with your own)
   const videoSource = {
-    uri: 'https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+    uri: 'http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
   };
 
   const videoSourcesByLanguage = {
     en: {
-      uri: 'https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+      uri: 'http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
     },
     tr: {
-      uri: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4',
+      uri: 'http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4',
     },
     es: {
-      uri: 'https://storage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4',
+      uri: 'http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4',
     },
   };
 
@@ -108,7 +108,8 @@ export const ZPlayerDemo: React.FC = () => {
           subtitleTracks={subtitleTracks}
           defaultSubtitleTrackId="en"
           onSettingsPress={handleSettingsPress}
-          playerType="landscape"
+          playerType="landscape"          
+          contentFit="contain" // Options: 'contain' (shows full video, may have bars) | 'cover' (fills screen, may crop) | 'fill' (stretches)          
           title="Big Buck Bunny"
           description="A fun animated short film about a giant rabbit and his adventures"
           author="blender_foundation"
@@ -125,8 +126,10 @@ export const ZPlayerDemo: React.FC = () => {
 
 const styles = StyleSheet.create({
   container: {
+    paddingTop: 80,
     backgroundColor: '#000',
-    height: 300,
+    //height: 300,
+    flex: 1,
   },
   player: {
     flex: 1,

@@ -1,6 +1,7 @@
 
 import { Ionicons } from '@expo/vector-icons';
 import { useEventListener } from 'expo';
+import * as ScreenOrientation from 'expo-screen-orientation';
 import { VideoView, useVideoPlayer, type VideoSource } from 'expo-video';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -13,6 +14,7 @@ import {
     View,
     useWindowDimensions,
 } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import CommentsSheet, { type Comment } from './lib/CommentsSheet';
 import LoadingIndicator from './lib/LoadingIndicator';
 import SettingsDialog from './lib/SettingsDialog';
@@ -125,6 +127,7 @@ export const VerticalPlayer: React.FC<VerticalPlayerProps> = ({
   onSwipeUp,
   onSwipeDown,
 }) => {
+  const insets = useSafeAreaInsets();
   const [selectedSubtitleTrackId, setSelectedSubtitleTrackId] = useState<string | null>(
     defaultSubtitleTrackId
   );
@@ -287,6 +290,22 @@ export const VerticalPlayer: React.FC<VerticalPlayerProps> = ({
 
     return () => clearInterval(interval);
   }, [autoPlay, player, startAt]);
+
+  // Lock screen orientation to portrait
+  useEffect(() => {
+    const lockOrientation = async () => {
+      await ScreenOrientation.lockAsync(
+        ScreenOrientation.OrientationLock.PORTRAIT_UP
+      );
+    };
+
+    lockOrientation();
+
+    // Unlock orientation when component unmounts
+    return () => {
+      ScreenOrientation.unlockAsync();
+    };
+  }, []);
 
   useEffect(() => {
     if (resolvedSubtitleTracks.length === 0) {
@@ -465,7 +484,7 @@ export const VerticalPlayer: React.FC<VerticalPlayerProps> = ({
     return count.toString();
   };
   return (
-    <View style={styles.contentContainer}>
+    <SafeAreaView style={styles.contentContainer} edges={['top', 'bottom']}>
       <StatusBar hidden />
       
       {/* Video Background */}
@@ -530,7 +549,7 @@ export const VerticalPlayer: React.FC<VerticalPlayerProps> = ({
       </Pressable>
 
       {/* Right Side Action Buttons */}
-      <View style={styles.rightActions}>
+      <View style={[styles.rightActions, { bottom: Math.max(140, insets.bottom + 100) }]}>
         {/* Author Avatar */}
         <TouchableOpacity style={styles.avatarContainer}>
           <View style={styles.avatar}>
@@ -570,7 +589,7 @@ export const VerticalPlayer: React.FC<VerticalPlayerProps> = ({
       </View>
 
       {/* Bottom Info Section */}
-      <View style={styles.bottomInfo}>
+      <View style={[styles.bottomInfo, { paddingBottom: Math.max(80, insets.bottom + 60) }]}>
         {/* Author Info */}
         <View style={styles.authorInfo}>
           <Text style={styles.authorName}>@{author}</Text>
@@ -581,7 +600,7 @@ export const VerticalPlayer: React.FC<VerticalPlayerProps> = ({
 
       {/* Subtitle Display */}
       {showSubtitles && currentSubtitle && (
-        <View style={styles.subtitleContainer}>
+        <View style={[styles.subtitleContainer, { bottom: Math.max(180, insets.bottom + 140) }]}>
           <Text style={styles.subtitleText}>{currentSubtitle}</Text>
         </View>
       )}
@@ -613,7 +632,7 @@ export const VerticalPlayer: React.FC<VerticalPlayerProps> = ({
         onLikeComment={handleLikeComment}
         totalComments={comments + commentsList.length}
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -684,7 +703,6 @@ const styles = StyleSheet.create({
   rightActions: {
     position: 'absolute',
     right: 12,
-    bottom: 140,
     alignItems: 'center',
     gap: 24,
     zIndex: 3,
@@ -732,7 +750,6 @@ const styles = StyleSheet.create({
     left: 0,
     right: 100,
     paddingHorizontal: 16,
-    paddingBottom: 80,
     zIndex: 3,
   },
   authorInfo: {
@@ -764,7 +781,6 @@ const styles = StyleSheet.create({
   },
   subtitleContainer: {
     position: 'absolute',
-    bottom: 180,
     left: 16,
     right: 100,
     alignItems: 'center',

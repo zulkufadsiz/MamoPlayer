@@ -15,6 +15,7 @@ import {
     View,
     useWindowDimensions,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import LandscapeSettingsDialog from './lib/LandscapeSettingsDialog';
 import LoadingIndicator from './lib/LoadingIndicator';
 
@@ -143,11 +144,13 @@ export const LandscapePlayer: React.FC<LandscapePlayerProps> = ({
   onSettingsPress,
   skipSeconds = 10,
   showSkipButtons = true,
+  contentFit = 'contain',
   title = 'Video Title',
   episode,
   season,
   onBack,
 }) => {
+  const insets = useSafeAreaInsets();
   const [selectedSubtitleTrackId, setSelectedSubtitleTrackId] = useState<string | null>(
     defaultSubtitleTrackId
   );
@@ -460,7 +463,7 @@ export const LandscapePlayer: React.FC<LandscapePlayerProps> = ({
         style={styles.video}
         player={player}
         nativeControls={false}
-        contentFit="contain"
+        contentFit={contentFit}
       />
 
       {(isBuffering || isError) && (
@@ -490,7 +493,11 @@ export const LandscapePlayer: React.FC<LandscapePlayerProps> = ({
             style={[styles.controlsContainer, { opacity: controlsOpacity }]}
           >
             {/* Top Bar */}
-            <View style={styles.topBar}>
+            <View style={[styles.topBar, { 
+              paddingTop: Math.max(20, insets.top + 8),
+              paddingLeft: Math.max(20, insets.left + 12),
+              paddingRight: Math.max(20, insets.right + 12),
+            }]}>
               <View style={styles.titleContainer}>
                 <Text style={styles.title}>{title}</Text>
                 {(season || episode) && (
@@ -562,7 +569,11 @@ export const LandscapePlayer: React.FC<LandscapePlayerProps> = ({
             </View>
 
             {/* Bottom Bar */}
-            <View style={styles.bottomBar}>
+            <View style={[styles.bottomBar, { 
+              paddingBottom: Math.max(20, insets.bottom + 12),
+              paddingLeft: Math.max(20, insets.left + 12),
+              paddingRight: Math.max(20, insets.right + 12),
+            }]}>
               {/* Timeline */}
               <View style={styles.timelineContainer}>
                 <Text style={styles.timeText}>{formatTime(currentTime)}</Text>
@@ -591,7 +602,11 @@ export const LandscapePlayer: React.FC<LandscapePlayerProps> = ({
 
         {/* Subtitle Display */}
         {showSubtitles && currentSubtitle && (
-          <View style={styles.subtitleContainer}>
+          <View style={[styles.subtitleContainer, {
+            bottom: Math.max(80, insets.bottom + 60),
+            left: Math.max(40, insets.left + 40),
+            right: Math.max(40, insets.right + 40),
+          }]}>
             <Text style={styles.subtitleText}>{currentSubtitle}</Text>
           </View>
         )}
@@ -622,10 +637,7 @@ export const LandscapePlayer: React.FC<LandscapePlayerProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    width: '100%',
-    height: '100%',
     backgroundColor: '#000',
-    position: 'relative',
   },
   video: {
     width: '100%',
@@ -650,8 +662,6 @@ const styles = StyleSheet.create({
   topBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 20,
     paddingBottom: 10,
   },
   titleContainer: {
@@ -706,8 +716,6 @@ const styles = StyleSheet.create({
     bottom: 16,
   },
   bottomBar: {
-    paddingHorizontal: 20,
-    paddingBottom: 20,
   },
   timelineContainer: {
     flexDirection: 'row',
@@ -727,11 +735,7 @@ const styles = StyleSheet.create({
   },
   subtitleContainer: {
     position: 'absolute',
-    bottom: 40,
-    left: 0,
-    right: 0,
     alignItems: 'center',
-    paddingHorizontal: 40,
   },
   overlay: {
     position: 'absolute',

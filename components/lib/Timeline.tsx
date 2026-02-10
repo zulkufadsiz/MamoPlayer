@@ -1,12 +1,14 @@
 import Slider from '@react-native-community/slider';
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface TimelineProps {
   isPlaying: boolean;
   player: any;
   duration: number;
   onSeek: (time: number) => void;
+  isFullscreen?: boolean;
 }
 
 export default function Timeline({
@@ -14,7 +16,9 @@ export default function Timeline({
   player,
   duration,
   onSeek,
+  isFullscreen = false,
 }: TimelineProps) {
+  const insets = useSafeAreaInsets();
   const [isSeeking, setIsSeeking] = useState(false);
   const [seekPosition, setSeekPosition] = useState(0);
 
@@ -56,7 +60,14 @@ export default function Timeline({
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[
+      styles.container,
+      isFullscreen && {
+        paddingLeft: Math.max(12, insets.left + 8),
+        paddingRight: Math.max(12, insets.right + 8),
+        paddingBottom: Math.max(8, insets.bottom + 4),
+      }
+    ]}>
       {/* Timeline */}
       <View style={styles.timelineContainer}>
         <Text style={styles.timeText}>{formatTime(seekPosition)}</Text>
@@ -81,8 +92,8 @@ export default function Timeline({
 const styles = StyleSheet.create({
   container: {
     width: '100%',
-    paddingHorizontal: 0,
-    paddingVertical: 0,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     backgroundColor: 'rgba(0, 0, 0, 0.6)',
     position: 'absolute',
     left: 0,
@@ -93,7 +104,7 @@ const styles = StyleSheet.create({
   timelineContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 2,
+    paddingHorizontal: 4,
   },
   slider: {
     flex: 1,
@@ -102,9 +113,10 @@ const styles = StyleSheet.create({
   },
   timeText: {
     color: '#FFFFFF',
-    fontSize: 12,
+    fontSize: 13,
+    fontWeight: '500',
     fontVariant: ['tabular-nums'],
-    minWidth: 40,
+    minWidth: 65,
     textAlign: 'center',
   },
   controlsContainer: {
