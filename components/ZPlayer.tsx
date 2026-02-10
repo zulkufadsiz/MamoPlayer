@@ -45,6 +45,7 @@ interface ZPlayerProps {
   title?: string;
   description?: string;
   author?: string;
+  artwork?: string;
   likes?: number;
   comments?: number;
   shares?: number;

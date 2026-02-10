@@ -108,7 +108,7 @@ export const ZPlayerDemo: React.FC = () => {
           subtitleTracks={subtitleTracks}
           defaultSubtitleTrackId="en"
           onSettingsPress={handleSettingsPress}
-          playerType="landscape"          
+          playerType="simple"          
           contentFit="contain" // Options: 'contain' (shows full video, may have bars) | 'cover' (fills screen, may crop) | 'fill' (stretches)          
           title="Big Buck Bunny"
           description="A fun animated short film about a giant rabbit and his adventures"
@@ -128,8 +128,8 @@ const styles = StyleSheet.create({
   container: {
     paddingTop: 80,
     backgroundColor: '#000',
-    //height: 300,
-    flex: 1,
+    height: 400,
+    //flex: 1,
   },
   player: {
     flex: 1,
