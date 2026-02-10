@@ -1,7 +1,6 @@
 import ZPlayerDemo from '@/components/ZPlayerDemo';
 import { useNavigation } from 'expo-router';
 import React, { useEffect } from 'react';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function Index2Screen() {
   const navigation = useNavigation();
@@ -21,8 +20,6 @@ export default function Index2Screen() {
   }, [navigation]);
 
   return (
-    <SafeAreaView style={{ flex: 1 }}>
-      <ZPlayerDemo />
-    </SafeAreaView>
+    <ZPlayerDemo />
   );
 }

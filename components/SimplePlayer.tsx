@@ -1,14 +1,17 @@
 
 import { useEventListener } from 'expo';
+import * as ScreenOrientation from 'expo-screen-orientation';
 import { VideoView, useVideoPlayer, type VideoSource } from 'expo-video';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
   useWindowDimensions,
 } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import LoadingIndicator from './lib/LoadingIndicator';
 import PlaybackControls from './lib/PlaybackControls';
 import SettingsDialog from './lib/SettingsDialog';
@@ -71,6 +74,7 @@ export const SimplePlayer: React.FC<SimplePlayerProps> = ({
   showSkipButtons = true,
   style,
 }) => {
+  const insets = useSafeAreaInsets();
   const [selectedSubtitleTrackId, setSelectedSubtitleTrackId] = useState<string | null>(
     defaultSubtitleTrackId
   );
@@ -200,6 +204,30 @@ export const SimplePlayer: React.FC<SimplePlayerProps> = ({
   const isBuffering = playerStatus === 'loading' || playerStatus === 'buffering';
   const isError = !!errorMessage || playerStatus === 'error';
 
+  // Handle orientation when entering/exiting fullscreen
+  useEffect(() => {
+    const handleOrientation = async () => {
+      if (isFullscreen) {
+        // Lock to landscape when fullscreen
+        await ScreenOrientation.lockAsync(
+          ScreenOrientation.OrientationLock.LANDSCAPE
+        );
+      } else {
+        // Unlock orientation when exiting fullscreen
+        await ScreenOrientation.unlockAsync();
+      }
+    };
+
+    handleOrientation();
+
+    // Cleanup: unlock on unmount
+    return () => {
+      if (isFullscreen) {
+        ScreenOrientation.unlockAsync();
+      }
+    };
+  }, [isFullscreen]);
+
   useEffect(() => {
     if (resolvedSubtitleTracks.length === 0) {
       setSelectedSubtitleTrackId(null);
@@ -278,15 +306,20 @@ export const SimplePlayer: React.FC<SimplePlayerProps> = ({
     player.play();
   };
   
+  const ContainerComponent = isFullscreen ? SafeAreaView : View;
+  const containerStyle = [
+    styles.container,
+    style,
+    isFullscreen && styles.fullscreenContainer,
+    isFullscreen && { width, height },
+  ];
+  
   return (
-    <View
-      style={[
-        styles.container,
-        style,
-        isFullscreen && styles.fullscreenContainer,
-        isFullscreen && { width, height },
-      ]}
+    <ContainerComponent
+      style={containerStyle}
+      edges={isFullscreen ? ['left', 'right'] : undefined}
     >
+      {isFullscreen && <StatusBar hidden />}
       <VideoView
         style={[
           styles.video,
@@ -360,7 +393,7 @@ export const SimplePlayer: React.FC<SimplePlayerProps> = ({
         selectedSubtitleTrackId={selectedSubtitleTrackId}
         onSubtitleTrackChange={setSelectedSubtitleTrackId}
       />
-    </View>
+    </ContainerComponent>
   );
 }
 

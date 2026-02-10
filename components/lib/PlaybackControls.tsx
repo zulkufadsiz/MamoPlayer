@@ -2,13 +2,14 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ScreenOrientation from 'expo-screen-orientation';
 import React, { useEffect, useState } from 'react';
 import {
-    Pressable,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    useWindowDimensions,
-    View,
+  Pressable,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  useWindowDimensions,
+  View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Timeline from './Timeline';
 
 interface Subtitle {
@@ -91,6 +92,7 @@ export default function PlaybackControls({
   autoHideDelayMs = 3000,
 }: PlaybackControlsProps) {
   const { width, height } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const [currentSubtitle, setCurrentSubtitle] = useState<string>('');
   const [controlsVisible, setControlsVisible] = useState(true);
 
@@ -164,7 +166,10 @@ export default function PlaybackControls({
     <View
       style={[
         styles.container,
-        isFullscreen && styles.fullscreenContainer,
+        isFullscreen && {
+          left: insets.left,
+          right: insets.right,
+        },
       ]}
     >
       {!controlsVisible && autoHideControls && (
@@ -212,7 +217,13 @@ export default function PlaybackControls({
         </View>
 
         {/* Bottom Controls */}
-        <View style={styles.bottomControls}>
+        <View style={[
+          styles.bottomControls,
+          isFullscreen && {
+            top: Math.max(12, insets.top + 8),
+            right: Math.max(12, insets.right + 8),
+          }
+        ]}>
           {onSettingsPress && (
             <TouchableOpacity
               style={styles.fullscreenButton}
@@ -254,19 +265,16 @@ export default function PlaybackControls({
       </View>
       )}
 
-      {isFullscreen && controlsVisible && (
-        <TouchableOpacity
-          style={styles.fullscreenExitButton}
-          onPress={handleFullscreen}
-          activeOpacity={0.8}
-        >
-          <Ionicons name="contract" size={24} color="#FFFFFF" />
-        </TouchableOpacity>
-      )}
-
       {/* Subtitle Display */}
       {showSubtitles && currentSubtitle && (
-        <View style={styles.subtitleContainer} pointerEvents="none">
+        <View style={[
+          styles.subtitleContainer,
+          isFullscreen && {
+            bottom: Math.max(100, insets.bottom + 80),
+            paddingLeft: Math.max(20, insets.left + 16),
+            paddingRight: Math.max(20, insets.right + 16),
+          }
+        ]} pointerEvents="none">
           <Text style={styles.subtitleText}>{currentSubtitle}</Text>
         </View>
       )}
@@ -277,6 +285,7 @@ export default function PlaybackControls({
               player={player}
               duration={player?.duration ?? 0}
               onSeek={onSeek}
+              isFullscreen={isFullscreen}
             />
        )}
     </View>
@@ -293,10 +302,6 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     zIndex: 10,
-  },
-  fullscreenContainer: {
-    width: '100%',
-    height: '100%',
   },
   controlsOverlay: {
     flex: 1,
@@ -347,18 +352,6 @@ const styles = StyleSheet.create({
     right: 12,
     flexDirection: 'row',
     gap: 10,
-  },
-  fullscreenExitButton: {
-    position: 'absolute',
-    top: 12,
-    left: 12,
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 50,
   },
   fullscreenButton: {
     width: 50,
