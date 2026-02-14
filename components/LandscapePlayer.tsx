@@ -1,5 +1,5 @@
 
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import Slider from '@react-native-community/slider';
 import { useEventListener } from 'expo';
 import * as ScreenOrientation from 'expo-screen-orientation';
@@ -635,7 +635,11 @@ export const LandscapePlayer: React.FC<LandscapePlayerProps> = ({
                     accessibilityHint="Toggles picture in picture mode"
                     hitSlop={10}
                   >
-                    <Text style={styles.pipLabel}>PiP</Text>
+                    <MaterialIcons
+                      name={isPictureInPictureActive ? 'picture-in-picture' : 'picture-in-picture-alt'}
+                      size={24}
+                      color="#fff"
+                    />
                   </TouchableOpacity>
                 )}
               </View>
@@ -809,11 +813,6 @@ const styles = StyleSheet.create({
     minHeight: 44,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  pipLabel: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '700',
   },
   centerControls: {
     flexDirection: 'row',

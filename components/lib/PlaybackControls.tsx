@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import * as ScreenOrientation from 'expo-screen-orientation';
 import React, { useEffect, useState } from 'react';
 import {
@@ -299,7 +299,11 @@ export default function PlaybackControls({
               accessibilityHint="Toggles picture in picture mode"
               hitSlop={10}
             >
-              <Text style={styles.pipLabel}>PiP</Text>
+              <MaterialIcons
+                name={isPictureInPictureActive ? 'picture-in-picture' : 'picture-in-picture-alt'}
+                size={24}
+                color="#FFFFFF"
+              />
             </TouchableOpacity>
           )}
           <TouchableOpacity
@@ -416,11 +420,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.6)',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  pipLabel: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '700',
   },
   subtitleContainer: {
     position: 'absolute',
