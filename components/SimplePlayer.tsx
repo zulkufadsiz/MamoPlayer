@@ -19,6 +19,10 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import LoadingIndicator from './lib/LoadingIndicator';
 import PlaybackControls from './lib/PlaybackControls';
+import {
+    getPlaybackPosition,
+    savePlaybackPosition,
+} from './lib/playbackPositionStore';
 import SettingsDialog from './lib/SettingsDialog';
 import { useTransportControls } from './lib/useTransportControls';
 
@@ -163,13 +167,17 @@ export const SimplePlayer: React.FC<SimplePlayerProps> = ({
   const videoViewRef = useRef<VideoView>(null);
   const { width, height } = useWindowDimensions();
   const hasAppliedStartAt = useRef(false);
+  const hasStartedOnReadyRef = useRef(false);
   const pictureInPictureSupported = isPictureInPictureSupported();
+  const [resumeStartAt, setResumeStartAt] = useState<number | null>(null);
+  const [resumeReady, setResumeReady] = useState(false);
+  const effectiveStartAt = resumeStartAt ?? startAt;
 
     const applyStartAt = () => {
       if (hasAppliedStartAt.current) return false;
-      if (typeof startAt !== 'number' || Number.isNaN(startAt)) return false;
+      if (typeof effectiveStartAt !== 'number' || Number.isNaN(effectiveStartAt)) return false;
       const duration = player.duration ?? 0;
-      const clampedTime = duration > 0 ? Math.min(duration, startAt) : startAt;
+      const clampedTime = duration > 0 ? Math.min(duration, effectiveStartAt) : effectiveStartAt;
       player.currentTime = Math.max(0, clampedTime);
       hasAppliedStartAt.current = true;
       return true;
@@ -189,20 +197,53 @@ export const SimplePlayer: React.FC<SimplePlayerProps> = ({
     if (status !== 'error') {
       setErrorMessage(null);
     }
-    if (status === 'readyToPlay') {
-      applyStartAt();
-      if (autoPlay) {
-        player.play();
-      }
-    }
   });
   const [isPlaying, setIsPlaying] = useState(autoPlay);
-  useEffect(() => {
-    hasAppliedStartAt.current = false;
-  }, [resolvedSource, startAt]);
 
   useEffect(() => {
-    if (typeof startAt !== 'number' || Number.isNaN(startAt)) return;
+    hasAppliedStartAt.current = false;
+    hasStartedOnReadyRef.current = false;
+    setResumeStartAt(null);
+    setResumeReady(false);
+
+    let isCancelled = false;
+
+    const loadResumePosition = async () => {
+      if (!mediaUrl) {
+        if (!isCancelled) {
+          setResumeReady(true);
+        }
+        return;
+      }
+
+      const savedPosition = await getPlaybackPosition(mediaUrl);
+      if (!isCancelled) {
+        setResumeStartAt(savedPosition);
+        setResumeReady(true);
+      }
+    };
+
+    void loadResumePosition();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [mediaUrl]);
+
+  useEffect(() => {
+    if (playerStatus !== 'readyToPlay' || !resumeReady || hasStartedOnReadyRef.current) return;
+
+    applyStartAt();
+    if (autoPlay) {
+      player.play();
+      setIsPlaying(true);
+    }
+    hasStartedOnReadyRef.current = true;
+  }, [autoPlay, player, playerStatus, resumeReady, effectiveStartAt]);
+
+  useEffect(() => {
+    if (!resumeReady) return;
+    if (typeof effectiveStartAt !== 'number' || Number.isNaN(effectiveStartAt)) return;
 
     const interval = setInterval(() => {
       if (hasAppliedStartAt.current) {
@@ -211,15 +252,12 @@ export const SimplePlayer: React.FC<SimplePlayerProps> = ({
       }
       if ((player.duration ?? 0) > 0) {
         applyStartAt();
-        if (autoPlay) {
-          player.play();
-        }
         clearInterval(interval);
       }
-    }, 100);
+    }, 150);
 
     return () => clearInterval(interval);
-  }, [autoPlay, player, startAt]);
+  }, [player, resumeReady, effectiveStartAt]);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showSubtitles, setShowSubtitles] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
@@ -230,6 +268,15 @@ export const SimplePlayer: React.FC<SimplePlayerProps> = ({
   const isBuffering = playerStatus === 'loading' || playerStatus === 'buffering';
   const isError = !!errorMessage || playerStatus === 'error';
   const canUsePictureInPicture = allowsPictureInPicture && pictureInPictureSupported;
+
+  const persistPlaybackProgress = async () => {
+    if (!mediaUrl) return;
+    const duration = player.duration ?? 0;
+    const currentTime = player.currentTime ?? 0;
+
+    if (!Number.isFinite(duration) || !Number.isFinite(currentTime) || duration <= 0) return;
+    await savePlaybackPosition(mediaUrl, currentTime, duration);
+  };
 
   // Handle orientation when entering/exiting fullscreen
   useEffect(() => {
@@ -296,10 +343,11 @@ export const SimplePlayer: React.FC<SimplePlayerProps> = ({
 
   const handlePlayPause = () => {
     if (isPlaying) {
-        player.pause();
+      void persistPlaybackProgress();
+      player.pause();
       setIsPlaying(false);
     } else {
-        player.play();
+      player.play();
       setIsPlaying(true);
     }
   };
@@ -319,6 +367,23 @@ export const SimplePlayer: React.FC<SimplePlayerProps> = ({
       : Math.max(0, currentTime + seconds);
     player.currentTime = nextTime;
   };
+
+  useEffect(() => {
+    if (!mediaUrl) return;
+
+    const interval = setInterval(() => {
+      if (!isPlaying) return;
+      void persistPlaybackProgress();
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [isPlaying, mediaUrl, player]);
+
+  useEffect(() => {
+    return () => {
+      void persistPlaybackProgress();
+    };
+  }, [mediaUrl, player]);
 
   useTransportControls({
     enabled: Boolean(mediaUrl),
