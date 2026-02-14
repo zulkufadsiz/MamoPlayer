@@ -4,14 +4,15 @@ import Slider from '@react-native-community/slider';
 import { useEventListener } from 'expo';
 import * as ScreenOrientation from 'expo-screen-orientation';
 import {
-  isPictureInPictureSupported,
   VideoView,
+  isPictureInPictureSupported,
   useVideoPlayer,
   type VideoSource,
 } from 'expo-video';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
+  GestureResponderEvent,
   Pressable,
   StatusBar,
   StyleSheet,
@@ -87,6 +88,10 @@ const resolveMediaUrl = (source: VideoSource): string | null => {
     return source.uri;
   }
   return null;
+};
+
+const clamp = (value: number, min: number, max: number) => {
+  return Math.max(min, Math.min(max, value));
 };
 
 interface LandscapePlayerProps {
@@ -283,16 +288,40 @@ export const LandscapePlayer: React.FC<LandscapePlayerProps> = ({
   const [duration, setDuration] = useState(0);
   const [isSeeking, setIsSeeking] = useState(false);
   const [volume, setVolume] = useState(1);
-  const [showVolumeSlider, setShowVolumeSlider] = useState(false);
+  const [brightnessLevel, setBrightnessLevel] = useState(0.6);
+  const [zoomScale, setZoomScale] = useState(1);
+  const [gestureMessage, setGestureMessage] = useState<string | null>(null);
   const [currentSubtitle, setCurrentSubtitle] = useState<string>('');
   const [isPictureInPictureActive, setIsPictureInPictureActive] = useState(false);
   const [controlsOpacity] = useState(new Animated.Value(1));
   const isBuffering = playerStatus === 'loading' || playerStatus === 'buffering';
   const isError = !!errorMessage || playerStatus === 'error';
   const canUsePictureInPicture = allowsPictureInPicture && pictureInPictureSupported;
+  const gestureModeRef = useRef<'none' | 'volume' | 'brightness' | 'pinch'>('none');
+  const gestureMovedRef = useRef(false);
+  const touchStartYRef = useRef(0);
+  const touchStartVolumeRef = useRef(1);
+  const touchStartBrightnessRef = useRef(0.6);
+  const pinchStartDistanceRef = useRef(0);
+  const pinchStartZoomRef = useRef(1);
+  const lastTapRef = useRef<{ time: number; x: number; y: number } | null>(null);
+  const tapTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const feedbackTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const suppressPressUntilRef = useRef(0);
   useEffect(() => {
     hasAppliedStartAt.current = false;
   }, [resolvedSource, startAt]);
+
+  useEffect(() => {
+    return () => {
+      if (tapTimeoutRef.current) {
+        clearTimeout(tapTimeoutRef.current);
+      }
+      if (feedbackTimeoutRef.current) {
+        clearTimeout(feedbackTimeoutRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (typeof startAt !== 'number' || Number.isNaN(startAt)) return;
@@ -472,6 +501,16 @@ export const LandscapePlayer: React.FC<LandscapePlayerProps> = ({
     player.volume = value;
   };
 
+  const showGestureFeedback = (message: string) => {
+    setGestureMessage(message);
+    if (feedbackTimeoutRef.current) {
+      clearTimeout(feedbackTimeoutRef.current);
+    }
+    feedbackTimeoutRef.current = setTimeout(() => {
+      setGestureMessage(null);
+    }, 700);
+  };
+
   const handlePlaybackSpeedChange = (speed: number) => {
     setPlaybackSpeed(speed);
     if (player) {
@@ -490,6 +529,136 @@ export const LandscapePlayer: React.FC<LandscapePlayerProps> = ({
     setErrorMessage(null);
     setPlayerStatus('loading');
     player.play();
+  };
+
+  const handleTouchAreaPress = () => {
+    if (Date.now() < suppressPressUntilRef.current) return;
+    handleScreenPress();
+  };
+
+  const getTouchDistance = (event: GestureResponderEvent) => {
+    const [firstTouch, secondTouch] = event.nativeEvent.touches;
+    if (!firstTouch || !secondTouch) return 0;
+    return Math.hypot(
+      secondTouch.pageX - firstTouch.pageX,
+      secondTouch.pageY - firstTouch.pageY
+    );
+  };
+
+  const handleTouchStart = (event: GestureResponderEvent) => {
+    if (showControls) return;
+
+    const touches = event.nativeEvent.touches;
+    if (touches.length >= 2) {
+      gestureModeRef.current = 'pinch';
+      gestureMovedRef.current = true;
+      pinchStartDistanceRef.current = getTouchDistance(event);
+      pinchStartZoomRef.current = zoomScale;
+      suppressPressUntilRef.current = Date.now() + 350;
+      return;
+    }
+
+    const firstTouch = touches[0];
+    if (!firstTouch) return;
+    gestureMovedRef.current = false;
+    touchStartYRef.current = firstTouch.locationY;
+    touchStartVolumeRef.current = volume;
+    touchStartBrightnessRef.current = brightnessLevel;
+    gestureModeRef.current =
+      firstTouch.locationX < width / 2 ? 'brightness' : 'volume';
+  };
+
+  const handleTouchMove = (event: GestureResponderEvent) => {
+    if (showControls) return;
+
+    if (event.nativeEvent.touches.length >= 2) {
+      if (gestureModeRef.current !== 'pinch') {
+        gestureModeRef.current = 'pinch';
+        pinchStartDistanceRef.current = getTouchDistance(event);
+        pinchStartZoomRef.current = zoomScale;
+      }
+
+      const distance = getTouchDistance(event);
+      if (distance <= 0 || pinchStartDistanceRef.current <= 0) return;
+
+      const pinchRatio = distance / pinchStartDistanceRef.current;
+      const nextZoom = clamp(pinchStartZoomRef.current * pinchRatio, 1, 2.2);
+      setZoomScale(nextZoom);
+      gestureMovedRef.current = true;
+      showGestureFeedback(`Zoom ${Math.round(nextZoom * 100)}%`);
+      return;
+    }
+
+    const firstTouch = event.nativeEvent.touches[0];
+    if (!firstTouch) return;
+
+    const deltaY = touchStartYRef.current - firstTouch.locationY;
+    if (Math.abs(deltaY) < 8) return;
+
+    const ratioDelta = (deltaY / height) * 1.35;
+    gestureMovedRef.current = true;
+    suppressPressUntilRef.current = Date.now() + 350;
+
+    if (gestureModeRef.current === 'volume') {
+      const nextVolume = clamp(touchStartVolumeRef.current + ratioDelta, 0, 1);
+      handleVolumeChange(nextVolume);
+      showGestureFeedback(`Volume ${Math.round(nextVolume * 100)}%`);
+      return;
+    }
+
+    if (gestureModeRef.current === 'brightness') {
+      const nextBrightness = clamp(touchStartBrightnessRef.current + ratioDelta, 0.1, 1);
+      setBrightnessLevel(nextBrightness);
+      showGestureFeedback(`Brightness ${Math.round(nextBrightness * 100)}%`);
+    }
+  };
+
+  const handleTouchEnd = (event: GestureResponderEvent) => {
+    if (showControls) return;
+
+    suppressPressUntilRef.current = Date.now() + 350;
+    const wasMoved = gestureMovedRef.current;
+    gestureModeRef.current = 'none';
+    gestureMovedRef.current = false;
+
+    if (wasMoved) return;
+
+    const changedTouch = event.nativeEvent.changedTouches[0];
+    if (!changedTouch) return;
+
+    const now = Date.now();
+    const tapPoint = {
+      time: now,
+      x: changedTouch.locationX,
+      y: changedTouch.locationY,
+    };
+
+    const previousTap = lastTapRef.current;
+    if (
+      previousTap &&
+      now - previousTap.time < 280 &&
+      Math.hypot(tapPoint.x - previousTap.x, tapPoint.y - previousTap.y) < 40
+    ) {
+      if (tapTimeoutRef.current) {
+        clearTimeout(tapTimeoutRef.current);
+        tapTimeoutRef.current = null;
+      }
+      lastTapRef.current = null;
+      const seekDelta = tapPoint.x < width / 2 ? -skipSeconds : skipSeconds;
+      handleSkip(seekDelta);
+      showGestureFeedback(seekDelta > 0 ? `+${skipSeconds}s` : `-${skipSeconds}s`);
+      return;
+    }
+
+    lastTapRef.current = tapPoint;
+    if (tapTimeoutRef.current) {
+      clearTimeout(tapTimeoutRef.current);
+    }
+    tapTimeoutRef.current = setTimeout(() => {
+      handleScreenPress();
+      lastTapRef.current = null;
+      tapTimeoutRef.current = null;
+    }, 280);
   };
 
   const handlePictureInPictureToggle = async () => {
@@ -524,13 +693,21 @@ export const LandscapePlayer: React.FC<LandscapePlayerProps> = ({
       {/* Video Background */}
       <VideoView
         ref={videoViewRef}
-        style={styles.video}
+        style={[styles.video, { transform: [{ scale: zoomScale }] }]}
         player={player}
         nativeControls={false}
         allowsPictureInPicture={allowsPictureInPicture}
         onPictureInPictureStart={() => setIsPictureInPictureActive(true)}
         onPictureInPictureStop={() => setIsPictureInPictureActive(false)}
         contentFit={contentFit}
+      />
+
+      <View
+        pointerEvents="none"
+        style={[
+          styles.brightnessOverlay,
+          { opacity: clamp((1 - brightnessLevel) * 0.6, 0, 0.6) },
+        ]}
       />
 
       {(isBuffering || isError) && (
@@ -562,7 +739,10 @@ export const LandscapePlayer: React.FC<LandscapePlayerProps> = ({
       {/* Touch Area for showing controls */}
       <Pressable
         style={styles.touchArea}
-        onPress={handleScreenPress}
+        onPress={handleTouchAreaPress}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
         accessible={!showControls}
         accessibilityRole="button"
         accessibilityLabel="Show playback controls"
@@ -736,6 +916,12 @@ export const LandscapePlayer: React.FC<LandscapePlayerProps> = ({
             <Text style={styles.subtitleText}>{currentSubtitle}</Text>
           </View>
         )}
+
+        {gestureMessage && (
+          <View style={styles.gestureFeedback} pointerEvents="none">
+            <Text style={styles.gestureFeedbackText}>{gestureMessage}</Text>
+          </View>
+        )}
       </Pressable>
 
       <LandscapeSettingsDialog
@@ -771,6 +957,15 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 0,
     left: 0,
+  },
+  brightnessOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: '#000',
+    zIndex: 1,
   },
   touchArea: {
     width: '100%',
@@ -921,6 +1116,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 4,
+  },
+  gestureFeedback: {
+    position: 'absolute',
+    top: '42%',
+    alignSelf: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.72)',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 8,
+    zIndex: 8,
+  },
+  gestureFeedbackText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '700',
   },
 });
 
