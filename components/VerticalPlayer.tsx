@@ -91,6 +91,8 @@ const resolveMediaUrl = (source: VideoSource): string | null => {
 interface VerticalPlayerProps {
   source: VideoSource;
   videoSourcesByLanguage?: Record<string, VideoSource>;
+  qualitySources?: Record<string, VideoSource>;
+  qualitySourcesByLanguage?: Record<string, Record<string, VideoSource>>;
   audioTracks?: AudioTrack[];
   defaultAudioTrackId?: string | null;
   style?: any;
@@ -121,6 +123,8 @@ interface VerticalPlayerProps {
 export const VerticalPlayer: React.FC<VerticalPlayerProps> = ({ 
   source, 
   videoSourcesByLanguage,
+  qualitySources,
+  qualitySourcesByLanguage,
   audioTracks,
   defaultAudioTrackId = null,
   autoPlay = true,
@@ -151,6 +155,7 @@ export const VerticalPlayer: React.FC<VerticalPlayerProps> = ({
   const [selectedAudioTrackId, setSelectedAudioTrackId] = useState<string | null>(
     defaultAudioTrackId
   );
+  const [quality, setQuality] = useState('Auto');
 
   const resolvedSubtitleTracks: SubtitleTrack[] = useMemo(() => {
     if (subtitleTracks.length) return subtitleTracks;
@@ -181,27 +186,84 @@ export const VerticalPlayer: React.FC<VerticalPlayerProps> = ({
     });
   }, [audioTracks, resolvedSubtitleTracks, videoSourcesByLanguage]);
 
-  const resolvedSource = useMemo(() => {
-    if (!videoSourcesByLanguage) return source;
+  const selectedLanguageKey = useMemo(() => {
+    if (!videoSourcesByLanguage) return null;
+
     const audioTrackId = selectedAudioTrackId ?? resolvedAudioTracks[0]?.id;
     if (audioTrackId && videoSourcesByLanguage[audioTrackId]) {
-      return videoSourcesByLanguage[audioTrackId];
+      return audioTrackId;
     }
+
     const selectedTrack = resolvedSubtitleTracks.find(
       (track) => track.id === selectedSubtitleTrackId
     );
     const languageKey = selectedTrack?.language ?? selectedSubtitleTrackId;
     if (languageKey && videoSourcesByLanguage[languageKey]) {
-      return videoSourcesByLanguage[languageKey];
+      return languageKey;
     }
-    return source;
+
+    return null;
   }, [
+    resolvedAudioTracks,
     resolvedSubtitleTracks,
     selectedAudioTrackId,
     selectedSubtitleTrackId,
+    videoSourcesByLanguage,
+  ]);
+
+  const resolvedSource = useMemo(() => {
+    let baseSource: VideoSource = source;
+
+    if (selectedLanguageKey && videoSourcesByLanguage?.[selectedLanguageKey]) {
+      baseSource = videoSourcesByLanguage[selectedLanguageKey];
+    }
+
+    const qualityMap =
+      (selectedLanguageKey && qualitySourcesByLanguage?.[selectedLanguageKey]) || qualitySources;
+
+    if (qualityMap) {
+      const explicitQualitySource = qualityMap[quality];
+      if (explicitQualitySource) {
+        return explicitQualitySource;
+      }
+
+      if (quality === 'Auto' && qualityMap.Auto) {
+        return qualityMap.Auto;
+      }
+    }
+
+    return baseSource;
+  }, [
+    quality,
+    qualitySources,
+    qualitySourcesByLanguage,
+    selectedLanguageKey,
     source,
     videoSourcesByLanguage,
   ]);
+
+  const qualityOptions = useMemo(() => {
+    const sourceMap =
+      (selectedLanguageKey && qualitySourcesByLanguage?.[selectedLanguageKey]) || qualitySources;
+
+    const options = sourceMap ? Object.keys(sourceMap) : [];
+    if (!options.includes('Auto')) {
+      options.unshift('Auto');
+    }
+
+    return options;
+  }, [qualitySources, qualitySourcesByLanguage, selectedLanguageKey]);
+
+  useEffect(() => {
+    if (qualityOptions.length === 0) return;
+    if (!qualityOptions.includes(quality)) {
+      setQuality('Auto');
+    }
+  }, [quality, qualityOptions]);
+
+  useEffect(() => {
+    setQuality('Auto');
+  }, [source]);
   const mediaUrl = useMemo(() => resolveMediaUrl(resolvedSource), [resolvedSource]);
 
   const player = useVideoPlayer(resolvedSource, player => {
@@ -276,7 +338,6 @@ export const VerticalPlayer: React.FC<VerticalPlayerProps> = ({
     },
   ]);
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
-  const [quality, setQuality] = useState('Auto');
   const [autoPlayEnabled, setAutoPlayEnabled] = useState(autoPlay);
   const [isLiked, setIsLiked] = useState(false);
   const [currentSubtitle, setCurrentSubtitle] = useState<string>('');
@@ -778,6 +839,7 @@ export const VerticalPlayer: React.FC<VerticalPlayerProps> = ({
         onPlaybackSpeedChange={handlePlaybackSpeedChange}
         quality={quality}
         onQualityChange={setQuality}
+        qualityOptions={qualityOptions}
         autoPlay={autoPlayEnabled}
         onAutoPlayChange={setAutoPlayEnabled}
         showSubtitles={showSubtitles}
