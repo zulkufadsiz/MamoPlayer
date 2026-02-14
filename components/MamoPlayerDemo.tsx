@@ -142,6 +142,36 @@ export const MamoPlayerDemo: React.FC = () => {
     es: playerSource,
   };
 
+  const streamQualitySources = {
+    Auto: { uri: selectedVideo.uri },
+    '1080p': {
+      uri: 'https://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_16x9/gear4/prog_index.m3u8',
+    },
+    '720p': {
+      uri: 'https://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_16x9/gear3/prog_index.m3u8',
+    },
+    '480p': {
+      uri: 'https://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_16x9/gear2/prog_index.m3u8',
+    },
+    '360p': {
+      uri: 'https://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_16x9/gear1/prog_index.m3u8',
+    },
+  };
+
+  const offlineQualitySources = {
+    Auto: playerSource,
+    '1080p': playerSource,
+    '720p': playerSource,
+    '480p': playerSource,
+    '360p': playerSource,
+  };
+
+  const qualitySourcesByLanguage = {
+    en: isPlayingOffline ? offlineQualitySources : streamQualitySources,
+    tr: isPlayingOffline ? offlineQualitySources : streamQualitySources,
+    es: isPlayingOffline ? offlineQualitySources : streamQualitySources,
+  };
+
   const loadOfflineLibrary = useCallback(async () => {
     setIsLibraryLoading(true);
     try {
@@ -303,6 +333,7 @@ export const MamoPlayerDemo: React.FC = () => {
         <MamoPlayer
           source={playerSource}
           videoSourcesByLanguage={videoSourcesByLanguage}
+          qualitySourcesByLanguage={qualitySourcesByLanguage}
           autoPlay={true}
           startAt={0}
           style={styles.player}

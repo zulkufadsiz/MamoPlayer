@@ -18,6 +18,7 @@ interface SettingsDialogProps {
   onPlaybackSpeedChange: (speed: number) => void;
   quality: string;
   onQualityChange: (quality: string) => void;
+  qualityOptions?: string[];
   autoPlay: boolean;
   onAutoPlayChange: (value: boolean) => void;
   showSubtitles: boolean;
@@ -39,7 +40,7 @@ interface SettingsDialogProps {
 }
 
 const playbackSpeeds = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
-const videoQualities = ['Auto', '1080p', '720p', '480p', '360p'];
+const defaultVideoQualities = ['Auto', '1080p', '720p', '480p', '360p'];
 
 type SettingsMenuItem =
   | 'playbackSpeed'
@@ -56,6 +57,7 @@ export default function SettingsDialog({
   onPlaybackSpeedChange,
   quality,
   onQualityChange,
+  qualityOptions,
   autoPlay,
   onAutoPlayChange,
   showSubtitles,
@@ -80,6 +82,10 @@ export default function SettingsDialog({
   const subtitlesValue = showSubtitles
     ? selectedSubtitleLabel || 'On'
     : 'Off';
+  const videoQualities =
+    qualityOptions && qualityOptions.length > 0
+      ? qualityOptions
+      : defaultVideoQualities;
 
   const handleClose = () => {
     setActiveMenu(null);

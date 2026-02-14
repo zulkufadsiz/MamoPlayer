@@ -20,6 +20,8 @@ interface SubtitleTrack {
 interface MamoPlayerProps {
   source: VideoSource;
   videoSourcesByLanguage?: Record<string, VideoSource>;
+  qualitySources?: Record<string, VideoSource>;
+  qualitySourcesByLanguage?: Record<string, Record<string, VideoSource>>;
   audioTracks?: Array<{
     id: string;
     label: string;

@@ -16,6 +16,7 @@ interface LandscapeSettingsDialogProps {
   onPlaybackSpeedChange: (speed: number) => void;
   quality: string;
   onQualityChange: (quality: string) => void;
+  qualityOptions?: string[];
   autoPlay: boolean;
   onAutoPlayChange: (enabled: boolean) => void;
   showSubtitles: boolean;
@@ -43,6 +44,7 @@ export const LandscapeSettingsDialog: React.FC<LandscapeSettingsDialogProps> = (
   onPlaybackSpeedChange,
   quality,
   onQualityChange,
+  qualityOptions,
   autoPlay,
   onAutoPlayChange,
   showSubtitles,
@@ -56,7 +58,9 @@ export const LandscapeSettingsDialog: React.FC<LandscapeSettingsDialogProps> = (
 }) => {
   type SectionKey = 'playback' | 'quality' | 'audio' | 'subtitles' | 'preferences';
   const playbackSpeeds = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
-  const qualities = ['Auto', '4K', '1080p', '720p', '480p', '360p'];
+  const qualities = qualityOptions && qualityOptions.length > 0
+    ? qualityOptions
+    : ['Auto', '4K', '1080p', '720p', '480p', '360p'];
   const [openSection, setOpenSection] = React.useState<SectionKey | null>('playback');
   const hasAudioTracks = audioTracks.length > 0;
   const hasSubtitleTracks = subtitleTracks.length > 0;
