@@ -128,6 +128,8 @@ export default function PlaybackControls({
     onPlayPause();
   };
 
+  const currentDuration = player?.duration ?? 0;
+
   const showControls = () => {
     setControlsVisible(true);
   };
@@ -176,11 +178,18 @@ export default function PlaybackControls({
         <Pressable
           style={styles.tapToShow}
           onPress={showControls}
+          accessibilityRole="button"
+          accessibilityLabel="Show playback controls"
+          accessibilityHint="Shows playback actions and timeline"
+          hitSlop={12}
         />
       )}
 
       {controlsVisible && (
-        <View style={styles.controlsOverlay}>
+        <View
+          style={styles.controlsOverlay}
+          importantForAccessibility={controlsVisible ? 'yes' : 'no-hide-descendants'}
+        >
         {/* Center Play/Pause Button */}
         <View style={styles.centerControls}>
           {onSkipBackward && (
@@ -188,6 +197,10 @@ export default function PlaybackControls({
               style={styles.skipButton}
               onPress={onSkipBackward}
               activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel={`Skip backward ${skipSeconds} seconds`}
+              accessibilityHint="Moves playback position backward"
+              hitSlop={10}
             >
               <Ionicons name="play-back" size={28} color="#FFFFFF" />
               <Text style={styles.skipText}>{skipSeconds}</Text>
@@ -197,6 +210,10 @@ export default function PlaybackControls({
             style={styles.playButton}
             onPress={handlePlayPause}
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={isPlaying ? 'Pause video' : 'Play video'}
+            accessibilityHint={isPlaying ? 'Pauses playback' : 'Starts playback'}
+            hitSlop={10}
           >
             <Ionicons
               name={isPlaying ? 'pause' : 'play'}
@@ -209,6 +226,10 @@ export default function PlaybackControls({
               style={styles.skipButton}
               onPress={onSkipForward}
               activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel={`Skip forward ${skipSeconds} seconds`}
+              accessibilityHint="Moves playback position forward"
+              hitSlop={10}
             >
               <Ionicons name="play-forward" size={28} color="#FFFFFF" />
               <Text style={styles.skipText}>{skipSeconds}</Text>
@@ -229,6 +250,10 @@ export default function PlaybackControls({
               style={styles.fullscreenButton}
               onPress={onSettingsPress}
               activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="Open settings"
+              accessibilityHint="Opens playback and subtitle settings"
+              hitSlop={10}
             >
               <Ionicons
                 name="settings-outline"
@@ -242,6 +267,10 @@ export default function PlaybackControls({
               style={styles.fullscreenButton}
               onPress={onSubtitlesToggle}
               activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel={showSubtitles ? 'Hide subtitles' : 'Show subtitles'}
+              accessibilityHint="Toggles subtitle visibility"
+              hitSlop={10}
             >
               <Ionicons
                 name={showSubtitles ? 'chatbox' : 'chatbox-outline'}
@@ -254,6 +283,10 @@ export default function PlaybackControls({
             style={styles.fullscreenButton}
             onPress={handleFullscreen}
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
+            accessibilityHint={isFullscreen ? 'Returns to inline player' : 'Expands video to fullscreen'}
+            hitSlop={10}
           >
             <Ionicons
               name={isFullscreen ? 'contract' : 'expand'}
@@ -283,7 +316,7 @@ export default function PlaybackControls({
          <Timeline
               isPlaying={isPlaying}
               player={player}
-              duration={player?.duration ?? 0}
+              duration={currentDuration}
               onSeek={onSeek}
               isFullscreen={isFullscreen}
             />

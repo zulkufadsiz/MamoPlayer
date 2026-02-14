@@ -1,14 +1,14 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import {
-  Modal,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Switch,
-  Text,
-  TouchableOpacity,
-  View,
+    Modal,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Switch,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 
 interface SettingsDialogProps {
@@ -98,7 +98,13 @@ export default function SettingsDialog({
     <>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Settings</Text>
-        <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
+        <TouchableOpacity
+          onPress={handleClose}
+          style={styles.closeButton}
+          accessibilityRole="button"
+          accessibilityLabel="Close settings"
+          hitSlop={10}
+        >
           <Ionicons name="close" size={24} color="#333" />
         </TouchableOpacity>
       </View>
@@ -107,6 +113,9 @@ export default function SettingsDialog({
         <TouchableOpacity
           style={styles.menuItem}
           onPress={() => handleMenuItemPress('playbackSpeed')}
+          accessibilityRole="button"
+          accessibilityLabel="Playback speed"
+          accessibilityHint="Opens playback speed options"
         >
           <View style={styles.menuItemLeft}>
             <Ionicons name="speedometer-outline" size={24} color="#007AFF" />
@@ -121,6 +130,9 @@ export default function SettingsDialog({
         <TouchableOpacity
           style={styles.menuItem}
           onPress={() => handleMenuItemPress('quality')}
+          accessibilityRole="button"
+          accessibilityLabel="Video quality"
+          accessibilityHint="Opens video quality options"
         >
           <View style={styles.menuItemLeft}>
             <Ionicons name="videocam-outline" size={24} color="#007AFF" />
@@ -136,6 +148,9 @@ export default function SettingsDialog({
           <TouchableOpacity
             style={styles.menuItem}
             onPress={() => handleMenuItemPress('audio')}
+            accessibilityRole="button"
+            accessibilityLabel={`Audio track, current ${audioValue}`}
+            accessibilityHint="Opens audio track options"
           >
             <View style={styles.menuItemLeft}>
               <Ionicons name="volume-medium-outline" size={24} color="#007AFF" />
@@ -152,6 +167,9 @@ export default function SettingsDialog({
           <TouchableOpacity
             style={styles.menuItem}
             onPress={() => handleMenuItemPress('subtitles')}
+            accessibilityRole="button"
+            accessibilityLabel={`Subtitles, current ${subtitlesValue}`}
+            accessibilityHint="Opens subtitle options"
           >
             <View style={styles.menuItemLeft}>
               <Ionicons name="chatbox-ellipses-outline" size={24} color="#007AFF" />
@@ -167,6 +185,9 @@ export default function SettingsDialog({
         <TouchableOpacity
           style={styles.menuItem}
           onPress={() => handleMenuItemPress('preferences')}
+          accessibilityRole="button"
+          accessibilityLabel="Preferences"
+          accessibilityHint="Opens autoplay and subtitle preferences"
         >
           <View style={styles.menuItemLeft}>
             <Ionicons name="options-outline" size={24} color="#007AFF" />
@@ -183,7 +204,13 @@ export default function SettingsDialog({
   const renderPlaybackSpeedSheet = () => (
     <>
       <View style={styles.sheetHeader}>
-        <TouchableOpacity onPress={handleBackToMenu} style={styles.backButton}>
+        <TouchableOpacity
+          onPress={handleBackToMenu}
+          style={styles.backButton}
+          accessibilityRole="button"
+          accessibilityLabel="Back to settings menu"
+          hitSlop={10}
+        >
           <Ionicons name="chevron-back" size={24} color="#007AFF" />
         </TouchableOpacity>
         <Text style={styles.sheetTitle}>Playback Speed</Text>
@@ -203,6 +230,9 @@ export default function SettingsDialog({
                 onPlaybackSpeedChange(speed);
                 setTimeout(handleBackToMenu, 300);
               }}
+              accessibilityRole="radio"
+              accessibilityLabel={`Playback speed ${speed}x`}
+              accessibilityState={{ selected: playbackSpeed === speed }}
             >
               <Text
                 style={[
@@ -225,7 +255,13 @@ export default function SettingsDialog({
   const renderQualitySheet = () => (
     <>
       <View style={styles.sheetHeader}>
-        <TouchableOpacity onPress={handleBackToMenu} style={styles.backButton}>
+        <TouchableOpacity
+          onPress={handleBackToMenu}
+          style={styles.backButton}
+          accessibilityRole="button"
+          accessibilityLabel="Back to settings menu"
+          hitSlop={10}
+        >
           <Ionicons name="chevron-back" size={24} color="#007AFF" />
         </TouchableOpacity>
         <Text style={styles.sheetTitle}>Video Quality</Text>
@@ -245,6 +281,9 @@ export default function SettingsDialog({
                 onQualityChange(q);
                 setTimeout(handleBackToMenu, 300);
               }}
+              accessibilityRole="radio"
+              accessibilityLabel={`Video quality ${q}`}
+              accessibilityState={{ selected: quality === q }}
             >
               <Text
                 style={[
@@ -267,7 +306,13 @@ export default function SettingsDialog({
   const renderPreferencesSheet = () => (
     <>
       <View style={styles.sheetHeader}>
-        <TouchableOpacity onPress={handleBackToMenu} style={styles.backButton}>
+        <TouchableOpacity
+          onPress={handleBackToMenu}
+          style={styles.backButton}
+          accessibilityRole="button"
+          accessibilityLabel="Back to settings menu"
+          hitSlop={10}
+        >
           <Ionicons name="chevron-back" size={24} color="#007AFF" />
         </TouchableOpacity>
         <Text style={styles.sheetTitle}>Preferences</Text>
@@ -288,6 +333,9 @@ export default function SettingsDialog({
               onValueChange={onAutoPlayChange}
               trackColor={{ false: '#D1D1D6', true: '#34C759' }}
               thumbColor="#FFFFFF"
+              accessibilityRole="switch"
+              accessibilityLabel="AutoPlay"
+              accessibilityHint="Automatically plays videos when loaded"
             />
           </View>
 
@@ -303,6 +351,9 @@ export default function SettingsDialog({
               onValueChange={onShowSubtitlesChange}
               trackColor={{ false: '#D1D1D6', true: '#34C759' }}
               thumbColor="#FFFFFF"
+              accessibilityRole="switch"
+              accessibilityLabel="Show subtitles"
+              accessibilityHint="Displays subtitles when available"
             />
           </View>
         </View>
@@ -313,7 +364,13 @@ export default function SettingsDialog({
   const renderSubtitlesSheet = () => (
     <>
       <View style={styles.sheetHeader}>
-        <TouchableOpacity onPress={handleBackToMenu} style={styles.backButton}>
+        <TouchableOpacity
+          onPress={handleBackToMenu}
+          style={styles.backButton}
+          accessibilityRole="button"
+          accessibilityLabel="Back to settings menu"
+          hitSlop={10}
+        >
           <Ionicons name="chevron-back" size={24} color="#007AFF" />
         </TouchableOpacity>
         <Text style={styles.sheetTitle}>Subtitles</Text>
@@ -332,6 +389,9 @@ export default function SettingsDialog({
               onSubtitleTrackChange?.(null);
               setTimeout(handleBackToMenu, 200);
             }}
+            accessibilityRole="radio"
+            accessibilityLabel="Subtitles off"
+            accessibilityState={{ selected: !showSubtitles }}
           >
             <Text
               style={[
@@ -357,6 +417,9 @@ export default function SettingsDialog({
                   onSubtitleTrackChange?.(track.id);
                   setTimeout(handleBackToMenu, 200);
                 }}
+                accessibilityRole="radio"
+                accessibilityLabel={`Subtitle track ${track.label}`}
+                accessibilityState={{ selected: isActive }}
               >
                 <Text
                   style={[styles.qualityText, isActive && styles.qualityTextActive]}
@@ -377,7 +440,13 @@ export default function SettingsDialog({
   const renderAudioSheet = () => (
     <>
       <View style={styles.sheetHeader}>
-        <TouchableOpacity onPress={handleBackToMenu} style={styles.backButton}>
+        <TouchableOpacity
+          onPress={handleBackToMenu}
+          style={styles.backButton}
+          accessibilityRole="button"
+          accessibilityLabel="Back to settings menu"
+          hitSlop={10}
+        >
           <Ionicons name="chevron-back" size={24} color="#007AFF" />
         </TouchableOpacity>
         <Text style={styles.sheetTitle}>Audio</Text>
@@ -396,6 +465,9 @@ export default function SettingsDialog({
                   onAudioTrackChange?.(track.id);
                   setTimeout(handleBackToMenu, 200);
                 }}
+                accessibilityRole="radio"
+                accessibilityLabel={`Audio track ${track.label}`}
+                accessibilityState={{ selected: isActive }}
               >
                 <Text
                   style={[styles.qualityText, isActive && styles.qualityTextActive]}
@@ -419,11 +491,19 @@ export default function SettingsDialog({
       transparent
       animationType="slide"
       onRequestClose={handleClose}
+      accessibilityViewIsModal
     >
-      <Pressable style={styles.overlay} onPress={handleClose}>
+      <Pressable
+        style={styles.overlay}
+        onPress={handleClose}
+        accessibilityRole="button"
+        accessibilityLabel="Close settings"
+        accessibilityHint="Closes the settings dialog"
+      >
         <Pressable
           style={styles.container}
           onPress={(e) => e.stopPropagation()}
+          accessible={false}
         >
           <View style={styles.dragHandle} />
           
@@ -477,7 +557,10 @@ const styles = StyleSheet.create({
     color: '#333',
   },
   closeButton: {
-    padding: 4,
+    minWidth: 44,
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   menuList: {
     paddingVertical: 8,
@@ -520,7 +603,10 @@ const styles = StyleSheet.create({
     borderBottomColor: '#f0f0f0',
   },
   backButton: {
-    padding: 4,
+    minWidth: 44,
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   sheetTitle: {
     fontSize: 18,

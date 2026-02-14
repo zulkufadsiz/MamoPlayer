@@ -1,12 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import {
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 
 interface LandscapeSettingsDialogProps {
@@ -69,13 +69,25 @@ export const LandscapeSettingsDialog: React.FC<LandscapeSettingsDialogProps> = (
 
   return (
     <View style={styles.overlay}>
-      <Pressable style={styles.backdrop} onPress={onClose} />
+      <Pressable
+        style={styles.backdrop}
+        onPress={onClose}
+        accessibilityRole="button"
+        accessibilityLabel="Close settings"
+        accessibilityHint="Closes the settings dialog"
+      />
         
         <View style={styles.container}>
           {/* Header */}
           <View style={styles.header}>
             <Text style={styles.headerTitle}>Settings</Text>
-            <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+            <TouchableOpacity
+              style={styles.closeButton}
+              onPress={onClose}
+              accessibilityRole="button"
+              accessibilityLabel="Close settings"
+              hitSlop={10}
+            >
               <Ionicons name="close" size={28} color="#fff" />
             </TouchableOpacity>
           </View>
@@ -90,6 +102,9 @@ export const LandscapeSettingsDialog: React.FC<LandscapeSettingsDialogProps> = (
               <TouchableOpacity
                 style={styles.sectionHeader}
                 onPress={() => toggleSection('playback')}
+                accessibilityRole="button"
+                accessibilityLabel="Playback speed section"
+                accessibilityHint="Expands or collapses playback speed options"
               >
                 <View style={styles.sectionHeaderLeft}>
                   <Ionicons name="speedometer-outline" size={24} color="#fff" />
@@ -112,6 +127,9 @@ export const LandscapeSettingsDialog: React.FC<LandscapeSettingsDialogProps> = (
                           playbackSpeed === speed && styles.speedOptionActive,
                         ]}
                         onPress={() => onPlaybackSpeedChange(speed)}
+                        accessibilityRole="radio"
+                        accessibilityLabel={`Playback speed ${speed}x`}
+                        accessibilityState={{ selected: playbackSpeed === speed }}
                       >
                         <Text
                           style={[
@@ -133,6 +151,9 @@ export const LandscapeSettingsDialog: React.FC<LandscapeSettingsDialogProps> = (
               <TouchableOpacity
                 style={styles.sectionHeader}
                 onPress={() => toggleSection('quality')}
+                accessibilityRole="button"
+                accessibilityLabel="Video quality section"
+                accessibilityHint="Expands or collapses quality options"
               >
                 <View style={styles.sectionHeaderLeft}>
                   <Ionicons name="videocam-outline" size={24} color="#fff" />
@@ -155,6 +176,9 @@ export const LandscapeSettingsDialog: React.FC<LandscapeSettingsDialogProps> = (
                           quality === q && styles.qualityOptionActive,
                         ]}
                         onPress={() => onQualityChange(q)}
+                        accessibilityRole="radio"
+                        accessibilityLabel={`Video quality ${q}`}
+                        accessibilityState={{ selected: quality === q }}
                       >
                         <Text
                           style={[
@@ -179,6 +203,9 @@ export const LandscapeSettingsDialog: React.FC<LandscapeSettingsDialogProps> = (
               <TouchableOpacity
                 style={styles.sectionHeader}
                 onPress={() => toggleSection('preferences')}
+                accessibilityRole="button"
+                accessibilityLabel="Preferences section"
+                accessibilityHint="Expands or collapses preference options"
               >
                 <View style={styles.sectionHeaderLeft}>
                   <Ionicons name="options-outline" size={24} color="#fff" />
@@ -196,6 +223,10 @@ export const LandscapeSettingsDialog: React.FC<LandscapeSettingsDialogProps> = (
                     <TouchableOpacity
                       style={styles.preferenceItem}
                       onPress={() => onAutoPlayChange(!autoPlay)}
+                      accessibilityRole="switch"
+                      accessibilityLabel="Auto Play"
+                      accessibilityHint="Automatically plays next episode"
+                      accessibilityState={{ checked: autoPlay }}
                     >
                       <View style={styles.preferenceInfo}>
                         <Text style={styles.preferenceTitle}>Auto Play</Text>
@@ -221,6 +252,10 @@ export const LandscapeSettingsDialog: React.FC<LandscapeSettingsDialogProps> = (
                     <TouchableOpacity
                       style={styles.preferenceItem}
                       onPress={() => onShowSubtitlesChange(!showSubtitles)}
+                      accessibilityRole="switch"
+                      accessibilityLabel="Subtitles"
+                      accessibilityHint="Shows subtitles when available"
+                      accessibilityState={{ checked: showSubtitles }}
                     >
                       <View style={styles.preferenceInfo}>
                         <Text style={styles.preferenceTitle}>Subtitles</Text>
@@ -253,6 +288,9 @@ export const LandscapeSettingsDialog: React.FC<LandscapeSettingsDialogProps> = (
                 <TouchableOpacity
                   style={styles.sectionHeader}
                   onPress={() => toggleSection('audio')}
+                  accessibilityRole="button"
+                  accessibilityLabel="Audio section"
+                  accessibilityHint="Expands or collapses audio track options"
                 >
                   <View style={styles.sectionHeaderLeft}>
                     <Ionicons name="volume-medium-outline" size={24} color="#fff" />
@@ -277,6 +315,9 @@ export const LandscapeSettingsDialog: React.FC<LandscapeSettingsDialogProps> = (
                               isActive && styles.qualityOptionActive,
                             ]}
                             onPress={() => onAudioTrackChange?.(track.id)}
+                            accessibilityRole="radio"
+                            accessibilityLabel={`Audio track ${track.label}`}
+                            accessibilityState={{ selected: isActive }}
                           >
                             <Text
                               style={[
@@ -304,6 +345,9 @@ export const LandscapeSettingsDialog: React.FC<LandscapeSettingsDialogProps> = (
                 <TouchableOpacity
                   style={styles.sectionHeader}
                   onPress={() => toggleSection('subtitles')}
+                  accessibilityRole="button"
+                  accessibilityLabel="Subtitles section"
+                  accessibilityHint="Expands or collapses subtitle options"
                 >
                   <View style={styles.sectionHeaderLeft}>
                     <Ionicons name="chatbox-ellipses-outline" size={24} color="#fff" />
@@ -327,6 +371,9 @@ export const LandscapeSettingsDialog: React.FC<LandscapeSettingsDialogProps> = (
                           onShowSubtitlesChange(false);
                           onSubtitleTrackChange?.(null);
                         }}
+                        accessibilityRole="radio"
+                        accessibilityLabel="Subtitles off"
+                        accessibilityState={{ selected: !showSubtitles }}
                       >
                         <Text
                           style={[
@@ -354,6 +401,9 @@ export const LandscapeSettingsDialog: React.FC<LandscapeSettingsDialogProps> = (
                               onShowSubtitlesChange(true);
                               onSubtitleTrackChange?.(track.id);
                             }}
+                            accessibilityRole="radio"
+                            accessibilityLabel={`Subtitle track ${track.label}`}
+                            accessibilityState={{ selected: isActive }}
                           >
                             <Text
                               style={[
@@ -422,7 +472,10 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   closeButton: {
-    padding: 8,
+    minWidth: 44,
+    minHeight: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   content: {
     flex: 1,
@@ -438,7 +491,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingVertical: 18,
     backgroundColor: '#2a2a2a',
     borderRadius: 8,
   },

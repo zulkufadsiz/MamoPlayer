@@ -386,7 +386,13 @@ export const SimplePlayer: React.FC<SimplePlayerProps> = ({
             <View style={styles.overlayCard}>
               <Text style={styles.overlayTitle}>Playback error</Text>
               <Text style={styles.overlayText}>{errorMessage ?? 'Unable to play video'}</Text>
-              <TouchableOpacity style={styles.retryButton} onPress={handleRetry}>
+              <TouchableOpacity
+                style={styles.retryButton}
+                onPress={handleRetry}
+                accessibilityRole="button"
+                accessibilityLabel="Retry playback"
+                accessibilityHint="Attempts to play the video again"
+              >
                 <Text style={styles.retryButtonText}>Retry</Text>
               </TouchableOpacity>
             </View>
@@ -482,6 +488,8 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 16,
     backgroundColor: '#FFFFFF',
+    minHeight: 44,
+    justifyContent: 'center',
   },
   retryButtonText: {
     color: '#000000',

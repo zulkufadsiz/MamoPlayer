@@ -544,7 +544,13 @@ export const VerticalPlayer: React.FC<VerticalPlayerProps> = ({
             <View style={styles.overlayCard}>
               <Text style={styles.overlayTitle}>Playback error</Text>
               <Text style={styles.overlayText}>{errorMessage ?? 'Unable to play video'}</Text>
-              <TouchableOpacity style={styles.retryButton} onPress={handleRetry}>
+              <TouchableOpacity
+                style={styles.retryButton}
+                onPress={handleRetry}
+                accessibilityRole="button"
+                accessibilityLabel="Retry playback"
+                accessibilityHint="Attempts to play the video again"
+              >
                 <Text style={styles.retryButtonText}>Retry</Text>
               </TouchableOpacity>
             </View>
@@ -560,12 +566,22 @@ export const VerticalPlayer: React.FC<VerticalPlayerProps> = ({
       <Pressable 
         style={styles.touchArea}
         onPress={handleScreenPress}
+        accessibilityRole="button"
+        accessibilityLabel={showControls ? (isPlaying ? 'Pause video' : 'Play video') : 'Show playback controls'}
+        accessibilityHint={showControls ? 'Toggles playback' : 'Shows playback controls'}
       >
         {/* Center Play/Pause Icon */}
         {showControls && (
           <Animated.View style={[styles.centerPlayPause, { opacity: controlsOpacity }]}>
             {showSkipButtons && (
-              <TouchableOpacity style={styles.skipButton} onPress={() => handleSkip(-skipSeconds)}>
+              <TouchableOpacity
+                style={styles.skipButton}
+                onPress={() => handleSkip(-skipSeconds)}
+                accessibilityRole="button"
+                accessibilityLabel={`Skip backward ${skipSeconds} seconds`}
+                accessibilityHint="Moves playback position backward"
+                hitSlop={10}
+              >
                 <Ionicons name="play-back" size={32} color="#FFFFFF" />
                 <Text style={styles.skipText}>{skipSeconds}</Text>
               </TouchableOpacity>
@@ -576,7 +592,14 @@ export const VerticalPlayer: React.FC<VerticalPlayerProps> = ({
               color="rgba(255, 255, 255, 0.9)"
             />
             {showSkipButtons && (
-              <TouchableOpacity style={styles.skipButton} onPress={() => handleSkip(skipSeconds)}>
+              <TouchableOpacity
+                style={styles.skipButton}
+                onPress={() => handleSkip(skipSeconds)}
+                accessibilityRole="button"
+                accessibilityLabel={`Skip forward ${skipSeconds} seconds`}
+                accessibilityHint="Moves playback position forward"
+                hitSlop={10}
+              >
                 <Ionicons name="play-forward" size={32} color="#FFFFFF" />
                 <Text style={styles.skipText}>{skipSeconds}</Text>
               </TouchableOpacity>
@@ -588,7 +611,12 @@ export const VerticalPlayer: React.FC<VerticalPlayerProps> = ({
       {/* Right Side Action Buttons */}
       <View style={[styles.rightActions, { bottom: Math.max(140, insets.bottom + 100) }]}>
         {/* Author Avatar */}
-        <TouchableOpacity style={styles.avatarContainer}>
+        <TouchableOpacity
+          style={styles.avatarContainer}
+          accessibilityRole="button"
+          accessibilityLabel={`Open ${author} profile`}
+          hitSlop={10}
+        >
           <View style={styles.avatar}>
             <Ionicons name="person" size={24} color="#fff" />
           </View>
@@ -598,7 +626,14 @@ export const VerticalPlayer: React.FC<VerticalPlayerProps> = ({
         </TouchableOpacity>
 
         {/* Like Button */}
-        <TouchableOpacity style={styles.actionButton} onPress={handleLike}>
+        <TouchableOpacity
+          style={styles.actionButton}
+          onPress={handleLike}
+          accessibilityRole="button"
+          accessibilityLabel={isLiked ? 'Unlike video' : 'Like video'}
+          accessibilityHint="Toggles like on this video"
+          hitSlop={10}
+        >
           <Ionicons 
             name={isLiked ? 'heart' : 'heart-outline'} 
             size={32} 
@@ -608,19 +643,39 @@ export const VerticalPlayer: React.FC<VerticalPlayerProps> = ({
         </TouchableOpacity>
 
         {/* Comment Button */}
-        <TouchableOpacity style={styles.actionButton} onPress={handleCommentsPress}>
+        <TouchableOpacity
+          style={styles.actionButton}
+          onPress={handleCommentsPress}
+          accessibilityRole="button"
+          accessibilityLabel="Open comments"
+          accessibilityHint="Opens the comments sheet"
+          hitSlop={10}
+        >
           <Ionicons name="chatbubble-outline" size={32} color="#fff" />
           <Text style={styles.actionText}>{formatCount(comments + commentsList.length)}</Text>
         </TouchableOpacity>
 
         {/* Share Button */}
-        <TouchableOpacity style={styles.actionButton} onPress={onShare}>
+        <TouchableOpacity
+          style={styles.actionButton}
+          onPress={onShare}
+          accessibilityRole="button"
+          accessibilityLabel="Share video"
+          hitSlop={10}
+        >
           <Ionicons name="arrow-redo-outline" size={32} color="#fff" />
           <Text style={styles.actionText}>{formatCount(shares)}</Text>
         </TouchableOpacity>
 
         {/* Settings Button */}
-        <TouchableOpacity style={styles.actionButton} onPress={handleSettingsPress}>
+        <TouchableOpacity
+          style={styles.actionButton}
+          onPress={handleSettingsPress}
+          accessibilityRole="button"
+          accessibilityLabel="Open settings"
+          accessibilityHint="Opens playback and subtitle settings"
+          hitSlop={10}
+        >
           <Ionicons name="ellipsis-horizontal" size={32} color="#fff" />
         </TouchableOpacity>
       </View>
@@ -747,6 +802,9 @@ const styles = StyleSheet.create({
   avatarContainer: {
     alignItems: 'center',
     marginBottom: 8,
+    minWidth: 48,
+    minHeight: 48,
+    justifyContent: 'center',
   },
   avatar: {
     width: 48,
@@ -772,6 +830,9 @@ const styles = StyleSheet.create({
   actionButton: {
     alignItems: 'center',
     gap: 4,
+    minWidth: 48,
+    minHeight: 48,
+    justifyContent: 'center',
   },
   actionText: {
     color: '#fff',
@@ -861,6 +922,8 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 16,
     backgroundColor: '#FFFFFF',
+    minHeight: 44,
+    justifyContent: 'center',
   },
   retryButtonText: {
     color: '#000000',
