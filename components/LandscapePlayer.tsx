@@ -24,6 +24,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import LandscapeSettingsDialog from './lib/LandscapeSettingsDialog';
 import LoadingIndicator from './lib/LoadingIndicator';
+import { trackPlaybackEvent } from './lib/playbackAnalytics';
 import {
   getPlaybackPosition,
   savePlaybackPosition,
@@ -310,6 +311,7 @@ export const LandscapePlayer: React.FC<LandscapePlayerProps> = ({
   const { width, height } = useWindowDimensions();
   const hasAppliedStartAt = useRef(false);
   const hasStartedOnReadyRef = useRef(false);
+  const completionTrackedRef = useRef(false);
   const pictureInPictureSupported = isPictureInPictureSupported();
   const [resumeStartAt, setResumeStartAt] = useState<number | null>(null);
   const [resumeReady, setResumeReady] = useState(false);
@@ -396,6 +398,7 @@ export const LandscapePlayer: React.FC<LandscapePlayerProps> = ({
   useEffect(() => {
     hasAppliedStartAt.current = false;
     hasStartedOnReadyRef.current = false;
+    completionTrackedRef.current = false;
     setResumeStartAt(null);
     setResumeReady(false);
 
@@ -563,13 +566,29 @@ export const LandscapePlayer: React.FC<LandscapePlayerProps> = ({
   }, [showControls, isPlaying]);
 
   const handlePlayPause = () => {
+    const snapshotTime = Number.isFinite(currentTime) ? currentTime : 0;
+    const snapshotDuration = Number.isFinite(duration) ? duration : 0;
     if (isPlaying) {
       void persistPlaybackProgress();
       player.pause();
       setIsPlaying(false);
+      trackPlaybackEvent({
+        type: 'pause',
+        playerType: 'landscape',
+        mediaUrl,
+        currentTime: snapshotTime,
+        duration: snapshotDuration,
+      });
     } else {
       player.play();
       setIsPlaying(true);
+      trackPlaybackEvent({
+        type: 'play',
+        playerType: 'landscape',
+        mediaUrl,
+        currentTime: snapshotTime,
+        duration: snapshotDuration,
+      });
     }
   };
 
@@ -585,8 +604,19 @@ export const LandscapePlayer: React.FC<LandscapePlayerProps> = ({
   };
 
   const handleSeek = (value: number) => {
+    const fromTime = Number.isFinite(currentTime) ? currentTime : 0;
+    const mediaDuration = Number.isFinite(duration) ? duration : 0;
     player.currentTime = value;
     setCurrentTime(value);
+    completionTrackedRef.current = false;
+    trackPlaybackEvent({
+      type: 'seek',
+      playerType: 'landscape',
+      mediaUrl,
+      fromTime,
+      toTime: value,
+      duration: mediaDuration,
+    });
     void persistPlaybackProgress();
   };
 
@@ -604,14 +634,32 @@ export const LandscapePlayer: React.FC<LandscapePlayerProps> = ({
     artwork,
     onPlay: () => {
       if (!isPlaying) {
+        const snapshotTime = Number.isFinite(currentTime) ? currentTime : 0;
+        const snapshotDuration = Number.isFinite(duration) ? duration : 0;
         player.play();
         setIsPlaying(true);
+        trackPlaybackEvent({
+          type: 'play',
+          playerType: 'landscape',
+          mediaUrl,
+          currentTime: snapshotTime,
+          duration: snapshotDuration,
+        });
       }
     },
     onPause: () => {
       if (isPlaying) {
+        const snapshotTime = Number.isFinite(currentTime) ? currentTime : 0;
+        const snapshotDuration = Number.isFinite(duration) ? duration : 0;
         player.pause();
         setIsPlaying(false);
+        trackPlaybackEvent({
+          type: 'pause',
+          playerType: 'landscape',
+          mediaUrl,
+          currentTime: snapshotTime,
+          duration: snapshotDuration,
+        });
       }
     },
     onNext: showSkipButtons ? () => handleSkip(skipSeconds) : undefined,
@@ -639,6 +687,25 @@ export const LandscapePlayer: React.FC<LandscapePlayerProps> = ({
       void persistPlaybackProgress();
     };
   }, [mediaUrl, player, duration, currentTime]);
+
+  useEffect(() => {
+    if (!isPlaying || duration <= 0) return;
+
+    if (!completionTrackedRef.current && currentTime >= duration - 0.35) {
+      completionTrackedRef.current = true;
+      trackPlaybackEvent({
+        type: 'completion',
+        playerType: 'landscape',
+        mediaUrl,
+        currentTime,
+        duration,
+      });
+    }
+
+    if (completionTrackedRef.current && currentTime < duration - 2) {
+      completionTrackedRef.current = false;
+    }
+  }, [isPlaying, currentTime, duration, mediaUrl]);
 
   const showGestureFeedback = (message: string) => {
     setGestureMessage(message);

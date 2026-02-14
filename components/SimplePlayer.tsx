@@ -18,6 +18,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import LoadingIndicator from './lib/LoadingIndicator';
+import { trackPlaybackEvent } from './lib/playbackAnalytics';
 import PlaybackControls from './lib/PlaybackControls';
 import {
     getPlaybackPosition,
@@ -231,6 +232,7 @@ export const SimplePlayer: React.FC<SimplePlayerProps> = ({
   const { width, height } = useWindowDimensions();
   const hasAppliedStartAt = useRef(false);
   const hasStartedOnReadyRef = useRef(false);
+  const completionTrackedRef = useRef(false);
   const pictureInPictureSupported = isPictureInPictureSupported();
   const [resumeStartAt, setResumeStartAt] = useState<number | null>(null);
   const [resumeReady, setResumeReady] = useState(false);
@@ -266,6 +268,7 @@ export const SimplePlayer: React.FC<SimplePlayerProps> = ({
   useEffect(() => {
     hasAppliedStartAt.current = false;
     hasStartedOnReadyRef.current = false;
+    completionTrackedRef.current = false;
     setResumeStartAt(null);
     setResumeReady(false);
 
@@ -413,15 +416,57 @@ export const SimplePlayer: React.FC<SimplePlayerProps> = ({
   );
   const activeSubtitles = showSubtitles && activeSubtitleTrack ? activeSubtitleTrack.subtitles : [];
 
+  const getSafePlaybackSnapshot = () => {
+    try {
+      const currentTime = player.currentTime ?? 0;
+      const duration = player.duration ?? 0;
+      return {
+        currentTime: Number.isFinite(currentTime) ? currentTime : 0,
+        duration: Number.isFinite(duration) ? duration : 0,
+      };
+    } catch {
+      return { currentTime: 0, duration: 0 };
+    }
+  };
+
   const handlePlayPause = () => {
+    const { currentTime, duration } = getSafePlaybackSnapshot();
     if (isPlaying) {
       void persistPlaybackProgress();
       player.pause();
       setIsPlaying(false);
+      trackPlaybackEvent({
+        type: 'pause',
+        playerType: 'simple',
+        mediaUrl,
+        currentTime,
+        duration,
+      });
     } else {
       player.play();
       setIsPlaying(true);
+      trackPlaybackEvent({
+        type: 'play',
+        playerType: 'simple',
+        mediaUrl,
+        currentTime,
+        duration,
+      });
     }
+  };
+
+  const handleSeek = (time: number) => {
+    const { currentTime, duration } = getSafePlaybackSnapshot();
+    player.currentTime = time;
+    completionTrackedRef.current = false;
+    trackPlaybackEvent({
+      type: 'seek',
+      playerType: 'simple',
+      mediaUrl,
+      fromTime: currentTime,
+      toTime: time,
+      duration,
+    });
   };
 
   const handlePlaybackSpeedChange = (speed: number) => {
@@ -437,7 +482,7 @@ export const SimplePlayer: React.FC<SimplePlayerProps> = ({
     const nextTime = duration > 0
       ? Math.max(0, Math.min(duration, currentTime + seconds))
       : Math.max(0, currentTime + seconds);
-    player.currentTime = nextTime;
+    handleSeek(nextTime);
   };
 
   useEffect(() => {
@@ -457,6 +502,32 @@ export const SimplePlayer: React.FC<SimplePlayerProps> = ({
     };
   }, [mediaUrl, player]);
 
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (!isPlaying) return;
+
+      const { currentTime, duration } = getSafePlaybackSnapshot();
+      if (duration <= 0) return;
+
+      if (!completionTrackedRef.current && currentTime >= duration - 0.35) {
+        completionTrackedRef.current = true;
+        trackPlaybackEvent({
+          type: 'completion',
+          playerType: 'simple',
+          mediaUrl,
+          currentTime,
+          duration,
+        });
+      }
+
+      if (completionTrackedRef.current && currentTime < duration - 2) {
+        completionTrackedRef.current = false;
+      }
+    }, 400);
+
+    return () => clearInterval(interval);
+  }, [isPlaying, mediaUrl, player]);
+
   useTransportControls({
     enabled: Boolean(mediaUrl),
     isPlaying,
@@ -466,14 +537,30 @@ export const SimplePlayer: React.FC<SimplePlayerProps> = ({
     artwork,
     onPlay: () => {
       if (!isPlaying) {
+        const { currentTime, duration } = getSafePlaybackSnapshot();
         player.play();
         setIsPlaying(true);
+        trackPlaybackEvent({
+          type: 'play',
+          playerType: 'simple',
+          mediaUrl,
+          currentTime,
+          duration,
+        });
       }
     },
     onPause: () => {
       if (isPlaying) {
+        const { currentTime, duration } = getSafePlaybackSnapshot();
         player.pause();
         setIsPlaying(false);
+        trackPlaybackEvent({
+          type: 'pause',
+          playerType: 'simple',
+          mediaUrl,
+          currentTime,
+          duration,
+        });
       }
     },
     onNext: showSkipButtons ? () => handleSkip(skipSeconds) : undefined,
@@ -569,9 +656,7 @@ export const SimplePlayer: React.FC<SimplePlayerProps> = ({
         duration={player.duration || 0}
         mediaUrl={mediaUrl}
         onPlayPause={handlePlayPause}
-        onSeek={(time) => {
-          player.currentTime = time;
-        }}
+        onSeek={handleSeek}
         onSkipBackward={showSkipButtons ? () => handleSkip(-skipSeconds) : undefined}
         onSkipForward={showSkipButtons ? () => handleSkip(skipSeconds) : undefined}
         skipSeconds={skipSeconds}
