@@ -313,8 +313,15 @@ export const LandscapePlayer: React.FC<LandscapePlayerProps> = ({
 
   const persistPlaybackProgress = async () => {
     if (!mediaUrl) return;
-    const mediaDuration = player.duration ?? duration;
-    const position = player.currentTime ?? currentTime;
+
+    let mediaDuration = duration;
+    let position = currentTime;
+    try {
+      mediaDuration = player.duration ?? duration;
+      position = player.currentTime ?? currentTime;
+    } catch {
+      return;
+    }
 
     if (!Number.isFinite(mediaDuration) || !Number.isFinite(position) || mediaDuration <= 0) {
       return;

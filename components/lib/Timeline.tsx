@@ -30,10 +30,26 @@ export default function Timeline({
   const previewTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const previewRequestIdRef = React.useRef(0);
 
+  const getSafeCurrentTime = () => {
+    try {
+      return player?.currentTime ?? 0;
+    } catch {
+      return 0;
+    }
+  };
+
+  const getSafeDuration = () => {
+    try {
+      return player?.duration ?? 0;
+    } catch {
+      return 0;
+    }
+  };
+
   useEffect(() => {
     const interval = setInterval(() => {
       if (isSeeking) return;
-      const currentTime = player?.currentTime ?? 0;
+      const currentTime = getSafeCurrentTime();
       setSeekPosition(Number.isFinite(currentTime) ? currentTime : 0);
     }, isPlaying ? 250 : 500);
 
@@ -82,7 +98,7 @@ export default function Timeline({
     scheduleThumbnailLoad(value);
   };
 
-  const resolvedDuration = duration > 0 ? duration : player?.duration || 0;
+  const resolvedDuration = duration > 0 ? duration : getSafeDuration();
   const previewBubbleWidth = 132;
   const previewProgress = resolvedDuration > 0 ? seekPosition / resolvedDuration : 0;
   const previewLeft = Math.max(
