@@ -1,24 +1,60 @@
-import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import MamoPlayer from './MamoPlayer';
+import {
+  downloadVideoToLibrary,
+  getOfflineLibraryItems,
+  removeOfflineVideo,
+  type OfflineLibraryItem,
+} from './lib/offlineLibraryStore';
+
+type DemoVideo = {
+  id: string;
+  title: string;
+  description: string;
+  author: string;
+  uri: string;
+};
+
+const demoVideos: DemoVideo[] = [
+  {
+    id: 'big-buck-bunny',
+    title: 'Big Buck Bunny',
+    description: 'A fun animated short film about a giant rabbit and his adventures',
+    author: 'blender_foundation',
+    uri: 'https://devstreaming-cdn.apple.com/videos/streaming/examples/img_bipbop_adv_example_ts/master.m3u8',
+  },
+  {
+    id: 'elephants-dream',
+    title: 'Elephant Dream',
+    description: 'A surreal open movie made by the Blender Foundation',
+    author: 'blender_foundation',
+    uri: 'https://devstreaming-cdn.apple.com/videos/streaming/examples/img_bipbop_adv_example_ts/master.m3u8',
+  },
+  {
+    id: 'sintel',
+    title: 'Sintel',
+    description: 'A fantasy short film with cinematic animation and action',
+    author: 'blender_foundation',
+    uri: 'https://devstreaming-cdn.apple.com/videos/streaming/examples/img_bipbop_adv_example_ts/master.m3u8',
+  },
+];
 
 export const MamoPlayerDemo: React.FC = () => {
-  // Example video URL (replace with your own)
-  const videoSource = {
-    uri: 'https://devstreaming-cdn.apple.com/videos/streaming/examples/img_bipbop_adv_example_ts/master.m3u8',
-  };
-
-  const videoSourcesByLanguage = {
-    en: {
-      uri: 'https://devstreaming-cdn.apple.com/videos/streaming/examples/img_bipbop_adv_example_ts/master.m3u8',
-    },
-    tr: {
-      uri: 'https://devstreaming-cdn.apple.com/videos/streaming/examples/img_bipbop_adv_example_ts/master.m3u8',
-    },
-    es: {
-      uri: 'https://devstreaming-cdn.apple.com/videos/streaming/examples/img_bipbop_adv_example_ts/master.m3u8',
-    },
-  };
+  const [selectedVideoId, setSelectedVideoId] = useState(demoVideos[0].id);
+  const [offlineItems, setOfflineItems] = useState<OfflineLibraryItem[]>([]);
+  const [isLibraryLoading, setIsLibraryLoading] = useState(true);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [preferOfflinePlayback, setPreferOfflinePlayback] = useState(true);
 
   // Sample subtitle tracks (adjust timing for your video)
   const subtitleTracks = [
@@ -81,6 +117,51 @@ export const MamoPlayerDemo: React.FC = () => {
     },
   ];
 
+  const selectedVideo = useMemo(() => {
+    return demoVideos.find((video) => video.id === selectedVideoId) ?? demoVideos[0];
+  }, [selectedVideoId]);
+
+  const offlineItemsById = useMemo(() => {
+    return offlineItems.reduce<Record<string, OfflineLibraryItem>>((accumulator, item) => {
+      accumulator[item.id] = item;
+      return accumulator;
+    }, {});
+  }, [offlineItems]);
+
+  const selectedOfflineItem = offlineItemsById[selectedVideo.id] ?? null;
+  const isSelectedVideoDownloaded = Boolean(selectedOfflineItem);
+  const isPlayingOffline = preferOfflinePlayback && isSelectedVideoDownloaded;
+
+  const playerSource = {
+    uri: isPlayingOffline ? selectedOfflineItem.localUri : selectedVideo.uri,
+  };
+
+  const videoSourcesByLanguage = {
+    en: playerSource,
+    tr: playerSource,
+    es: playerSource,
+  };
+
+  const loadOfflineLibrary = useCallback(async () => {
+    setIsLibraryLoading(true);
+    try {
+      const items = await getOfflineLibraryItems();
+      setOfflineItems(items);
+    } finally {
+      setIsLibraryLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadOfflineLibrary();
+  }, [loadOfflineLibrary]);
+
+  const formatFileSize = (sizeBytes?: number) => {
+    if (!sizeBytes || sizeBytes <= 0) return 'Unknown size';
+    const mb = sizeBytes / (1024 * 1024);
+    return `${mb.toFixed(1)} MB`;
+  };
+
   const handleSettingsPress = () => {
     console.log('Settings button pressed');
   };
@@ -97,22 +178,142 @@ export const MamoPlayerDemo: React.FC = () => {
     console.log('Share button pressed');
   };
 
+  const handleDownload = async () => {
+    if (Platform.OS === 'web') {
+      Alert.alert('Not supported on web', 'Offline download is available on iOS and Android.');
+      return;
+    }
+
+    if (downloadingId) return;
+
+    try {
+      setDownloadingId(selectedVideo.id);
+      await downloadVideoToLibrary({
+        id: selectedVideo.id,
+        title: selectedVideo.title,
+        remoteUrl: selectedVideo.uri,
+      });
+      setPreferOfflinePlayback(true);
+      await loadOfflineLibrary();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Download failed.';
+      Alert.alert('Download failed', message);
+    } finally {
+      setDownloadingId(null);
+    }
+  };
+
+  const handleRemoveDownload = async (videoId: string) => {
+    try {
+      await removeOfflineVideo(videoId);
+      await loadOfflineLibrary();
+    } catch {
+      Alert.alert('Unable to remove', 'The downloaded file could not be removed.');
+    }
+  };
+
   return (
-    <View style={styles.container}>
+    <ScrollView style={styles.screen} contentContainerStyle={styles.screenContent}>
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Catalog</Text>
+        <View style={styles.rowWrap}>
+          {demoVideos.map((video) => {
+            const isSelected = video.id === selectedVideo.id;
+            return (
+              <Pressable
+                key={video.id}
+                style={[styles.chip, isSelected && styles.chipSelected]}
+                onPress={() => setSelectedVideoId(video.id)}
+              >
+                <Text style={[styles.chipText, isSelected && styles.chipTextSelected]}>{video.title}</Text>
+              </Pressable>
+            );
+          })}
+        </View>
+
+        <View style={styles.actionsRow}>
+          <Pressable
+            onPress={handleDownload}
+            disabled={Boolean(downloadingId) || isSelectedVideoDownloaded}
+            style={[
+              styles.actionButton,
+              (Boolean(downloadingId) || isSelectedVideoDownloaded) && styles.actionButtonDisabled,
+            ]}
+          >
+            {downloadingId === selectedVideo.id ? (
+              <ActivityIndicator color="#FFF" />
+            ) : (
+              <Text style={styles.actionButtonText}>
+                {isSelectedVideoDownloaded ? 'Downloaded' : 'Download Offline'}
+              </Text>
+            )}
+          </Pressable>
+
+          <Pressable
+            onPress={() => setPreferOfflinePlayback((value) => !value)}
+            style={styles.actionButtonSecondary}
+          >
+            <Text style={styles.actionButtonSecondaryText}>
+              {preferOfflinePlayback ? 'Use Streaming Source' : 'Prefer Offline Source'}
+            </Text>
+          </Pressable>
+        </View>
+
+        <Text style={styles.statusText}>
+          Source: {isPlayingOffline ? 'Local file' : 'Streaming URL'}
+        </Text>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Local Library</Text>
+        {isLibraryLoading ? (
+          <ActivityIndicator color="#111" />
+        ) : offlineItems.length === 0 ? (
+          <Text style={styles.emptyText}>No downloaded videos yet.</Text>
+        ) : (
+          <View style={styles.libraryList}>
+            {offlineItems.map((item) => {
+              const isSelected = selectedVideo.id === item.id;
+              return (
+                <View key={item.id} style={styles.libraryItem}>
+                  <Pressable
+                    onPress={() => {
+                      setSelectedVideoId(item.id);
+                      setPreferOfflinePlayback(true);
+                    }}
+                    style={[styles.librarySelectButton, isSelected && styles.librarySelectButtonSelected]}
+                  >
+                    <Text style={styles.libraryTitle}>{item.title}</Text>
+                    <Text style={styles.libraryMeta}>{formatFileSize(item.sizeBytes)}</Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => void handleRemoveDownload(item.id)}
+                    style={styles.removeButton}
+                  >
+                    <Text style={styles.removeButtonText}>Remove</Text>
+                  </Pressable>
+                </View>
+              );
+            })}
+          </View>
+        )}
+      </View>
+
+      <View style={styles.playerContainer}>
         <MamoPlayer
-          source={videoSource}
+          source={playerSource}
           videoSourcesByLanguage={videoSourcesByLanguage}
           autoPlay={true}
-          startAt={12}
+          startAt={0}
           style={styles.player}
           subtitleTracks={subtitleTracks}
           defaultSubtitleTrackId="en"
           onSettingsPress={handleSettingsPress}
           playerType="simple"          
-          contentFit="contain" // Options: 'contain' (shows full video, may have bars) | 'cover' (fills screen, may crop) | 'fill' (stretches)          
-          title="Big Buck Bunny"
-          description="A fun animated short film about a giant rabbit and his adventures"
-          author="blender_foundation"
+          contentFit="contain"
+          title={selectedVideo.title}
+          description={selectedVideo.description}
+          author={selectedVideo.author}
           likes={125300}
           comments={3450}
           shares={8920}
@@ -120,16 +321,150 @@ export const MamoPlayerDemo: React.FC = () => {
           onComment={handleComment}
           onShare={handleShare}
         />
-    </View>
+      </View>
+    </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    paddingTop: 80,
-    //backgroundColor: '#000',
-    height: 400,
-    //flex: 1,
+  screen: {
+    flex: 1,
+    backgroundColor: '#F6F7F9',
+  },
+  screenContent: {
+    paddingTop: 60,
+    paddingBottom: 24,
+    gap: 14,
+  },
+  section: {
+    marginHorizontal: 14,
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: '#FFFFFF',
+    gap: 10,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  rowWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  chip: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: '#FFF',
+  },
+  chipSelected: {
+    borderColor: '#111827',
+    backgroundColor: '#111827',
+  },
+  chipText: {
+    color: '#111827',
+    fontWeight: '600',
+    fontSize: 13,
+  },
+  chipTextSelected: {
+    color: '#FFF',
+  },
+  actionsRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  actionButton: {
+    flex: 1,
+    minHeight: 42,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 10,
+    backgroundColor: '#2563EB',
+  },
+  actionButtonDisabled: {
+    opacity: 0.6,
+  },
+  actionButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 13,
+  },
+  actionButtonSecondary: {
+    flex: 1,
+    minHeight: 42,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 10,
+    backgroundColor: '#E5E7EB',
+  },
+  actionButtonSecondaryText: {
+    color: '#111827',
+    fontWeight: '700',
+    fontSize: 13,
+  },
+  statusText: {
+    color: '#4B5563',
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  emptyText: {
+    color: '#6B7280',
+    fontSize: 14,
+  },
+  libraryList: {
+    gap: 8,
+  },
+  libraryItem: {
+    flexDirection: 'row',
+    gap: 8,
+    alignItems: 'center',
+  },
+  librarySelectButton: {
+    flex: 1,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#FFF',
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+  },
+  librarySelectButtonSelected: {
+    borderColor: '#111827',
+  },
+  libraryTitle: {
+    color: '#111827',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  libraryMeta: {
+    color: '#6B7280',
+    fontSize: 12,
+    marginTop: 2,
+  },
+  removeButton: {
+    borderRadius: 10,
+    backgroundColor: '#FEE2E2',
+    minHeight: 40,
+    minWidth: 78,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 10,
+  },
+  removeButtonText: {
+    color: '#991B1B',
+    fontWeight: '700',
+    fontSize: 12,
+  },
+  playerContainer: {
+    marginHorizontal: 14,
+    borderRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: '#000',
+    height: 320,
   },
   player: {
     flex: 1,

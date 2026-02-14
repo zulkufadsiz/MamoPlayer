@@ -287,8 +287,15 @@ export const VerticalPlayer: React.FC<VerticalPlayerProps> = ({
   const persistPlaybackProgress = async () => {
     if (!mediaUrl) return;
 
-    const duration = player.duration ?? 0;
-    const currentTime = player.currentTime ?? 0;
+    let duration = 0;
+    let currentTime = 0;
+    try {
+      duration = player.duration ?? 0;
+      currentTime = player.currentTime ?? 0;
+    } catch {
+      return;
+    }
+
     if (!Number.isFinite(duration) || !Number.isFinite(currentTime) || duration <= 0) return;
 
     await savePlaybackPosition(mediaUrl, currentTime, duration);
