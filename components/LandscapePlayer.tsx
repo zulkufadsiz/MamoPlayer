@@ -3,7 +3,12 @@ import { Ionicons } from '@expo/vector-icons';
 import Slider from '@react-native-community/slider';
 import { useEventListener } from 'expo';
 import * as ScreenOrientation from 'expo-screen-orientation';
-import { VideoView, useVideoPlayer, type VideoSource } from 'expo-video';
+import {
+  isPictureInPictureSupported,
+  VideoView,
+  useVideoPlayer,
+  type VideoSource,
+} from 'expo-video';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
@@ -157,6 +162,7 @@ export const LandscapePlayer: React.FC<LandscapePlayerProps> = ({
   onSettingsPress,
   skipSeconds = 10,
   showSkipButtons = true,
+  allowsPictureInPicture = true,
   contentFit = 'contain',
   title = 'Video Title',
   episode,
@@ -229,8 +235,10 @@ export const LandscapePlayer: React.FC<LandscapePlayerProps> = ({
     player.loop = false;
     player.volume = 1;
   });
+  const videoViewRef = useRef<VideoView>(null);
   const { width, height } = useWindowDimensions();
   const hasAppliedStartAt = useRef(false);
+  const pictureInPictureSupported = isPictureInPictureSupported();
 
   const applyStartAt = () => {
     if (hasAppliedStartAt.current) return false;
@@ -277,9 +285,11 @@ export const LandscapePlayer: React.FC<LandscapePlayerProps> = ({
   const [volume, setVolume] = useState(1);
   const [showVolumeSlider, setShowVolumeSlider] = useState(false);
   const [currentSubtitle, setCurrentSubtitle] = useState<string>('');
+  const [isPictureInPictureActive, setIsPictureInPictureActive] = useState(false);
   const [controlsOpacity] = useState(new Animated.Value(1));
   const isBuffering = playerStatus === 'loading' || playerStatus === 'buffering';
   const isError = !!errorMessage || playerStatus === 'error';
+  const canUsePictureInPicture = allowsPictureInPicture && pictureInPictureSupported;
   useEffect(() => {
     hasAppliedStartAt.current = false;
   }, [resolvedSource, startAt]);
@@ -482,6 +492,20 @@ export const LandscapePlayer: React.FC<LandscapePlayerProps> = ({
     player.play();
   };
 
+  const handlePictureInPictureToggle = async () => {
+    if (!canUsePictureInPicture || !videoViewRef.current) return;
+
+    try {
+      if (isPictureInPictureActive) {
+        await videoViewRef.current.stopPictureInPicture();
+      } else {
+        await videoViewRef.current.startPictureInPicture();
+      }
+    } catch (error) {
+      console.warn('Failed to toggle picture in picture mode', error);
+    }
+  };
+
   const formatTime = (seconds: number): string => {
     const hrs = Math.floor(seconds / 3600);
     const mins = Math.floor((seconds % 3600) / 60);
@@ -499,9 +523,13 @@ export const LandscapePlayer: React.FC<LandscapePlayerProps> = ({
 
       {/* Video Background */}
       <VideoView
+        ref={videoViewRef}
         style={styles.video}
         player={player}
         nativeControls={false}
+        allowsPictureInPicture={allowsPictureInPicture}
+        onPictureInPictureStart={() => setIsPictureInPictureActive(true)}
+        onPictureInPictureStop={() => setIsPictureInPictureActive(false)}
         contentFit={contentFit}
       />
 
@@ -591,6 +619,25 @@ export const LandscapePlayer: React.FC<LandscapePlayerProps> = ({
                 >
                   <Ionicons name="settings-outline" size={24} color="#fff" />
                 </TouchableOpacity>
+                {canUsePictureInPicture && (
+                  <TouchableOpacity
+                    style={styles.iconButton}
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      handlePictureInPictureToggle();
+                    }}
+                    accessibilityRole="button"
+                    accessibilityLabel={
+                      isPictureInPictureActive
+                        ? 'Exit picture in picture'
+                        : 'Enter picture in picture'
+                    }
+                    accessibilityHint="Toggles picture in picture mode"
+                    hitSlop={10}
+                  >
+                    <Text style={styles.pipLabel}>PiP</Text>
+                  </TouchableOpacity>
+                )}
               </View>
             </View>
 
@@ -762,6 +809,11 @@ const styles = StyleSheet.create({
     minHeight: 44,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  pipLabel: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '700',
   },
   centerControls: {
     flexDirection: 'row',

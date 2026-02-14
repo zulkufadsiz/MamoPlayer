@@ -51,6 +51,12 @@
     "plugins": [
       "expo-router",
       [
+        "expo-video",
+        {
+          "supportsPictureInPicture": true
+        }
+      ],
+      [
         "expo-splash-screen",
         {
           "image": "./assets/images/splash-icon.png",

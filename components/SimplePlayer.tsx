@@ -1,7 +1,12 @@
 
 import { useEventListener } from 'expo';
 import * as ScreenOrientation from 'expo-screen-orientation';
-import { VideoView, useVideoPlayer, type VideoSource } from 'expo-video';
+import {
+  isPictureInPictureSupported,
+  VideoView,
+  useVideoPlayer,
+  type VideoSource,
+} from 'expo-video';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
     StatusBar,
@@ -155,8 +160,10 @@ export const SimplePlayer: React.FC<SimplePlayerProps> = ({
     player.loop = true;
     player.volume = 0;
   });
+  const videoViewRef = useRef<VideoView>(null);
   const { width, height } = useWindowDimensions();
   const hasAppliedStartAt = useRef(false);
+  const pictureInPictureSupported = isPictureInPictureSupported();
 
     const applyStartAt = () => {
       if (hasAppliedStartAt.current) return false;
@@ -219,8 +226,10 @@ export const SimplePlayer: React.FC<SimplePlayerProps> = ({
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
   const [quality, setQuality] = useState('Auto');
   const [autoPlayEnabled, setAutoPlayEnabled] = useState(autoPlay);
+  const [isPictureInPictureActive, setIsPictureInPictureActive] = useState(false);
   const isBuffering = playerStatus === 'loading' || playerStatus === 'buffering';
   const isError = !!errorMessage || playerStatus === 'error';
+  const canUsePictureInPicture = allowsPictureInPicture && pictureInPictureSupported;
 
   // Handle orientation when entering/exiting fullscreen
   useEffect(() => {
@@ -346,6 +355,20 @@ export const SimplePlayer: React.FC<SimplePlayerProps> = ({
     setPlayerStatus('loading');
     player.play();
   };
+
+  const handlePictureInPictureToggle = async () => {
+    if (!canUsePictureInPicture || !videoViewRef.current) return;
+
+    try {
+      if (isPictureInPictureActive) {
+        await videoViewRef.current.stopPictureInPicture();
+      } else {
+        await videoViewRef.current.startPictureInPicture();
+      }
+    } catch (error) {
+      console.warn('Failed to toggle picture in picture mode', error);
+    }
+  };
   
   const ContainerComponent = isFullscreen ? SafeAreaView : View;
   const containerStyle = [
@@ -362,6 +385,7 @@ export const SimplePlayer: React.FC<SimplePlayerProps> = ({
     >
       {isFullscreen && <StatusBar hidden />}
       <VideoView
+        ref={videoViewRef}
         style={[
           styles.video,
           isFullscreen && styles.fullscreenVideo,
@@ -371,6 +395,8 @@ export const SimplePlayer: React.FC<SimplePlayerProps> = ({
         nativeControls={false}
         allowsFullscreen={allowsFullscreen}
         allowsPictureInPicture={allowsPictureInPicture}
+        onPictureInPictureStart={() => setIsPictureInPictureActive(true)}
+        onPictureInPictureStop={() => setIsPictureInPictureActive(false)}
         contentFit={contentFit}
       />
 
@@ -417,6 +443,9 @@ export const SimplePlayer: React.FC<SimplePlayerProps> = ({
         showSubtitles={showSubtitles}
         onSubtitlesToggle={() => setShowSubtitles(!showSubtitles)}
         onSettingsPress={handleSettingsPress}
+        allowsPictureInPicture={canUsePictureInPicture}
+        isPictureInPictureActive={isPictureInPictureActive}
+        onPictureInPictureToggle={handlePictureInPictureToggle}
         hasSubtitles={resolvedSubtitleTracks.length > 0}
         autoHideControls
         autoHideDelayMs={3000}

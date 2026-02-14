@@ -68,6 +68,9 @@ interface PlaybackControlsProps {
   showSubtitles?: boolean;
   onSubtitlesToggle?: () => void;
   onSettingsPress?: () => void;
+  allowsPictureInPicture?: boolean;
+  isPictureInPictureActive?: boolean;
+  onPictureInPictureToggle?: () => void;
   hasSubtitles?: boolean;
   autoHideControls?: boolean;
   autoHideDelayMs?: number;
@@ -87,6 +90,9 @@ export default function PlaybackControls({
   showSubtitles = true,
   onSubtitlesToggle,
   onSettingsPress,
+  allowsPictureInPicture = false,
+  isPictureInPictureActive = false,
+  onPictureInPictureToggle,
   hasSubtitles,
   autoHideControls = false,
   autoHideDelayMs = 3000,
@@ -279,6 +285,23 @@ export default function PlaybackControls({
               />
             </TouchableOpacity>
           )}
+          {allowsPictureInPicture && onPictureInPictureToggle && (
+            <TouchableOpacity
+              style={styles.fullscreenButton}
+              onPress={onPictureInPictureToggle}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel={
+                isPictureInPictureActive
+                  ? 'Exit picture in picture'
+                  : 'Enter picture in picture'
+              }
+              accessibilityHint="Toggles picture in picture mode"
+              hitSlop={10}
+            >
+              <Text style={styles.pipLabel}>PiP</Text>
+            </TouchableOpacity>
+          )}
           <TouchableOpacity
             style={styles.fullscreenButton}
             onPress={handleFullscreen}
@@ -393,6 +416,11 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.6)',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  pipLabel: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '700',
   },
   subtitleContainer: {
     position: 'absolute',
