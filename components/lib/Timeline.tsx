@@ -1,6 +1,7 @@
 import Slider from '@react-native-community/slider';
+import * as VideoThumbnails from 'expo-video-thumbnails';
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Image, LayoutChangeEvent, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface TimelineProps {
@@ -9,6 +10,7 @@ interface TimelineProps {
   duration: number;
   onSeek: (time: number) => void;
   isFullscreen?: boolean;
+  mediaUrl?: string | null;
 }
 
 export default function Timeline({
@@ -17,10 +19,16 @@ export default function Timeline({
   duration,
   onSeek,
   isFullscreen = false,
+  mediaUrl,
 }: TimelineProps) {
   const insets = useSafeAreaInsets();
   const [isSeeking, setIsSeeking] = useState(false);
   const [seekPosition, setSeekPosition] = useState(0);
+  const [previewUri, setPreviewUri] = useState<string | null>(null);
+  const [sliderWidth, setSliderWidth] = useState(0);
+  const thumbnailCacheRef = React.useRef<Record<number, string>>({});
+  const previewTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const previewRequestIdRef = React.useRef(0);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -31,6 +39,19 @@ export default function Timeline({
 
     return () => clearInterval(interval);
   }, [isPlaying, isSeeking, player]);
+
+  useEffect(() => {
+    thumbnailCacheRef.current = {};
+    setPreviewUri(null);
+  }, [mediaUrl]);
+
+  useEffect(() => {
+    return () => {
+      if (previewTimerRef.current) {
+        clearTimeout(previewTimerRef.current);
+      }
+    };
+  }, []);
 
   const formatTime = (seconds: number) => {
     if (isNaN(seconds) || !isFinite(seconds)) {
@@ -48,6 +69,7 @@ export default function Timeline({
 
   const handleSlidingStart = () => {
     setIsSeeking(true);
+    scheduleThumbnailLoad(seekPosition);
   };
 
   const handleSlidingComplete = (value: number) => {
@@ -57,9 +79,63 @@ export default function Timeline({
 
   const handleValueChange = (value: number) => {
     setSeekPosition(value);
+    scheduleThumbnailLoad(value);
   };
 
   const resolvedDuration = duration > 0 ? duration : player?.duration || 0;
+  const previewBubbleWidth = 132;
+  const previewProgress = resolvedDuration > 0 ? seekPosition / resolvedDuration : 0;
+  const previewLeft = Math.max(
+    0,
+    Math.min(
+      sliderWidth - previewBubbleWidth,
+      previewProgress * sliderWidth - previewBubbleWidth / 2
+    )
+  );
+
+  const loadThumbnail = async (timeSeconds: number) => {
+    if (!mediaUrl) {
+      setPreviewUri(null);
+      return;
+    }
+
+    const bucket = Math.max(0, Math.floor(timeSeconds));
+    const cached = thumbnailCacheRef.current[bucket];
+    if (cached) {
+      setPreviewUri(cached);
+      return;
+    }
+
+    const requestId = ++previewRequestIdRef.current;
+    try {
+      const { uri } = await VideoThumbnails.getThumbnailAsync(mediaUrl, {
+        time: bucket * 1000,
+        quality: 0.5,
+      });
+      thumbnailCacheRef.current[bucket] = uri;
+      if (requestId === previewRequestIdRef.current) {
+        setPreviewUri(uri);
+      }
+    } catch {
+      if (requestId === previewRequestIdRef.current) {
+        setPreviewUri(null);
+      }
+    }
+  };
+
+  const scheduleThumbnailLoad = (timeSeconds: number) => {
+    if (!mediaUrl) return;
+    if (previewTimerRef.current) {
+      clearTimeout(previewTimerRef.current);
+    }
+    previewTimerRef.current = setTimeout(() => {
+      void loadThumbnail(timeSeconds);
+    }, 80);
+  };
+
+  const handleSliderLayout = (event: LayoutChangeEvent) => {
+    setSliderWidth(event.nativeEvent.layout.width);
+  };
 
   return (
     <View style={[
@@ -78,21 +154,37 @@ export default function Timeline({
         >
           {formatTime(seekPosition)}
         </Text>
-        <Slider
-          style={styles.slider}
-          value={seekPosition}
-          minimumValue={0}
-          maximumValue={resolvedDuration || 1}
-          onSlidingStart={handleSlidingStart}
-          onSlidingComplete={handleSlidingComplete}
-          onValueChange={handleValueChange}
-          minimumTrackTintColor="#1DB954"
-          maximumTrackTintColor="#404040"
-          thumbTintColor="#FFFFFF"
-          accessibilityRole="adjustable"
-          accessibilityLabel="Playback position"
-          accessibilityHint="Swipe up or down to adjust the current playback time"
-        />
+        <View style={styles.sliderWrapper} onLayout={handleSliderLayout}>
+          {isSeeking && (
+            <View style={[styles.previewBubble, { left: previewLeft }]} pointerEvents="none">
+              <View style={styles.previewImageWrap}>
+                {previewUri ? (
+                  <Image source={{ uri: previewUri }} style={styles.previewImage} />
+                ) : (
+                  <View style={styles.previewFallback}>
+                    <Text style={styles.previewFallbackText}>Preview</Text>
+                  </View>
+                )}
+              </View>
+              <Text style={styles.previewTime}>{formatTime(seekPosition)}</Text>
+            </View>
+          )}
+          <Slider
+            style={styles.slider}
+            value={seekPosition}
+            minimumValue={0}
+            maximumValue={resolvedDuration || 1}
+            onSlidingStart={handleSlidingStart}
+            onSlidingComplete={handleSlidingComplete}
+            onValueChange={handleValueChange}
+            minimumTrackTintColor="#1DB954"
+            maximumTrackTintColor="#404040"
+            thumbTintColor="#FFFFFF"
+            accessibilityRole="adjustable"
+            accessibilityLabel="Playback position"
+            accessibilityHint="Swipe up or down to adjust the current playback time"
+          />
+        </View>
         <Text
           style={styles.timeText}
           accessibilityLabel={`Duration ${formatTime(resolvedDuration)}`}
@@ -122,9 +214,51 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   slider: {
+    width: '100%',
+    height: 44,
+  },
+  sliderWrapper: {
     flex: 1,
     marginHorizontal: 8,
-    height: 44,
+    position: 'relative',
+  },
+  previewBubble: {
+    position: 'absolute',
+    width: 132,
+    bottom: 44,
+    borderRadius: 8,
+    overflow: 'hidden',
+    backgroundColor: 'rgba(20, 20, 20, 0.96)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.18)',
+    zIndex: 5,
+  },
+  previewImageWrap: {
+    width: '100%',
+    height: 72,
+    backgroundColor: '#121212',
+  },
+  previewImage: {
+    width: '100%',
+    height: '100%',
+  },
+  previewFallback: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  previewFallbackText: {
+    color: '#BDBDBD',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  previewTime: {
+    color: '#FFFFFF',
+    textAlign: 'center',
+    fontSize: 12,
+    fontWeight: '700',
+    paddingVertical: 6,
+    fontVariant: ['tabular-nums'],
   },
   timeText: {
     color: '#FFFFFF',
