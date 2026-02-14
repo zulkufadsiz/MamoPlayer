@@ -7,9 +7,11 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from 'react-native';
 import MamoPlayer from './MamoPlayer';
+import { parseSrtOrVtt } from './lib/subtitleParser';
 import {
   downloadVideoToLibrary,
   getOfflineLibraryItems,
@@ -55,6 +57,15 @@ export const MamoPlayerDemo: React.FC = () => {
   const [isLibraryLoading, setIsLibraryLoading] = useState(true);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [preferOfflinePlayback, setPreferOfflinePlayback] = useState(true);
+  const [subtitleUrlInput, setSubtitleUrlInput] = useState('');
+  const [subtitleTextInput, setSubtitleTextInput] = useState('');
+  const [isImportingSubtitles, setIsImportingSubtitles] = useState(false);
+  const [externalSubtitleTrack, setExternalSubtitleTrack] = useState<{
+    id: string;
+    label: string;
+    language?: string;
+    subtitles: Array<{ start: number; end: number; text: string }>;
+  } | null>(null);
 
   // Sample subtitle tracks (adjust timing for your video)
   const subtitleTracks = [
@@ -116,6 +127,13 @@ export const MamoPlayerDemo: React.FC = () => {
       ],
     },
   ];
+
+  const effectiveSubtitleTracks = useMemo(() => {
+    if (!externalSubtitleTrack) return subtitleTracks;
+
+    const withoutExternal = subtitleTracks.filter((track) => track.id !== externalSubtitleTrack.id);
+    return [...withoutExternal, externalSubtitleTrack];
+  }, [externalSubtitleTrack, subtitleTracks]);
 
   const selectedVideo = useMemo(() => {
     return demoVideos.find((video) => video.id === selectedVideoId) ?? demoVideos[0];
@@ -206,6 +224,62 @@ export const MamoPlayerDemo: React.FC = () => {
 
   const handleShare = () => {
     console.log('Share button pressed');
+  };
+
+  const applyImportedSubtitleContent = (content: string, sourceLabel: string) => {
+    const parsedSubtitles = parseSrtOrVtt(content);
+
+    if (parsedSubtitles.length === 0) {
+      Alert.alert('Import failed', 'No valid cues were found. Please provide a valid SRT or VTT file.');
+      return;
+    }
+
+    setExternalSubtitleTrack({
+      id: 'external',
+      label: `External (${sourceLabel})`,
+      language: 'external',
+      subtitles: parsedSubtitles,
+    });
+
+    Alert.alert('Subtitles imported', `Loaded ${parsedSubtitles.length} subtitle cues.`);
+  };
+
+  const handleImportFromUrl = async () => {
+    const url = subtitleUrlInput.trim();
+    if (!url) {
+      Alert.alert('URL required', 'Enter a subtitle URL (.srt or .vtt).');
+      return;
+    }
+
+    setIsImportingSubtitles(true);
+    try {
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`Request failed with status ${response.status}`);
+      }
+
+      const content = await response.text();
+      applyImportedSubtitleContent(content, 'URL');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unable to fetch subtitle URL.';
+      Alert.alert('Import failed', message);
+    } finally {
+      setIsImportingSubtitles(false);
+    }
+  };
+
+  const handleImportFromText = () => {
+    const content = subtitleTextInput.trim();
+    if (!content) {
+      Alert.alert('Subtitle text required', 'Paste SRT or VTT content to import.');
+      return;
+    }
+
+    applyImportedSubtitleContent(content, 'Text');
+  };
+
+  const handleClearImportedSubtitles = () => {
+    setExternalSubtitleTrack(null);
   };
 
   const handleDownload = async () => {
@@ -329,6 +403,54 @@ export const MamoPlayerDemo: React.FC = () => {
         )}
       </View>
 
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>External Subtitles (SRT/VTT)</Text>
+
+        <TextInput
+          value={subtitleUrlInput}
+          onChangeText={setSubtitleUrlInput}
+          placeholder="https://example.com/subtitles.vtt"
+          autoCapitalize="none"
+          autoCorrect={false}
+          style={styles.textInput}
+        />
+
+        <View style={styles.actionsRow}>
+          <Pressable
+            onPress={() => void handleImportFromUrl()}
+            disabled={isImportingSubtitles}
+            style={[styles.actionButton, isImportingSubtitles && styles.actionButtonDisabled]}
+          >
+            {isImportingSubtitles ? (
+              <ActivityIndicator color="#FFF" />
+            ) : (
+              <Text style={styles.actionButtonText}>Import from URL</Text>
+            )}
+          </Pressable>
+
+          <Pressable onPress={handleClearImportedSubtitles} style={styles.actionButtonSecondary}>
+            <Text style={styles.actionButtonSecondaryText}>Clear External</Text>
+          </Pressable>
+        </View>
+
+        <TextInput
+          value={subtitleTextInput}
+          onChangeText={setSubtitleTextInput}
+          placeholder="Paste SRT or VTT content here"
+          multiline
+          style={styles.textArea}
+          textAlignVertical="top"
+        />
+
+        <Pressable onPress={handleImportFromText} style={styles.actionButton}>
+          <Text style={styles.actionButtonText}>Import from Text</Text>
+        </Pressable>
+
+        <Text style={styles.statusText}>
+          External track: {externalSubtitleTrack ? `${externalSubtitleTrack.label} (${externalSubtitleTrack.subtitles.length} cues)` : 'Not loaded'}
+        </Text>
+      </View>
+
       <View style={styles.playerContainer}>
         <MamoPlayer
           source={playerSource}
@@ -337,8 +459,8 @@ export const MamoPlayerDemo: React.FC = () => {
           autoPlay={true}
           startAt={0}
           style={styles.player}
-          subtitleTracks={subtitleTracks}
-          defaultSubtitleTrackId="en"
+          subtitleTracks={effectiveSubtitleTracks}
+          defaultSubtitleTrackId={externalSubtitleTrack ? 'external' : 'en'}
           onSettingsPress={handleSettingsPress}
           playerType="simple"          
           contentFit="contain"
@@ -499,6 +621,27 @@ const styles = StyleSheet.create({
   },
   player: {
     flex: 1,
+  },
+  textInput: {
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 10,
+    backgroundColor: '#FFF',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 13,
+    color: '#111827',
+  },
+  textArea: {
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 10,
+    backgroundColor: '#FFF',
+    minHeight: 120,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 13,
+    color: '#111827',
   },
 });
 

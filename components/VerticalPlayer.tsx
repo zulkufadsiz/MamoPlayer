@@ -339,6 +339,8 @@ export const VerticalPlayer: React.FC<VerticalPlayerProps> = ({
   ]);
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
   const [autoPlayEnabled, setAutoPlayEnabled] = useState(autoPlay);
+  const [subtitleFontSize, setSubtitleFontSize] = useState(18);
+  const [subtitleFontStyle, setSubtitleFontStyle] = useState<'normal' | 'bold' | 'thin' | 'italic'>('normal');
   const [isLiked, setIsLiked] = useState(false);
   const [currentSubtitle, setCurrentSubtitle] = useState<string>('');
   const [controlsOpacity] = useState(new Animated.Value(1));
@@ -828,7 +830,24 @@ export const VerticalPlayer: React.FC<VerticalPlayerProps> = ({
       {/* Subtitle Display */}
       {showSubtitles && currentSubtitle && (
         <View style={[styles.subtitleContainer, { bottom: Math.max(180, insets.bottom + 140) }]}>
-          <Text style={styles.subtitleText}>{currentSubtitle}</Text>
+          <Text
+            style={[
+              styles.subtitleText,
+              {
+                fontSize: subtitleFontSize,
+                color: '#FFFFFF',
+                fontWeight:
+                  subtitleFontStyle === 'bold'
+                    ? '700'
+                    : subtitleFontStyle === 'thin'
+                      ? '300'
+                      : '400',
+                fontStyle: subtitleFontStyle === 'italic' ? 'italic' : 'normal',
+              },
+            ]}
+          >
+            {currentSubtitle}
+          </Text>
         </View>
       )}
       
@@ -844,6 +863,10 @@ export const VerticalPlayer: React.FC<VerticalPlayerProps> = ({
         onAutoPlayChange={setAutoPlayEnabled}
         showSubtitles={showSubtitles}
         onShowSubtitlesChange={setShowSubtitles}
+        subtitleFontSize={subtitleFontSize}
+        onSubtitleFontSizeChange={setSubtitleFontSize}
+        subtitleFontStyle={subtitleFontStyle}
+        onSubtitleFontStyleChange={setSubtitleFontStyle}
         audioTracks={resolvedAudioTracks}
         selectedAudioTrackId={selectedAudioTrackId}
         onAudioTrackChange={setSelectedAudioTrackId}

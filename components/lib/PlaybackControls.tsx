@@ -67,6 +67,8 @@ interface PlaybackControlsProps {
   onFullscreenChange: (isFullscreen: boolean) => void;
   subtitles?: Subtitle[];
   showSubtitles?: boolean;
+  subtitleFontSize?: number;
+  subtitleFontStyle?: 'normal' | 'bold' | 'thin' | 'italic';
   onSubtitlesToggle?: () => void;
   onSettingsPress?: () => void;
   allowsPictureInPicture?: boolean;
@@ -90,6 +92,8 @@ export default function PlaybackControls({
   onFullscreenChange,
   subtitles = [],
   showSubtitles = true,
+  subtitleFontSize = 18,
+  subtitleFontStyle = 'normal',
   onSubtitlesToggle,
   onSettingsPress,
   allowsPictureInPicture = false,
@@ -337,7 +341,24 @@ export default function PlaybackControls({
             paddingRight: Math.max(20, insets.right + 16),
           }
         ]} pointerEvents="none">
-          <Text style={styles.subtitleText}>{currentSubtitle}</Text>
+          <Text
+            style={[
+              styles.subtitleText,
+              {
+                fontSize: subtitleFontSize,
+                color: '#FFFFFF',
+                fontWeight:
+                  subtitleFontStyle === 'bold'
+                    ? '700'
+                    : subtitleFontStyle === 'thin'
+                      ? '300'
+                      : '400',
+                fontStyle: subtitleFontStyle === 'italic' ? 'italic' : 'normal',
+              },
+            ]}
+          >
+            {currentSubtitle}
+          </Text>
         </View>
       )}
 

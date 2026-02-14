@@ -4,6 +4,14 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
 
 ## Get started
 
+### Node.js version (recommended)
+
+This project is pinned to Node.js 20 using `.nvmrc`.
+
+```bash
+nvm use
+```
+
 1. Install dependencies
 
    ```bash
@@ -14,6 +22,45 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
 
    ```bash
    npx expo start
+   ```
+
+### iOS device run (recommended)
+
+For physical iPhone runs, prefer passing the exact UDID:
+
+```bash
+npx expo run:ios --device <YOUR_DEVICE_UDID>
+```
+
+This avoids interactive device prompt issues that can happen on some Xcode/Node combinations.
+
+## Troubleshooting (iOS)
+
+### `devicectl ... process launch ... exited with non-zero code: 1`
+
+If you see:
+
+- `The process identifier of the launched application could not be determined`
+
+Try, in order:
+
+1. Use Node 20 (`nvm use`).
+2. Run with explicit UDID:
+
+   ```bash
+   npx expo run:ios --device <YOUR_DEVICE_UDID>
+   ```
+
+3. Install missing native dependency used by navigation stacks:
+
+   ```bash
+   npx expo install @react-native-masked-view/masked-view
+   ```
+
+4. Rebuild:
+
+   ```bash
+   npx expo run:ios --device <YOUR_DEVICE_UDID>
    ```
 
 In the output, you'll find options to open the app in a

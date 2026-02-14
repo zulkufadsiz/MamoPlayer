@@ -21,6 +21,10 @@ interface LandscapeSettingsDialogProps {
   onAutoPlayChange: (enabled: boolean) => void;
   showSubtitles: boolean;
   onShowSubtitlesChange: (enabled: boolean) => void;
+  subtitleFontSize?: number;
+  onSubtitleFontSizeChange?: (size: number) => void;
+  subtitleFontStyle?: 'normal' | 'bold' | 'thin' | 'italic';
+  onSubtitleFontStyleChange?: (style: 'normal' | 'bold' | 'thin' | 'italic') => void;
   audioTracks?: Array<{
     id: string;
     label: string;
@@ -49,6 +53,10 @@ export const LandscapeSettingsDialog: React.FC<LandscapeSettingsDialogProps> = (
   onAutoPlayChange,
   showSubtitles,
   onShowSubtitlesChange,
+  subtitleFontSize = 18,
+  onSubtitleFontSizeChange,
+  subtitleFontStyle = 'normal',
+  onSubtitleFontStyleChange,
   audioTracks = [],
   selectedAudioTrackId = null,
   onAudioTrackChange,
@@ -56,8 +64,14 @@ export const LandscapeSettingsDialog: React.FC<LandscapeSettingsDialogProps> = (
   selectedSubtitleTrackId = null,
   onSubtitleTrackChange,
 }) => {
-  type SectionKey = 'playback' | 'quality' | 'audio' | 'subtitles' | 'preferences';
+  type SectionKey = 'playback' | 'quality' | 'audio' | 'subtitles' | 'subtitleStyle' | 'preferences';
   const playbackSpeeds = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
+  const subtitleFontSizes = [
+    { label: 'Small', value: 14 },
+    { label: 'Medium', value: 18 },
+    { label: 'Large', value: 24 },
+  ];
+  const subtitleFontStyles: Array<'normal' | 'bold' | 'thin' | 'italic'> = ['normal', 'bold', 'thin', 'italic'];
   const qualities = qualityOptions && qualityOptions.length > 0
     ? qualityOptions
     : ['Auto', '4K', '1080p', '720p', '480p', '360p'];
@@ -428,6 +442,80 @@ export const LandscapeSettingsDialog: React.FC<LandscapeSettingsDialogProps> = (
                 )}
               </View>
             )}
+
+            {/* Subtitle Style Section */}
+            <View style={styles.section}>
+              <TouchableOpacity
+                style={styles.sectionHeader}
+                onPress={() => toggleSection('subtitleStyle')}
+                accessibilityRole="button"
+                accessibilityLabel="Subtitle style section"
+                accessibilityHint="Expands or collapses subtitle style options"
+              >
+                <View style={styles.sectionHeaderLeft}>
+                  <Ionicons name="color-palette-outline" size={24} color="#fff" />
+                  <Text style={styles.sectionTitle}>Subtitle Style</Text>
+                </View>
+                <Ionicons
+                  name={openSection === 'subtitleStyle' ? 'chevron-down' : 'chevron-forward'}
+                  size={22}
+                  color="#fff"
+                />
+              </TouchableOpacity>
+              {openSection === 'subtitleStyle' && (
+                <View style={styles.optionsContainer}>
+                  <Text style={styles.preferenceTitle}>Font Size</Text>
+                  <View style={styles.optionsGrid}>
+                    {subtitleFontSizes.map((sizeOption) => {
+                      const isActive = subtitleFontSize === sizeOption.value;
+                      return (
+                        <TouchableOpacity
+                          key={sizeOption.label}
+                          style={[styles.speedOption, isActive && styles.speedOptionActive]}
+                          onPress={() => onSubtitleFontSizeChange?.(sizeOption.value)}
+                          accessibilityRole="radio"
+                          accessibilityLabel={`Subtitle size ${sizeOption.label}`}
+                          accessibilityState={{ selected: isActive }}
+                        >
+                          <Text style={[styles.speedText, isActive && styles.speedTextActive]}>{sizeOption.label}</Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+
+                  <View style={{ height: 12 }} />
+                  <Text style={styles.preferenceTitle}>Text Style</Text>
+                  <View style={styles.optionsList}>
+                    {subtitleFontStyles.map((style) => {
+                      const isActive = subtitleFontStyle === style;
+                      return (
+                        <TouchableOpacity
+                          key={style}
+                          style={[styles.qualityOption, isActive && styles.qualityOptionActive]}
+                          onPress={() => onSubtitleFontStyleChange?.(style)}
+                          accessibilityRole="radio"
+                          accessibilityLabel={`Subtitle text style ${style}`}
+                          accessibilityState={{ selected: isActive }}
+                        >
+                          <Text
+                            style={[
+                              styles.qualityText,
+                              {
+                                fontWeight: style === 'bold' ? '700' : style === 'thin' ? '300' : '400',
+                                fontStyle: style === 'italic' ? 'italic' : 'normal',
+                              },
+                            ]}
+                          >
+                            {style.charAt(0).toUpperCase() + style.slice(1)}
+                          </Text>
+                          {isActive && <Ionicons name="checkmark" size={20} color="#E50914" />}
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </View>
+              )}
+            </View>
           </ScrollView>
         </View>
       </View>
