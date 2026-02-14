@@ -17,6 +17,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import CommentsSheet, { type Comment } from './lib/CommentsSheet';
 import LoadingIndicator from './lib/LoadingIndicator';
+import { trackPlaybackEvent } from './lib/playbackAnalytics';
 import {
     getPlaybackPosition,
     savePlaybackPosition,
@@ -273,6 +274,7 @@ export const VerticalPlayer: React.FC<VerticalPlayerProps> = ({
   const { width, height } = useWindowDimensions();
   const hasAppliedStartAt = useRef(false);
   const hasStartedOnReadyRef = useRef(false);
+  const completionTrackedRef = useRef(false);
   const [resumeStartAt, setResumeStartAt] = useState<number | null>(null);
   const [resumeReady, setResumeReady] = useState(false);
   const effectiveStartAt = resumeStartAt ?? startAt;
@@ -367,6 +369,7 @@ export const VerticalPlayer: React.FC<VerticalPlayerProps> = ({
   useEffect(() => {
     hasAppliedStartAt.current = false;
     hasStartedOnReadyRef.current = false;
+    completionTrackedRef.current = false;
     setResumeStartAt(null);
     setResumeReady(false);
 
@@ -478,6 +481,19 @@ export const VerticalPlayer: React.FC<VerticalPlayerProps> = ({
   );
   const activeSubtitles = showSubtitles && activeSubtitleTrack ? activeSubtitleTrack.subtitles : [];
 
+  const getSafePlaybackSnapshot = () => {
+    try {
+      const currentTime = player.currentTime ?? 0;
+      const duration = player.duration ?? 0;
+      return {
+        currentTime: Number.isFinite(currentTime) ? currentTime : 0,
+        duration: Number.isFinite(duration) ? duration : 0,
+      };
+    } catch {
+      return { currentTime: 0, duration: 0 };
+    }
+  };
+
   // Track current subtitle
   useEffect(() => {
     if (!player || activeSubtitles.length === 0) {
@@ -515,14 +531,43 @@ export const VerticalPlayer: React.FC<VerticalPlayerProps> = ({
   }, [showControls, isPlaying]);
 
   const handlePlayPause = () => {
+    const { currentTime, duration } = getSafePlaybackSnapshot();
     if (isPlaying) {
       void persistPlaybackProgress();
       player.pause();
       setIsPlaying(false);
+      trackPlaybackEvent({
+        type: 'pause',
+        playerType: 'vertical',
+        mediaUrl,
+        currentTime,
+        duration,
+      });
     } else {
       player.play();
       setIsPlaying(true);
+      trackPlaybackEvent({
+        type: 'play',
+        playerType: 'vertical',
+        mediaUrl,
+        currentTime,
+        duration,
+      });
     }
+  };
+
+  const handleSeek = (time: number) => {
+    const { currentTime, duration } = getSafePlaybackSnapshot();
+    player.currentTime = time;
+    completionTrackedRef.current = false;
+    trackPlaybackEvent({
+      type: 'seek',
+      playerType: 'vertical',
+      mediaUrl,
+      fromTime: currentTime,
+      toTime: time,
+      duration,
+    });
   };
 
   const handleScreenPress = () => {
@@ -551,7 +596,7 @@ export const VerticalPlayer: React.FC<VerticalPlayerProps> = ({
     const nextTime = duration > 0
       ? Math.max(0, Math.min(duration, currentTime + seconds))
       : Math.max(0, currentTime + seconds);
-    player.currentTime = nextTime;
+    handleSeek(nextTime);
     void persistPlaybackProgress();
   };
 
@@ -572,6 +617,32 @@ export const VerticalPlayer: React.FC<VerticalPlayerProps> = ({
     };
   }, [mediaUrl, player]);
 
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (!isPlaying) return;
+
+      const { currentTime, duration } = getSafePlaybackSnapshot();
+      if (duration <= 0) return;
+
+      if (!completionTrackedRef.current && currentTime >= duration - 0.35) {
+        completionTrackedRef.current = true;
+        trackPlaybackEvent({
+          type: 'completion',
+          playerType: 'vertical',
+          mediaUrl,
+          currentTime,
+          duration,
+        });
+      }
+
+      if (completionTrackedRef.current && currentTime < duration - 2) {
+        completionTrackedRef.current = false;
+      }
+    }, 400);
+
+    return () => clearInterval(interval);
+  }, [isPlaying, mediaUrl, player]);
+
   useTransportControls({
     enabled: Boolean(mediaUrl),
     isPlaying,
@@ -581,14 +652,30 @@ export const VerticalPlayer: React.FC<VerticalPlayerProps> = ({
     artwork,
     onPlay: () => {
       if (!isPlaying) {
+        const { currentTime, duration } = getSafePlaybackSnapshot();
         player.play();
         setIsPlaying(true);
+        trackPlaybackEvent({
+          type: 'play',
+          playerType: 'vertical',
+          mediaUrl,
+          currentTime,
+          duration,
+        });
       }
     },
     onPause: () => {
       if (isPlaying) {
+        const { currentTime, duration } = getSafePlaybackSnapshot();
         player.pause();
         setIsPlaying(false);
+        trackPlaybackEvent({
+          type: 'pause',
+          playerType: 'vertical',
+          mediaUrl,
+          currentTime,
+          duration,
+        });
       }
     },
     onNext: showSkipButtons ? () => handleSkip(skipSeconds) : undefined,

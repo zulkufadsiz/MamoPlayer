@@ -63,6 +63,29 @@ Try, in order:
    npx expo run:ios --device <YOUR_DEVICE_UDID>
    ```
 
+## Playback analytics endpoint (optional)
+
+Playback events (`play`, `pause`, `seek`, `completion`) are logged locally and can also be posted to your backend.
+
+Set this environment variable before starting the app:
+
+```bash
+EXPO_PUBLIC_PLAYBACK_ANALYTICS_ENDPOINT=https://your-api.example.com/playback-events
+```
+
+Optional auth token (sent as `Authorization: Bearer <token>`):
+
+```bash
+EXPO_PUBLIC_PLAYBACK_ANALYTICS_TOKEN=your-token
+```
+
+Optional custom header (for `X-API-Key` style auth):
+
+```bash
+EXPO_PUBLIC_PLAYBACK_ANALYTICS_HEADER_NAME=X-API-Key
+EXPO_PUBLIC_PLAYBACK_ANALYTICS_HEADER_VALUE=your-api-key
+```
+
 In the output, you'll find options to open the app in a
 
 - [development build](https://docs.expo.dev/develop/development-builds/introduction/)
