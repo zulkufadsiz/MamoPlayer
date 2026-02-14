@@ -1,6 +1,15 @@
 module.exports = {
   preset: 'jest-expo',
   setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
+  collectCoverageFrom: ['<rootDir>/components/lib/playbackAnalytics.ts'],
+  coverageThreshold: {
+    global: {
+      branches: 100,
+      functions: 100,
+      lines: 100,
+      statements: 100,
+    },
+  },
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
   },
