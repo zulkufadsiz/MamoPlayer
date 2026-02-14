@@ -16,7 +16,11 @@ export function Collapsible({ children, title }: PropsWithChildren & { title: st
       <TouchableOpacity
         style={styles.heading}
         onPress={() => setIsOpen((value) => !value)}
-        activeOpacity={0.8}>
+        activeOpacity={0.8}
+        accessibilityRole="button"
+        accessibilityLabel={title}
+        accessibilityHint={isOpen ? 'Collapses section' : 'Expands section'}
+        accessibilityState={{ expanded: isOpen }}>
         <IconSymbol
           name="chevron.right"
           size={18}
@@ -37,6 +41,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+    minHeight: 44,
   },
   content: {
     marginTop: 6,

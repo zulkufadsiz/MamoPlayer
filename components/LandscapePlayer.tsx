@@ -6,14 +6,14 @@ import * as ScreenOrientation from 'expo-screen-orientation';
 import { VideoView, useVideoPlayer, type VideoSource } from 'expo-video';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-    Animated,
-    Pressable,
-    StatusBar,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
-    useWindowDimensions,
+  Animated,
+  Pressable,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+  useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import LandscapeSettingsDialog from './lib/LandscapeSettingsDialog';
@@ -517,7 +517,13 @@ export const LandscapePlayer: React.FC<LandscapePlayerProps> = ({
             <View style={styles.overlayCard}>
               <Text style={styles.overlayTitle}>Playback error</Text>
               <Text style={styles.overlayText}>{errorMessage ?? 'Unable to play video'}</Text>
-              <TouchableOpacity style={styles.retryButton} onPress={handleRetry}>
+              <TouchableOpacity
+                style={styles.retryButton}
+                onPress={handleRetry}
+                accessibilityRole="button"
+                accessibilityLabel="Retry playback"
+                accessibilityHint="Attempts to play the video again"
+              >
                 <Text style={styles.retryButtonText}>Retry</Text>
               </TouchableOpacity>
             </View>
@@ -526,7 +532,14 @@ export const LandscapePlayer: React.FC<LandscapePlayerProps> = ({
       )}
 
       {/* Touch Area for showing controls */}
-      <Pressable style={styles.touchArea} onPress={handleScreenPress}>
+      <Pressable
+        style={styles.touchArea}
+        onPress={handleScreenPress}
+        accessible={!showControls}
+        accessibilityRole="button"
+        accessibilityLabel="Show playback controls"
+        accessibilityHint="Shows playback controls when they are hidden"
+      >
         {showControls && (
           <Animated.View
             style={[styles.controlsContainer, { opacity: controlsOpacity }]}
@@ -554,6 +567,10 @@ export const LandscapePlayer: React.FC<LandscapePlayerProps> = ({
                     e.stopPropagation();
                     setShowSubtitles(!showSubtitles);
                   }}
+                  accessibilityRole="button"
+                  accessibilityLabel={showSubtitles ? 'Hide subtitles' : 'Show subtitles'}
+                  accessibilityHint="Toggles subtitle visibility"
+                  hitSlop={10}
                 >
                   <Ionicons
                     name={showSubtitles ? 'chatbox' : 'chatbox-outline'}
@@ -567,6 +584,10 @@ export const LandscapePlayer: React.FC<LandscapePlayerProps> = ({
                     e.stopPropagation();
                     handleSettingsPress();
                   }}
+                  accessibilityRole="button"
+                  accessibilityLabel="Open settings"
+                  accessibilityHint="Opens playback and subtitle settings"
+                  hitSlop={10}
                 >
                   <Ionicons name="settings-outline" size={24} color="#fff" />
                 </TouchableOpacity>
@@ -579,6 +600,10 @@ export const LandscapePlayer: React.FC<LandscapePlayerProps> = ({
                 <TouchableOpacity
                   style={styles.skipButton}
                   onPress={() => handleSkip(-skipSeconds)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Skip backward ${skipSeconds} seconds`}
+                  accessibilityHint="Moves playback position backward"
+                  hitSlop={10}
                 >
                   <Ionicons name="play-back" size={36} color="#fff" />
                   <Text style={styles.skipText}>{skipSeconds}</Text>
@@ -588,6 +613,10 @@ export const LandscapePlayer: React.FC<LandscapePlayerProps> = ({
               <TouchableOpacity
                 style={styles.playPauseButton}
                 onPress={handlePlayPause}
+                accessibilityRole="button"
+                accessibilityLabel={isPlaying ? 'Pause video' : 'Play video'}
+                accessibilityHint={isPlaying ? 'Pauses playback' : 'Starts playback'}
+                hitSlop={10}
               >
                 <Ionicons
                   name={isPlaying ? 'pause' : 'play'}
@@ -600,6 +629,10 @@ export const LandscapePlayer: React.FC<LandscapePlayerProps> = ({
                 <TouchableOpacity
                   style={styles.skipButton}
                   onPress={() => handleSkip(skipSeconds)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Skip forward ${skipSeconds} seconds`}
+                  accessibilityHint="Moves playback position forward"
+                  hitSlop={10}
                 >
                   <Ionicons name="play-forward" size={36} color="#fff" />
                   <Text style={styles.skipText}>{skipSeconds}</Text>
@@ -632,6 +665,9 @@ export const LandscapePlayer: React.FC<LandscapePlayerProps> = ({
                   minimumTrackTintColor="#E50914"
                   maximumTrackTintColor="rgba(255,255,255,0.3)"
                   thumbTintColor="#fff"
+                  accessibilityRole="adjustable"
+                  accessibilityLabel="Playback position"
+                  accessibilityHint="Adjusts current playback time"
                 />
                 <Text style={styles.timeText}>{formatTime(duration)}</Text>
               </View>
@@ -722,7 +758,10 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   iconButton: {
-    padding: 8,
+    minWidth: 44,
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   centerControls: {
     flexDirection: 'row',
@@ -814,6 +853,8 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 16,
     backgroundColor: '#FFFFFF',
+    minHeight: 44,
+    justifyContent: 'center',
   },
   retryButtonText: {
     color: '#000000',

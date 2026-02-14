@@ -59,6 +59,8 @@ export default function Timeline({
     setSeekPosition(value);
   };
 
+  const resolvedDuration = duration > 0 ? duration : player?.duration || 0;
+
   return (
     <View style={[
       styles.container,
@@ -70,20 +72,33 @@ export default function Timeline({
     ]}>
       {/* Timeline */}
       <View style={styles.timelineContainer}>
-        <Text style={styles.timeText}>{formatTime(seekPosition)}</Text>
+        <Text
+          style={styles.timeText}
+          accessibilityLabel={`Current time ${formatTime(seekPosition)}`}
+        >
+          {formatTime(seekPosition)}
+        </Text>
         <Slider
           style={styles.slider}
           value={seekPosition}
           minimumValue={0}
-          maximumValue={duration > 0 ? duration : player?.duration || 1}
+          maximumValue={resolvedDuration || 1}
           onSlidingStart={handleSlidingStart}
           onSlidingComplete={handleSlidingComplete}
           onValueChange={handleValueChange}
           minimumTrackTintColor="#1DB954"
           maximumTrackTintColor="#404040"
           thumbTintColor="#FFFFFF"
+          accessibilityRole="adjustable"
+          accessibilityLabel="Playback position"
+          accessibilityHint="Swipe up or down to adjust the current playback time"
         />
-        <Text style={styles.timeText}>{formatTime(duration > 0 ? duration : player?.duration || 0)}</Text>
+        <Text
+          style={styles.timeText}
+          accessibilityLabel={`Duration ${formatTime(resolvedDuration)}`}
+        >
+          {formatTime(resolvedDuration)}
+        </Text>
       </View>
     </View>
   );
@@ -109,7 +124,7 @@ const styles = StyleSheet.create({
   slider: {
     flex: 1,
     marginHorizontal: 8,
-    height: 30,
+    height: 44,
   },
   timeText: {
     color: '#FFFFFF',

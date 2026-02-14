@@ -99,6 +99,9 @@ export default function CommentsSheet({
           <TouchableOpacity
             style={styles.commentAction}
             onPress={() => setReplyingTo(item.id)}
+            accessibilityRole="button"
+            accessibilityLabel={`Reply to ${item.userName}`}
+            hitSlop={10}
           >
             <Text style={styles.commentActionText}>Reply</Text>
           </TouchableOpacity>
@@ -110,6 +113,9 @@ export default function CommentsSheet({
       <TouchableOpacity
         style={styles.likeButton}
         onPress={() => onLikeComment(item.id)}
+        accessibilityRole="button"
+        accessibilityLabel={item.isLiked ? `Unlike comment by ${item.userName}` : `Like comment by ${item.userName}`}
+        hitSlop={10}
       >
         <Ionicons
           name={item.isLiked ? 'heart' : 'heart-outline'}
@@ -126,8 +132,15 @@ export default function CommentsSheet({
       transparent
       animationType="slide"
       onRequestClose={onClose}
+      accessibilityViewIsModal
     >
-      <Pressable style={styles.overlay} onPress={onClose}>
+      <Pressable
+        style={styles.overlay}
+        onPress={onClose}
+        accessibilityRole="button"
+        accessibilityLabel="Close comments"
+        accessibilityHint="Closes the comments panel"
+      >
         <Pressable style={styles.container} onPress={(e) => e.stopPropagation()}>
           {/* Header */}
           <View style={styles.header}>
@@ -135,7 +148,13 @@ export default function CommentsSheet({
             <Text style={styles.headerTitle}>
               {totalComments || comments.length} Comments
             </Text>
-            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+            <TouchableOpacity
+              onPress={onClose}
+              style={styles.closeButton}
+              accessibilityRole="button"
+              accessibilityLabel="Close comments"
+              hitSlop={10}
+            >
               <Ionicons name="close" size={24} color="#333" />
             </TouchableOpacity>
           </View>
@@ -165,7 +184,12 @@ export default function CommentsSheet({
                 <Text style={styles.replyingText}>
                   Replying to {comments.find((c) => c.id === replyingTo)?.userName}
                 </Text>
-                <TouchableOpacity onPress={() => setReplyingTo(null)}>
+                <TouchableOpacity
+                  onPress={() => setReplyingTo(null)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Cancel reply"
+                  hitSlop={10}
+                >
                   <Ionicons name="close-circle" size={20} color="#666" />
                 </TouchableOpacity>
               </View>
@@ -182,6 +206,8 @@ export default function CommentsSheet({
                 onChangeText={setCommentText}
                 multiline
                 maxLength={500}
+                accessibilityLabel="Comment input"
+                accessibilityHint="Type your comment"
               />
               <TouchableOpacity
                 style={[
@@ -190,6 +216,10 @@ export default function CommentsSheet({
                 ]}
                 onPress={handleSendComment}
                 disabled={!commentText.trim()}
+                accessibilityRole="button"
+                accessibilityLabel="Send comment"
+                accessibilityHint="Posts your comment"
+                accessibilityState={{ disabled: !commentText.trim() }}
               >
                 <Ionicons
                   name="send"
@@ -245,7 +275,10 @@ const styles = StyleSheet.create({
   closeButton: {
     position: 'absolute',
     right: 16,
-    padding: 4,
+    minWidth: 44,
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   commentsList: {
     paddingVertical: 8,
@@ -295,6 +328,8 @@ const styles = StyleSheet.create({
   },
   commentAction: {
     paddingVertical: 2,
+    minHeight: 32,
+    justifyContent: 'center',
   },
   commentActionText: {
     fontSize: 13,
@@ -306,7 +341,10 @@ const styles = StyleSheet.create({
     color: '#999',
   },
   likeButton: {
-    padding: 4,
+    minWidth: 44,
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   emptyState: {
     alignItems: 'center',
