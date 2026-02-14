@@ -18,6 +18,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import CommentsSheet, { type Comment } from './lib/CommentsSheet';
 import LoadingIndicator from './lib/LoadingIndicator';
 import SettingsDialog from './lib/SettingsDialog';
+import { useTransportControls } from './lib/useTransportControls';
 
 interface Subtitle {
   start: number | string;
@@ -73,6 +74,16 @@ interface AudioTrack {
   language?: string;
 }
 
+const resolveMediaUrl = (source: VideoSource): string | null => {
+  if (!source) return null;
+  if (typeof source === 'string') return source;
+  if (typeof source === 'number') return null;
+  if (typeof source === 'object' && 'uri' in source && typeof source.uri === 'string') {
+    return source.uri;
+  }
+  return null;
+};
+
 interface VerticalPlayerProps {
   source: VideoSource;
   videoSourcesByLanguage?: Record<string, VideoSource>;
@@ -92,6 +103,7 @@ interface VerticalPlayerProps {
   title?: string;
   description?: string;
   author?: string;
+  artwork?: string;
   likes?: number;
   comments?: number;
   shares?: number;
@@ -118,6 +130,7 @@ export const VerticalPlayer: React.FC<VerticalPlayerProps> = ({
   title,
   description,
   author = 'User',
+  artwork,
   likes = 0,
   comments = 0,
   shares = 0,
@@ -185,6 +198,7 @@ export const VerticalPlayer: React.FC<VerticalPlayerProps> = ({
     source,
     videoSourcesByLanguage,
   ]);
+  const mediaUrl = useMemo(() => resolveMediaUrl(resolvedSource), [resolvedSource]);
 
   const player = useVideoPlayer(resolvedSource, player => {
     player.loop = true;
@@ -420,6 +434,29 @@ export const VerticalPlayer: React.FC<VerticalPlayerProps> = ({
       : Math.max(0, currentTime + seconds);
     player.currentTime = nextTime;
   };
+
+  useTransportControls({
+    enabled: Boolean(mediaUrl),
+    isPlaying,
+    mediaUrl,
+    title,
+    artist: author,
+    artwork,
+    onPlay: () => {
+      if (!isPlaying) {
+        player.play();
+        setIsPlaying(true);
+      }
+    },
+    onPause: () => {
+      if (isPlaying) {
+        player.pause();
+        setIsPlaying(false);
+      }
+    },
+    onNext: showSkipButtons ? () => handleSkip(skipSeconds) : undefined,
+    onPrevious: showSkipButtons ? () => handleSkip(-skipSeconds) : undefined,
+  });
 
   const handleSettingsPress = () => {
     setShowSettings(true);

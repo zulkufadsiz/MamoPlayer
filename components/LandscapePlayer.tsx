@@ -18,6 +18,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import LandscapeSettingsDialog from './lib/LandscapeSettingsDialog';
 import LoadingIndicator from './lib/LoadingIndicator';
+import { useTransportControls } from './lib/useTransportControls';
 
 interface Subtitle {
   start: number | string;
@@ -73,6 +74,16 @@ interface AudioTrack {
   language?: string;
 }
 
+const resolveMediaUrl = (source: VideoSource): string | null => {
+  if (!source) return null;
+  if (typeof source === 'string') return source;
+  if (typeof source === 'number') return null;
+  if (typeof source === 'object' && 'uri' in source && typeof source.uri === 'string') {
+    return source.uri;
+  }
+  return null;
+};
+
 interface LandscapePlayerProps {
   source: VideoSource;
   videoSourcesByLanguage?: Record<string, VideoSource>;
@@ -95,6 +106,8 @@ interface LandscapePlayerProps {
   title?: string;
   episode?: string;
   season?: string;
+  author?: string;
+  artwork?: string;
   onBack?: () => void;
 }
 
@@ -148,6 +161,8 @@ export const LandscapePlayer: React.FC<LandscapePlayerProps> = ({
   title = 'Video Title',
   episode,
   season,
+  author,
+  artwork,
   onBack,
 }) => {
   const insets = useSafeAreaInsets();
@@ -208,6 +223,7 @@ export const LandscapePlayer: React.FC<LandscapePlayerProps> = ({
     source,
     videoSourcesByLanguage,
   ]);
+  const mediaUrl = useMemo(() => resolveMediaUrl(resolvedSource), [resolvedSource]);
 
   const player = useVideoPlayer(resolvedSource, (player) => {
     player.loop = false;
@@ -417,6 +433,29 @@ export const LandscapePlayer: React.FC<LandscapePlayerProps> = ({
     const newTime = Math.max(0, Math.min(duration, currentTime + seconds));
     handleSeek(newTime);
   };
+
+  useTransportControls({
+    enabled: Boolean(mediaUrl),
+    isPlaying,
+    mediaUrl,
+    title,
+    artist: author ?? season,
+    artwork,
+    onPlay: () => {
+      if (!isPlaying) {
+        player.play();
+        setIsPlaying(true);
+      }
+    },
+    onPause: () => {
+      if (isPlaying) {
+        player.pause();
+        setIsPlaying(false);
+      }
+    },
+    onNext: showSkipButtons ? () => handleSkip(skipSeconds) : undefined,
+    onPrevious: showSkipButtons ? () => handleSkip(-skipSeconds) : undefined,
+  });
 
   const handleVolumeChange = (value: number) => {
     setVolume(value);

@@ -17,7 +17,7 @@ interface SubtitleTrack {
   subtitles: Subtitle[];
 }
 
-interface ZPlayerProps {
+interface MamoPlayerProps {
   source: VideoSource;
   videoSourcesByLanguage?: Record<string, VideoSource>;
   audioTracks?: Array<{
@@ -45,6 +45,7 @@ interface ZPlayerProps {
   title?: string;
   description?: string;
   author?: string;
+  artwork?: string;
   likes?: number;
   comments?: number;
   shares?: number;
@@ -59,7 +60,7 @@ interface ZPlayerProps {
   onBack?: () => void;
 }
 
-export const ZPlayer: React.FC<ZPlayerProps> = ({ 
+export const MamoPlayer: React.FC<MamoPlayerProps> = ({ 
   playerType = 'simple',
   ...props 
 }) => {
@@ -74,4 +75,4 @@ export const ZPlayer: React.FC<ZPlayerProps> = ({
   }
 };
 
-export default ZPlayer;
+export default MamoPlayer;

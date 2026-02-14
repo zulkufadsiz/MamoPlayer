@@ -1,4 +1,4 @@
-import ZPlayerDemo from '@/components/ZPlayerDemo';
+import MamoPlayerDemo from '@/components/MamoPlayerDemo';
 import { useNavigation } from 'expo-router';
 import React, { useEffect } from 'react';
 
@@ -20,6 +20,6 @@ export default function Index2Screen() {
   }, [navigation]);
 
   return (
-    <ZPlayerDemo />
+    <MamoPlayerDemo />
   );
 }
