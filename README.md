@@ -24,6 +24,12 @@ nvm use
    npx expo start
    ```
 
+3. Run unit tests
+
+   ```bash
+   yarn test
+   ```
+
 ### iOS device run (recommended)
 
 For physical iPhone runs, prefer passing the exact UDID:
