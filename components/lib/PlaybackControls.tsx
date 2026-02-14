@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import * as ScreenOrientation from 'expo-screen-orientation';
 import React, { useEffect, useState } from 'react';
 import {
@@ -68,6 +68,9 @@ interface PlaybackControlsProps {
   showSubtitles?: boolean;
   onSubtitlesToggle?: () => void;
   onSettingsPress?: () => void;
+  allowsPictureInPicture?: boolean;
+  isPictureInPictureActive?: boolean;
+  onPictureInPictureToggle?: () => void;
   hasSubtitles?: boolean;
   autoHideControls?: boolean;
   autoHideDelayMs?: number;
@@ -87,6 +90,9 @@ export default function PlaybackControls({
   showSubtitles = true,
   onSubtitlesToggle,
   onSettingsPress,
+  allowsPictureInPicture = false,
+  isPictureInPictureActive = false,
+  onPictureInPictureToggle,
   hasSubtitles,
   autoHideControls = false,
   autoHideDelayMs = 3000,
@@ -274,6 +280,27 @@ export default function PlaybackControls({
             >
               <Ionicons
                 name={showSubtitles ? 'chatbox' : 'chatbox-outline'}
+                size={24}
+                color="#FFFFFF"
+              />
+            </TouchableOpacity>
+          )}
+          {allowsPictureInPicture && onPictureInPictureToggle && (
+            <TouchableOpacity
+              style={styles.fullscreenButton}
+              onPress={onPictureInPictureToggle}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel={
+                isPictureInPictureActive
+                  ? 'Exit picture in picture'
+                  : 'Enter picture in picture'
+              }
+              accessibilityHint="Toggles picture in picture mode"
+              hitSlop={10}
+            >
+              <MaterialIcons
+                name={isPictureInPictureActive ? 'picture-in-picture' : 'picture-in-picture-alt'}
                 size={24}
                 color="#FFFFFF"
               />
