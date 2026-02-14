@@ -17,6 +17,10 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import CommentsSheet, { type Comment } from './lib/CommentsSheet';
 import LoadingIndicator from './lib/LoadingIndicator';
+import {
+    getPlaybackPosition,
+    savePlaybackPosition,
+} from './lib/playbackPositionStore';
 import SettingsDialog from './lib/SettingsDialog';
 import { useTransportControls } from './lib/useTransportControls';
 
@@ -206,12 +210,16 @@ export const VerticalPlayer: React.FC<VerticalPlayerProps> = ({
   });
   const { width, height } = useWindowDimensions();
   const hasAppliedStartAt = useRef(false);
+  const hasStartedOnReadyRef = useRef(false);
+  const [resumeStartAt, setResumeStartAt] = useState<number | null>(null);
+  const [resumeReady, setResumeReady] = useState(false);
+  const effectiveStartAt = resumeStartAt ?? startAt;
 
   const applyStartAt = () => {
     if (hasAppliedStartAt.current) return false;
-    if (typeof startAt !== 'number' || Number.isNaN(startAt)) return false;
+    if (typeof effectiveStartAt !== 'number' || Number.isNaN(effectiveStartAt)) return false;
     const duration = player.duration ?? 0;
-    const clampedTime = duration > 0 ? Math.min(duration, startAt) : startAt;
+    const clampedTime = duration > 0 ? Math.min(duration, effectiveStartAt) : effectiveStartAt;
     player.currentTime = Math.max(0, clampedTime);
     hasAppliedStartAt.current = true;
     return true;
@@ -230,12 +238,6 @@ export const VerticalPlayer: React.FC<VerticalPlayerProps> = ({
     }
     if (status !== 'error') {
       setErrorMessage(null);
-    }
-    if (status === 'readyToPlay') {
-      applyStartAt();
-      if (autoPlay) {
-        player.play();
-      }
     }
   });
 
@@ -281,12 +283,61 @@ export const VerticalPlayer: React.FC<VerticalPlayerProps> = ({
   const [controlsOpacity] = useState(new Animated.Value(1));
   const isBuffering = playerStatus === 'loading' || playerStatus === 'buffering';
   const isError = !!errorMessage || playerStatus === 'error';
-  useEffect(() => {
-    hasAppliedStartAt.current = false;
-  }, [resolvedSource, startAt]);
+
+  const persistPlaybackProgress = async () => {
+    if (!mediaUrl) return;
+
+    const duration = player.duration ?? 0;
+    const currentTime = player.currentTime ?? 0;
+    if (!Number.isFinite(duration) || !Number.isFinite(currentTime) || duration <= 0) return;
+
+    await savePlaybackPosition(mediaUrl, currentTime, duration);
+  };
 
   useEffect(() => {
-    if (typeof startAt !== 'number' || Number.isNaN(startAt)) return;
+    hasAppliedStartAt.current = false;
+    hasStartedOnReadyRef.current = false;
+    setResumeStartAt(null);
+    setResumeReady(false);
+
+    let isCancelled = false;
+
+    const loadResumePosition = async () => {
+      if (!mediaUrl) {
+        if (!isCancelled) {
+          setResumeReady(true);
+        }
+        return;
+      }
+
+      const savedPosition = await getPlaybackPosition(mediaUrl);
+      if (!isCancelled) {
+        setResumeStartAt(savedPosition);
+        setResumeReady(true);
+      }
+    };
+
+    void loadResumePosition();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [mediaUrl]);
+
+  useEffect(() => {
+    if (playerStatus !== 'readyToPlay' || !resumeReady || hasStartedOnReadyRef.current) return;
+
+    applyStartAt();
+    if (autoPlay) {
+      player.play();
+      setIsPlaying(true);
+    }
+    hasStartedOnReadyRef.current = true;
+  }, [autoPlay, player, playerStatus, resumeReady, effectiveStartAt]);
+
+  useEffect(() => {
+    if (!resumeReady) return;
+    if (typeof effectiveStartAt !== 'number' || Number.isNaN(effectiveStartAt)) return;
 
     const interval = setInterval(() => {
       if (hasAppliedStartAt.current) {
@@ -295,15 +346,12 @@ export const VerticalPlayer: React.FC<VerticalPlayerProps> = ({
       }
       if ((player.duration ?? 0) > 0) {
         applyStartAt();
-        if (autoPlay) {
-          player.play();
-        }
         clearInterval(interval);
       }
-    }, 100);
+    }, 150);
 
     return () => clearInterval(interval);
-  }, [autoPlay, player, startAt]);
+  }, [player, resumeReady, effectiveStartAt]);
 
   // Lock screen orientation to portrait
   useEffect(() => {
@@ -398,6 +446,7 @@ export const VerticalPlayer: React.FC<VerticalPlayerProps> = ({
 
   const handlePlayPause = () => {
     if (isPlaying) {
+      void persistPlaybackProgress();
       player.pause();
       setIsPlaying(false);
     } else {
@@ -433,7 +482,25 @@ export const VerticalPlayer: React.FC<VerticalPlayerProps> = ({
       ? Math.max(0, Math.min(duration, currentTime + seconds))
       : Math.max(0, currentTime + seconds);
     player.currentTime = nextTime;
+    void persistPlaybackProgress();
   };
+
+  useEffect(() => {
+    if (!mediaUrl) return;
+
+    const interval = setInterval(() => {
+      if (!isPlaying) return;
+      void persistPlaybackProgress();
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [isPlaying, mediaUrl, player]);
+
+  useEffect(() => {
+    return () => {
+      void persistPlaybackProgress();
+    };
+  }, [mediaUrl, player]);
 
   useTransportControls({
     enabled: Boolean(mediaUrl),

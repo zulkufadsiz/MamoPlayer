@@ -24,6 +24,10 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import LandscapeSettingsDialog from './lib/LandscapeSettingsDialog';
 import LoadingIndicator from './lib/LoadingIndicator';
+import {
+  getPlaybackPosition,
+  savePlaybackPosition,
+} from './lib/playbackPositionStore';
 import { useTransportControls } from './lib/useTransportControls';
 
 interface Subtitle {
@@ -243,13 +247,17 @@ export const LandscapePlayer: React.FC<LandscapePlayerProps> = ({
   const videoViewRef = useRef<VideoView>(null);
   const { width, height } = useWindowDimensions();
   const hasAppliedStartAt = useRef(false);
+  const hasStartedOnReadyRef = useRef(false);
   const pictureInPictureSupported = isPictureInPictureSupported();
+  const [resumeStartAt, setResumeStartAt] = useState<number | null>(null);
+  const [resumeReady, setResumeReady] = useState(false);
+  const effectiveStartAt = resumeStartAt ?? startAt;
 
   const applyStartAt = () => {
     if (hasAppliedStartAt.current) return false;
-    if (typeof startAt !== 'number' || Number.isNaN(startAt)) return false;
+    if (typeof effectiveStartAt !== 'number' || Number.isNaN(effectiveStartAt)) return false;
     const duration = player.duration ?? 0;
-    const clampedTime = duration > 0 ? Math.min(duration, startAt) : startAt;
+    const clampedTime = duration > 0 ? Math.min(duration, effectiveStartAt) : effectiveStartAt;
     player.currentTime = Math.max(0, clampedTime);
     hasAppliedStartAt.current = true;
     return true;
@@ -268,12 +276,6 @@ export const LandscapePlayer: React.FC<LandscapePlayerProps> = ({
     }
     if (status !== 'error') {
       setErrorMessage(null);
-    }
-    if (status === 'readyToPlay') {
-      applyStartAt();
-      if (autoPlay) {
-        player.play();
-      }
     }
   });
 
@@ -308,9 +310,48 @@ export const LandscapePlayer: React.FC<LandscapePlayerProps> = ({
   const tapTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const feedbackTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const suppressPressUntilRef = useRef(0);
+
+  const persistPlaybackProgress = async () => {
+    if (!mediaUrl) return;
+    const mediaDuration = player.duration ?? duration;
+    const position = player.currentTime ?? currentTime;
+
+    if (!Number.isFinite(mediaDuration) || !Number.isFinite(position) || mediaDuration <= 0) {
+      return;
+    }
+
+    await savePlaybackPosition(mediaUrl, position, mediaDuration);
+  };
+
   useEffect(() => {
     hasAppliedStartAt.current = false;
-  }, [resolvedSource, startAt]);
+    hasStartedOnReadyRef.current = false;
+    setResumeStartAt(null);
+    setResumeReady(false);
+
+    let isCancelled = false;
+
+    const loadResumePosition = async () => {
+      if (!mediaUrl) {
+        if (!isCancelled) {
+          setResumeReady(true);
+        }
+        return;
+      }
+
+      const savedPosition = await getPlaybackPosition(mediaUrl);
+      if (!isCancelled) {
+        setResumeStartAt(savedPosition);
+        setResumeReady(true);
+      }
+    };
+
+    void loadResumePosition();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [mediaUrl]);
 
   useEffect(() => {
     return () => {
@@ -324,7 +365,19 @@ export const LandscapePlayer: React.FC<LandscapePlayerProps> = ({
   }, []);
 
   useEffect(() => {
-    if (typeof startAt !== 'number' || Number.isNaN(startAt)) return;
+    if (playerStatus !== 'readyToPlay' || !resumeReady || hasStartedOnReadyRef.current) return;
+
+    applyStartAt();
+    if (autoPlay) {
+      player.play();
+      setIsPlaying(true);
+    }
+    hasStartedOnReadyRef.current = true;
+  }, [autoPlay, player, playerStatus, resumeReady, effectiveStartAt]);
+
+  useEffect(() => {
+    if (!resumeReady) return;
+    if (typeof effectiveStartAt !== 'number' || Number.isNaN(effectiveStartAt)) return;
 
     const interval = setInterval(() => {
       if (hasAppliedStartAt.current) {
@@ -333,15 +386,12 @@ export const LandscapePlayer: React.FC<LandscapePlayerProps> = ({
       }
       if ((player.duration ?? 0) > 0) {
         applyStartAt();
-        if (autoPlay) {
-          player.play();
-        }
         clearInterval(interval);
       }
-    }, 100);
+    }, 150);
 
     return () => clearInterval(interval);
-  }, [autoPlay, player, startAt]);
+  }, [player, resumeReady, effectiveStartAt]);
 
   // Lock screen orientation to landscape
   useEffect(() => {
@@ -444,6 +494,7 @@ export const LandscapePlayer: React.FC<LandscapePlayerProps> = ({
 
   const handlePlayPause = () => {
     if (isPlaying) {
+      void persistPlaybackProgress();
       player.pause();
       setIsPlaying(false);
     } else {
@@ -466,6 +517,7 @@ export const LandscapePlayer: React.FC<LandscapePlayerProps> = ({
   const handleSeek = (value: number) => {
     player.currentTime = value;
     setCurrentTime(value);
+    void persistPlaybackProgress();
   };
 
   const handleSkip = (seconds: number) => {
@@ -500,6 +552,23 @@ export const LandscapePlayer: React.FC<LandscapePlayerProps> = ({
     setVolume(value);
     player.volume = value;
   };
+
+  useEffect(() => {
+    if (!mediaUrl) return;
+
+    const interval = setInterval(() => {
+      if (!isPlaying) return;
+      void persistPlaybackProgress();
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [isPlaying, mediaUrl, player, duration, currentTime]);
+
+  useEffect(() => {
+    return () => {
+      void persistPlaybackProgress();
+    };
+  }, [mediaUrl, player, duration, currentTime]);
 
   const showGestureFeedback = (message: string) => {
     setGestureMessage(message);
