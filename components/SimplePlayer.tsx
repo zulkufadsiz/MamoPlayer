@@ -2,27 +2,27 @@
 import { useEventListener } from 'expo';
 import * as ScreenOrientation from 'expo-screen-orientation';
 import {
-    VideoView,
-    isPictureInPictureSupported,
-    useVideoPlayer,
-    type VideoSource,
+  VideoView,
+  isPictureInPictureSupported,
+  useVideoPlayer,
+  type VideoSource,
 } from 'expo-video';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-    StatusBar,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
-    useWindowDimensions,
+  Modal,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+  useWindowDimensions,
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import LoadingIndicator from './lib/LoadingIndicator';
 import { trackPlaybackEvent } from './lib/playbackAnalytics';
 import PlaybackControls from './lib/PlaybackControls';
 import {
-    getPlaybackPosition,
-    savePlaybackPosition,
+  getPlaybackPosition,
+  savePlaybackPosition,
 } from './lib/playbackPositionStore';
 import SettingsDialog from './lib/SettingsDialog';
 import { useTransportControls } from './lib/useTransportControls';
@@ -105,7 +105,6 @@ export const SimplePlayer: React.FC<SimplePlayerProps> = ({
   artwork,
   style,
 }) => {
-  const insets = useSafeAreaInsets();
   const [selectedSubtitleTrackId, setSelectedSubtitleTrackId] = useState<string | null>(
     defaultSubtitleTrackId
   );
@@ -353,29 +352,25 @@ export const SimplePlayer: React.FC<SimplePlayerProps> = ({
     await savePlaybackPosition(mediaUrl, currentTime, duration);
   };
 
-  // Handle orientation when entering/exiting fullscreen
   useEffect(() => {
-    const handleOrientation = async () => {
-      if (isFullscreen) {
-        // Lock to landscape when fullscreen
-        await ScreenOrientation.lockAsync(
-          ScreenOrientation.OrientationLock.LANDSCAPE
-        );
-      } else {
-        // Unlock orientation when exiting fullscreen
-        await ScreenOrientation.unlockAsync();
-      }
-    };
-
-    handleOrientation();
-
-    // Cleanup: unlock on unmount
     return () => {
-      if (isFullscreen) {
-        ScreenOrientation.unlockAsync();
-      }
+      void ScreenOrientation.unlockAsync();
     };
+  }, []);
+
+  useEffect(() => {
+    if (isFullscreen) return;
+
+    void ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(
+      (error) => {
+        console.warn('Failed to enforce portrait orientation', error);
+      }
+    );
   }, [isFullscreen]);
+
+  const handleFullscreenChange = (nextFullscreen: boolean) => {
+    setIsFullscreen(nextFullscreen);
+  };
 
   useEffect(() => {
     if (resolvedSubtitleTracks.length === 0) {
@@ -593,113 +588,147 @@ export const SimplePlayer: React.FC<SimplePlayerProps> = ({
       console.warn('Failed to toggle picture in picture mode', error);
     }
   };
-  
-  const ContainerComponent = isFullscreen ? SafeAreaView : View;
-  const containerStyle = [
-    styles.container,
-    style,
-    isFullscreen && styles.fullscreenContainer,
-    isFullscreen && { width, height },
-  ];
-  
+
+  const renderPlayerContent = (fullscreen: boolean) => {
+    const containerStyle = [
+      styles.container,
+      !fullscreen && style,
+      fullscreen && styles.fullscreenContainer,
+      fullscreen && { width, height },
+    ];
+
+    return (
+      <View style={containerStyle}>
+        {fullscreen && <StatusBar hidden />}
+        <VideoView
+          ref={videoViewRef}
+          style={[
+            styles.video,
+            fullscreen && styles.fullscreenVideo,
+            fullscreen && { width, height },
+          ]}
+          player={player}
+          nativeControls={false}
+          allowsFullscreen={allowsFullscreen}
+          allowsPictureInPicture={allowsPictureInPicture}
+          onPictureInPictureStart={() => setIsPictureInPictureActive(true)}
+          onPictureInPictureStop={() => setIsPictureInPictureActive(false)}
+          contentFit={contentFit}
+        />
+
+        {(isBuffering || isError) && (
+          <View style={styles.overlay} pointerEvents={isError ? 'auto' : 'none'}>
+            {isBuffering && !isError && (
+              <View style={styles.overlayCard}>
+                <LoadingIndicator size={52} variant="dots" color="#4CFDFF" />
+                <Text style={styles.overlayText}>Loading...</Text>
+              </View>
+            )}
+            {isError && (
+              <View style={styles.overlayCard}>
+                <Text style={styles.overlayTitle}>Playback error</Text>
+                <Text style={styles.overlayText}>{errorMessage ?? 'Unable to play video'}</Text>
+                <TouchableOpacity
+                  style={styles.retryButton}
+                  onPress={handleRetry}
+                  accessibilityRole="button"
+                  accessibilityLabel="Retry playback"
+                  accessibilityHint="Attempts to play the video again"
+                >
+                  <Text style={styles.retryButtonText}>Retry</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        )}
+
+        <PlaybackControls
+          isPlaying={isPlaying}
+          player={player}
+          duration={player.duration || 0}
+          mediaUrl={mediaUrl}
+          onPlayPause={handlePlayPause}
+          onSeek={handleSeek}
+          onSkipBackward={showSkipButtons ? () => handleSkip(-skipSeconds) : undefined}
+          onSkipForward={showSkipButtons ? () => handleSkip(skipSeconds) : undefined}
+          skipSeconds={skipSeconds}
+          isFullscreen={isFullscreen}
+          onFullscreenChange={handleFullscreenChange}
+          subtitles={activeSubtitles}
+          showSubtitles={showSubtitles}
+          subtitleFontSize={subtitleFontSize}
+          subtitleFontStyle={subtitleFontStyle}
+          onSubtitlesToggle={() => setShowSubtitles(!showSubtitles)}
+          onSettingsPress={handleSettingsPress}
+          allowsPictureInPicture={canUsePictureInPicture}
+          isPictureInPictureActive={isPictureInPictureActive}
+          onPictureInPictureToggle={handlePictureInPictureToggle}
+          hasSubtitles={resolvedSubtitleTracks.length > 0}
+          autoHideControls
+          autoHideDelayMs={3000}
+        />
+
+        <SettingsDialog
+          visible={showSettings}
+          onClose={() => setShowSettings(false)}
+          playbackSpeed={playbackSpeed}
+          onPlaybackSpeedChange={handlePlaybackSpeedChange}
+          quality={quality}
+          onQualityChange={setQuality}
+          qualityOptions={qualityOptions}
+          autoPlay={autoPlayEnabled}
+          onAutoPlayChange={setAutoPlayEnabled}
+          showSubtitles={showSubtitles}
+          onShowSubtitlesChange={setShowSubtitles}
+          subtitleFontSize={subtitleFontSize}
+          onSubtitleFontSizeChange={setSubtitleFontSize}
+          subtitleFontStyle={subtitleFontStyle}
+          onSubtitleFontStyleChange={setSubtitleFontStyle}
+          audioTracks={resolvedAudioTracks}
+          selectedAudioTrackId={selectedAudioTrackId}
+          onAudioTrackChange={setSelectedAudioTrackId}
+          subtitleTracks={resolvedSubtitleTracks}
+          selectedSubtitleTrackId={selectedSubtitleTrackId}
+          onSubtitleTrackChange={setSelectedSubtitleTrackId}
+        />
+      </View>
+    );
+  };
+
   return (
-    <ContainerComponent
-      style={containerStyle}
-      edges={isFullscreen ? ['left', 'right'] : undefined}
-    >
-      {isFullscreen && <StatusBar hidden />}
-      <VideoView
-        ref={videoViewRef}
-        style={[
-          styles.video,
-          isFullscreen && styles.fullscreenVideo,
-          isFullscreen && { width, height },
+    <>
+      {renderPlayerContent(false)}
+      <Modal
+        visible={isFullscreen}
+        animationType="fade"
+        presentationStyle="fullScreen"
+        statusBarTranslucent
+        supportedOrientations={[
+          'portrait',
+          'portrait-upside-down',
+          'landscape',
+          'landscape-left',
+          'landscape-right',
         ]}
-        player={player}
-        nativeControls={false}
-        allowsFullscreen={allowsFullscreen}
-        allowsPictureInPicture={allowsPictureInPicture}
-        onPictureInPictureStart={() => setIsPictureInPictureActive(true)}
-        onPictureInPictureStop={() => setIsPictureInPictureActive(false)}
-        contentFit={contentFit}
-      />
-
-      {(isBuffering || isError) && (
-        <View style={styles.overlay} pointerEvents={isError ? 'auto' : 'none'}>
-          {isBuffering && !isError && (
-            <View style={styles.overlayCard}>
-              <LoadingIndicator size={52} variant="dots" color="#4CFDFF" />
-              <Text style={styles.overlayText}>Loading...</Text>
-            </View>
-          )}
-          {isError && (
-            <View style={styles.overlayCard}>
-              <Text style={styles.overlayTitle}>Playback error</Text>
-              <Text style={styles.overlayText}>{errorMessage ?? 'Unable to play video'}</Text>
-              <TouchableOpacity
-                style={styles.retryButton}
-                onPress={handleRetry}
-                accessibilityRole="button"
-                accessibilityLabel="Retry playback"
-                accessibilityHint="Attempts to play the video again"
-              >
-                <Text style={styles.retryButtonText}>Retry</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-        </View>
-      )}
-
-      <PlaybackControls
-        isPlaying={isPlaying}
-        player={player}
-        duration={player.duration || 0}
-        mediaUrl={mediaUrl}
-        onPlayPause={handlePlayPause}
-        onSeek={handleSeek}
-        onSkipBackward={showSkipButtons ? () => handleSkip(-skipSeconds) : undefined}
-        onSkipForward={showSkipButtons ? () => handleSkip(skipSeconds) : undefined}
-        skipSeconds={skipSeconds}
-        isFullscreen={isFullscreen}
-        onFullscreenChange={setIsFullscreen}
-        subtitles={activeSubtitles}
-        showSubtitles={showSubtitles}
-        subtitleFontSize={subtitleFontSize}
-        subtitleFontStyle={subtitleFontStyle}
-        onSubtitlesToggle={() => setShowSubtitles(!showSubtitles)}
-        onSettingsPress={handleSettingsPress}
-        allowsPictureInPicture={canUsePictureInPicture}
-        isPictureInPictureActive={isPictureInPictureActive}
-        onPictureInPictureToggle={handlePictureInPictureToggle}
-        hasSubtitles={resolvedSubtitleTracks.length > 0}
-        autoHideControls
-        autoHideDelayMs={3000}
-      />
-
-      <SettingsDialog
-        visible={showSettings}
-        onClose={() => setShowSettings(false)}
-        playbackSpeed={playbackSpeed}
-        onPlaybackSpeedChange={handlePlaybackSpeedChange}
-        quality={quality}
-        onQualityChange={setQuality}
-        qualityOptions={qualityOptions}
-        autoPlay={autoPlayEnabled}
-        onAutoPlayChange={setAutoPlayEnabled}
-        showSubtitles={showSubtitles}
-        onShowSubtitlesChange={setShowSubtitles}
-        subtitleFontSize={subtitleFontSize}
-        onSubtitleFontSizeChange={setSubtitleFontSize}
-        subtitleFontStyle={subtitleFontStyle}
-        onSubtitleFontStyleChange={setSubtitleFontStyle}
-        audioTracks={resolvedAudioTracks}
-        selectedAudioTrackId={selectedAudioTrackId}
-        onAudioTrackChange={setSelectedAudioTrackId}
-        subtitleTracks={resolvedSubtitleTracks}
-        selectedSubtitleTrackId={selectedSubtitleTrackId}
-        onSubtitleTrackChange={setSelectedSubtitleTrackId}
-      />
-    </ContainerComponent>
+        onShow={() => {
+          void ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE).catch(
+            (error) => {
+              console.warn('Failed to lock landscape orientation', error);
+            }
+          );
+        }}
+        onDismiss={() => {
+          void ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(
+            (error) => {
+              console.warn('Failed to restore portrait orientation', error);
+            }
+          );
+        }}
+        onRequestClose={() => handleFullscreenChange(false)}
+      >
+        {renderPlayerContent(true)}
+      </Modal>
+    </>
   );
 }
 
@@ -756,9 +785,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   fullscreenContainer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
+    flex: 1,
     width: '100%',
     height: '100%',
     zIndex: 1000,

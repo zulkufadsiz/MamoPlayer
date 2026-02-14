@@ -22,6 +22,7 @@ export default function Timeline({
   mediaUrl,
 }: TimelineProps) {
   const insets = useSafeAreaInsets();
+  const fullscreenHorizontalInset = Math.max(insets.left, insets.right);
   const [isSeeking, setIsSeeking] = useState(false);
   const [seekPosition, setSeekPosition] = useState(0);
   const [previewUri, setPreviewUri] = useState<string | null>(null);
@@ -157,8 +158,8 @@ export default function Timeline({
     <View style={[
       styles.container,
       isFullscreen && {
-        paddingLeft: Math.max(12, insets.left + 8),
-        paddingRight: Math.max(12, insets.right + 8),
+        paddingLeft: Math.max(12, fullscreenHorizontalInset + 8),
+        paddingRight: Math.max(12, fullscreenHorizontalInset + 8),
         paddingBottom: Math.max(8, insets.bottom + 4),
       }
     ]}>
