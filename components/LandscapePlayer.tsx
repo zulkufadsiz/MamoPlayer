@@ -347,6 +347,8 @@ export const LandscapePlayer: React.FC<LandscapePlayerProps> = ({
   const [showSettings, setShowSettings] = useState(false);
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
   const [autoPlayEnabled, setAutoPlayEnabled] = useState(autoPlay);
+  const [subtitleFontSize, setSubtitleFontSize] = useState(18);
+  const [subtitleFontStyle, setSubtitleFontStyle] = useState<'normal' | 'bold' | 'thin' | 'italic'>('normal');
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [isSeeking, setIsSeeking] = useState(false);
@@ -1050,7 +1052,24 @@ export const LandscapePlayer: React.FC<LandscapePlayerProps> = ({
             left: Math.max(40, insets.left + 40),
             right: Math.max(40, insets.right + 40),
           }]}>
-            <Text style={styles.subtitleText}>{currentSubtitle}</Text>
+            <Text
+              style={[
+                styles.subtitleText,
+                {
+                  fontSize: subtitleFontSize,
+                  color: '#FFFFFF',
+                  fontWeight:
+                    subtitleFontStyle === 'bold'
+                      ? '700'
+                      : subtitleFontStyle === 'thin'
+                        ? '300'
+                        : '400',
+                  fontStyle: subtitleFontStyle === 'italic' ? 'italic' : 'normal',
+                },
+              ]}
+            >
+              {currentSubtitle}
+            </Text>
           </View>
         )}
 
@@ -1073,6 +1092,10 @@ export const LandscapePlayer: React.FC<LandscapePlayerProps> = ({
         onAutoPlayChange={setAutoPlayEnabled}
         showSubtitles={showSubtitles}
         onShowSubtitlesChange={setShowSubtitles}
+        subtitleFontSize={subtitleFontSize}
+        onSubtitleFontSizeChange={setSubtitleFontSize}
+        subtitleFontStyle={subtitleFontStyle}
+        onSubtitleFontStyleChange={setSubtitleFontStyle}
         audioTracks={resolvedAudioTracks}
         selectedAudioTrackId={selectedAudioTrackId}
         onAudioTrackChange={setSelectedAudioTrackId}

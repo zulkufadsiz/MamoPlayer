@@ -327,6 +327,8 @@ export const SimplePlayer: React.FC<SimplePlayerProps> = ({
   const [showSettings, setShowSettings] = useState(false);
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
   const [autoPlayEnabled, setAutoPlayEnabled] = useState(autoPlay);
+  const [subtitleFontSize, setSubtitleFontSize] = useState(18);
+  const [subtitleFontStyle, setSubtitleFontStyle] = useState<'normal' | 'bold' | 'thin' | 'italic'>('normal');
   const [isPictureInPictureActive, setIsPictureInPictureActive] = useState(false);
   const isBuffering = playerStatus === 'loading' || playerStatus === 'buffering';
   const isError = !!errorMessage || playerStatus === 'error';
@@ -577,6 +579,8 @@ export const SimplePlayer: React.FC<SimplePlayerProps> = ({
         onFullscreenChange={setIsFullscreen}
         subtitles={activeSubtitles}
         showSubtitles={showSubtitles}
+        subtitleFontSize={subtitleFontSize}
+        subtitleFontStyle={subtitleFontStyle}
         onSubtitlesToggle={() => setShowSubtitles(!showSubtitles)}
         onSettingsPress={handleSettingsPress}
         allowsPictureInPicture={canUsePictureInPicture}
@@ -599,6 +603,10 @@ export const SimplePlayer: React.FC<SimplePlayerProps> = ({
         onAutoPlayChange={setAutoPlayEnabled}
         showSubtitles={showSubtitles}
         onShowSubtitlesChange={setShowSubtitles}
+        subtitleFontSize={subtitleFontSize}
+        onSubtitleFontSizeChange={setSubtitleFontSize}
+        subtitleFontStyle={subtitleFontStyle}
+        onSubtitleFontStyleChange={setSubtitleFontStyle}
         audioTracks={resolvedAudioTracks}
         selectedAudioTrackId={selectedAudioTrackId}
         onAudioTrackChange={setSelectedAudioTrackId}

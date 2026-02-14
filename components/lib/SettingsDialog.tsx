@@ -23,6 +23,10 @@ interface SettingsDialogProps {
   onAutoPlayChange: (value: boolean) => void;
   showSubtitles: boolean;
   onShowSubtitlesChange: (value: boolean) => void;
+  subtitleFontSize?: number;
+  onSubtitleFontSizeChange?: (size: number) => void;
+  subtitleFontStyle?: 'normal' | 'bold' | 'thin' | 'italic';
+  onSubtitleFontStyleChange?: (style: 'normal' | 'bold' | 'thin' | 'italic') => void;
   audioTracks?: Array<{
     id: string;
     label: string;
@@ -41,12 +45,19 @@ interface SettingsDialogProps {
 
 const playbackSpeeds = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
 const defaultVideoQualities = ['Auto', '1080p', '720p', '480p', '360p'];
+const subtitleFontSizes = [
+  { label: 'Small', value: 14 },
+  { label: 'Medium', value: 18 },
+  { label: 'Large', value: 24 },
+];
+const subtitleFontStyles: Array<'normal' | 'bold' | 'thin' | 'italic'> = ['normal', 'bold', 'thin', 'italic'];
 
 type SettingsMenuItem =
   | 'playbackSpeed'
   | 'quality'
   | 'audio'
   | 'subtitles'
+  | 'subtitleStyle'
   | 'preferences'
   | null;
 
@@ -62,6 +73,10 @@ export default function SettingsDialog({
   onAutoPlayChange,
   showSubtitles,
   onShowSubtitlesChange,
+  subtitleFontSize = 18,
+  onSubtitleFontSizeChange,
+  subtitleFontStyle = 'normal',
+  onSubtitleFontStyleChange,
   audioTracks = [],
   selectedAudioTrackId = null,
   onAudioTrackChange,
@@ -187,6 +202,23 @@ export default function SettingsDialog({
             </View>
           </TouchableOpacity>
         )}
+
+        <TouchableOpacity
+          style={styles.menuItem}
+          onPress={() => handleMenuItemPress('subtitleStyle')}
+          accessibilityRole="button"
+          accessibilityLabel="Subtitle style"
+          accessibilityHint="Opens subtitle style options"
+        >
+          <View style={styles.menuItemLeft}>
+            <Ionicons name="color-palette-outline" size={24} color="#007AFF" />
+            <Text style={styles.menuItemTitle}>Subtitle Style</Text>
+          </View>
+          <View style={styles.menuItemRight}>
+            <Text style={styles.menuItemValue}>{subtitleFontStyle}</Text>
+            <Ionicons name="chevron-forward" size={20} color="#999" />
+          </View>
+        </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.menuItem}
@@ -491,6 +523,76 @@ export default function SettingsDialog({
     </>
   );
 
+  const renderSubtitleStyleSheet = () => (
+    <>
+      <View style={styles.sheetHeader}>
+        <TouchableOpacity
+          onPress={handleBackToMenu}
+          style={styles.backButton}
+          accessibilityRole="button"
+          accessibilityLabel="Back to settings menu"
+          hitSlop={10}
+        >
+          <Ionicons name="chevron-back" size={24} color="#007AFF" />
+        </TouchableOpacity>
+        <Text style={styles.sheetTitle}>Subtitle Style</Text>
+        <View style={{ width: 24 }} />
+      </View>
+
+      <ScrollView style={styles.sheetContent}>
+        <Text style={styles.preferenceTitle}>Font Size</Text>
+        <View style={styles.optionsGrid}>
+          {subtitleFontSizes.map((sizeOption) => {
+            const isActive = subtitleFontSize === sizeOption.value;
+            return (
+              <TouchableOpacity
+                key={sizeOption.label}
+                style={[styles.speedButton, isActive && styles.speedButtonActive]}
+                onPress={() => onSubtitleFontSizeChange?.(sizeOption.value)}
+                accessibilityRole="radio"
+                accessibilityLabel={`Subtitle size ${sizeOption.label}`}
+                accessibilityState={{ selected: isActive }}
+              >
+                <Text style={[styles.speedText, isActive && styles.speedTextActive]}>{sizeOption.label}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        <View style={{ height: 16 }} />
+        <Text style={styles.preferenceTitle}>Text Style</Text>
+        <View style={styles.qualityList}>
+          {subtitleFontStyles.map((style) => {
+            const isActive = subtitleFontStyle === style;
+            return (
+              <TouchableOpacity
+                key={style}
+                style={[styles.qualityItem, isActive && styles.qualityItemActive]}
+                onPress={() => onSubtitleFontStyleChange?.(style)}
+                accessibilityRole="radio"
+                accessibilityLabel={`Subtitle text style ${style}`}
+                accessibilityState={{ selected: isActive }}
+              >
+                <Text
+                  style={[
+                    styles.qualityText,
+                    {
+                      fontWeight: style === 'bold' ? '700' : style === 'thin' ? '300' : '400',
+                      fontStyle: style === 'italic' ? 'italic' : 'normal',
+                    },
+                  ]}
+                >
+                  {style.charAt(0).toUpperCase() + style.slice(1)}
+                </Text>
+                {isActive && <Ionicons name="checkmark-circle" size={24} color="#007AFF" />}
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      </ScrollView>
+    </>
+  );
+
   return (
     <Modal
       visible={visible}
@@ -518,6 +620,7 @@ export default function SettingsDialog({
           {activeMenu === 'quality' && renderQualitySheet()}
           {activeMenu === 'audio' && renderAudioSheet()}
           {activeMenu === 'subtitles' && renderSubtitlesSheet()}
+          {activeMenu === 'subtitleStyle' && renderSubtitleStyleSheet()}
           {activeMenu === 'preferences' && renderPreferencesSheet()}
         </Pressable>
       </Pressable>
