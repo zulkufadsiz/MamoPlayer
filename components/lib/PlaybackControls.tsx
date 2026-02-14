@@ -1,5 +1,4 @@
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
-import * as ScreenOrientation from 'expo-screen-orientation';
 import React, { useEffect, useState } from 'react';
 import {
   Pressable,
@@ -108,15 +107,6 @@ export default function PlaybackControls({
   const [currentSubtitle, setCurrentSubtitle] = useState<string>('');
   const [controlsVisible, setControlsVisible] = useState(true);
 
-  useEffect(() => {
-    return () => {
-      // Unlock orientation when component unmounts
-      if (isFullscreen) {
-        ScreenOrientation.unlockAsync();
-      }
-    };
-  }, []);
-
   // Track current subtitle
   useEffect(() => {
     if (!player || subtitles.length === 0) return;
@@ -146,14 +136,10 @@ export default function PlaybackControls({
     setControlsVisible(true);
   };
 
-  const handleFullscreen = async () => {
+  const handleFullscreen = () => {
     if (!isFullscreen) {
-      // Enter fullscreen and lock to landscape
-      await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE);
       onFullscreenChange(true);
     } else {
-      // Exit fullscreen and return to portrait orientation
-      await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP);
       onFullscreenChange(false);
     }
   };
@@ -177,15 +163,7 @@ export default function PlaybackControls({
   }, [autoHideControls, autoHideDelayMs, isPlaying, controlsVisible]);
 
   return (
-    <View
-      style={[
-        styles.container,
-        isFullscreen && {
-          left: insets.left,
-          right: insets.right,
-        },
-      ]}
-    >
+    <View style={styles.container}>
       {!controlsVisible && autoHideControls && (
         <Pressable
           style={styles.tapToShow}
@@ -253,7 +231,7 @@ export default function PlaybackControls({
         <View style={[
           styles.bottomControls,
           isFullscreen && {
-            top: Math.max(12, insets.top + 8),
+            top: 8,
             right: Math.max(12, insets.right + 8),
           }
         ]}>
