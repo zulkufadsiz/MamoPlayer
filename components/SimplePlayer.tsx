@@ -4,17 +4,18 @@ import * as ScreenOrientation from 'expo-screen-orientation';
 import { VideoView, useVideoPlayer, type VideoSource } from 'expo-video';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  StatusBar,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-  useWindowDimensions,
+    StatusBar,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+    useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import LoadingIndicator from './lib/LoadingIndicator';
 import PlaybackControls from './lib/PlaybackControls';
 import SettingsDialog from './lib/SettingsDialog';
+import { useTransportControls } from './lib/useTransportControls';
 
 interface Subtitle {
   start: number | string;
@@ -54,7 +55,20 @@ interface SimplePlayerProps {
   onSettingsPress?: () => void;
   skipSeconds?: number;
   showSkipButtons?: boolean;
+  title?: string;
+  author?: string;
+  artwork?: string;
 }
+
+const resolveMediaUrl = (source: VideoSource): string | null => {
+  if (!source) return null;
+  if (typeof source === 'string') return source;
+  if (typeof source === 'number') return null;
+  if (typeof source === 'object' && 'uri' in source && typeof source.uri === 'string') {
+    return source.uri;
+  }
+  return null;
+};
 
 export const SimplePlayer: React.FC<SimplePlayerProps> = ({
   source,
@@ -72,6 +86,9 @@ export const SimplePlayer: React.FC<SimplePlayerProps> = ({
   onSettingsPress,
   skipSeconds = 10,
   showSkipButtons = true,
+  title,
+  author,
+  artwork,
   style,
 }) => {
   const insets = useSafeAreaInsets();
@@ -132,6 +149,7 @@ export const SimplePlayer: React.FC<SimplePlayerProps> = ({
     source,
     videoSourcesByLanguage,
   ]);
+  const mediaUrl = useMemo(() => resolveMediaUrl(resolvedSource), [resolvedSource]);
 
   const player = useVideoPlayer(resolvedSource, player => {
     player.loop = true;
@@ -292,6 +310,29 @@ export const SimplePlayer: React.FC<SimplePlayerProps> = ({
       : Math.max(0, currentTime + seconds);
     player.currentTime = nextTime;
   };
+
+  useTransportControls({
+    enabled: Boolean(mediaUrl),
+    isPlaying,
+    mediaUrl,
+    title,
+    artist: author,
+    artwork,
+    onPlay: () => {
+      if (!isPlaying) {
+        player.play();
+        setIsPlaying(true);
+      }
+    },
+    onPause: () => {
+      if (isPlaying) {
+        player.pause();
+        setIsPlaying(false);
+      }
+    },
+    onNext: showSkipButtons ? () => handleSkip(skipSeconds) : undefined,
+    onPrevious: showSkipButtons ? () => handleSkip(-skipSeconds) : undefined,
+  });
 
   const handleSettingsPress = () => {
     setShowSettings(true);

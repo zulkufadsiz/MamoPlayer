@@ -1,5 +1,23 @@
+import Constants from 'expo-constants';
 import { useEffect } from 'react';
-import TrackPlayer, { Capability, Event } from 'react-native-track-player';
+
+let TrackPlayerModule: TrackPlayerModuleType | null = null;
+let hasWarnedUnavailable = false;
+
+const isExpoGo = Constants.appOwnership === 'expo';
+
+try {
+  if (!isExpoGo) {
+    TrackPlayerModule = require('react-native-track-player');
+  }
+} catch (error) {
+  TrackPlayerModule = null;
+}
+
+const TrackPlayer = TrackPlayerModule?.default ?? TrackPlayerModule;
+const Capability = TrackPlayerModule?.Capability;
+const Event = TrackPlayerModule?.Event;
+const isTrackPlayerAvailable = Boolean(TrackPlayer && Capability && Event);
 
 export interface TransportControlsOptions {
   enabled?: boolean;
@@ -18,6 +36,7 @@ const TRACK_ID = 'zplayer-media';
 let setupPromise: Promise<void> | null = null;
 
 const buildCapabilities = (canSkipNext: boolean, canSkipPrevious: boolean) => {
+  if (!Capability) return [];
   const capabilities = [Capability.Play, Capability.Pause];
   if (canSkipNext) capabilities.push(Capability.SkipToNext);
   if (canSkipPrevious) capabilities.push(Capability.SkipToPrevious);
@@ -25,6 +44,9 @@ const buildCapabilities = (canSkipNext: boolean, canSkipPrevious: boolean) => {
 };
 
 const ensureSetup = async () => {
+  if (!TrackPlayer || !Capability || !isTrackPlayerAvailable) {
+    throw new Error('TrackPlayer native module is not available.');
+  }
   if (!setupPromise) {
     setupPromise = TrackPlayer.setupPlayer().then(async () => {
       const capabilities = buildCapabilities(true, true);
@@ -34,7 +56,6 @@ const ensureSetup = async () => {
         compactCapabilities: [Capability.Play, Capability.Pause],
         notificationCapabilities: capabilities,
       });
-      await TrackPlayer.setVolume(0);
     });
   }
 
@@ -55,6 +76,13 @@ export const useTransportControls = ({
 }: TransportControlsOptions) => {
   useEffect(() => {
     if (!enabled) return;
+    if (!isTrackPlayerAvailable) {
+      if (!hasWarnedUnavailable) {
+        console.warn('TrackPlayer native module not available. Skipping transport controls.');
+        hasWarnedUnavailable = true;
+      }
+      return;
+    }
     let cancelled = false;
 
     const setup = async () => {
@@ -73,7 +101,7 @@ export const useTransportControls = ({
   }, [enabled]);
 
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled || !isTrackPlayerAvailable) return;
 
     const updateCapabilities = async () => {
       try {
@@ -94,7 +122,7 @@ export const useTransportControls = ({
   }, [enabled, onNext, onPrevious]);
 
   useEffect(() => {
-    if (!enabled || !mediaUrl) return;
+    if (!enabled || !mediaUrl || !isTrackPlayerAvailable) return;
 
     const updateMetadata = async () => {
       try {
@@ -113,6 +141,11 @@ export const useTransportControls = ({
             url: mediaUrl,
             ...metadata,
           });
+          if (isPlaying) {
+            await TrackPlayer.play();
+            const state = await TrackPlayer.getState();
+            console.log('TrackPlayer state after add+play:', state);
+          }
           return;
         }
 
@@ -123,18 +156,22 @@ export const useTransportControls = ({
     };
 
     void updateMetadata();
-  }, [artist, artwork, enabled, mediaUrl, title]);
+  }, [artist, artwork, enabled, isPlaying, mediaUrl, title]);
 
   useEffect(() => {
-    if (!enabled || !mediaUrl) return;
+    if (!enabled || !mediaUrl || !isTrackPlayerAvailable) return;
 
     const syncState = async () => {
       try {
         await ensureSetup();
         if (isPlaying) {
           await TrackPlayer.play();
+          const state = await TrackPlayer.getState();
+          console.log('TrackPlayer state after play:', state);
         } else {
           await TrackPlayer.pause();
+          const state = await TrackPlayer.getState();
+          console.log('TrackPlayer state after pause:', state);
         }
       } catch (error) {
         console.warn('Transport controls state sync failed', error);
@@ -145,7 +182,7 @@ export const useTransportControls = ({
   }, [enabled, isPlaying, mediaUrl]);
 
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled || !isTrackPlayerAvailable || !Event) return;
 
     const subscriptions = [
       TrackPlayer.addEventListener(Event.RemotePlay, () => onPlay?.()),

@@ -4,6 +4,6 @@ let isRegistered = false;
 
 export const registerTransportService = () => {
   if (isRegistered) return;
-  TrackPlayer.registerPlaybackService(() => require('./trackPlayerService'));
+  TrackPlayer.registerPlaybackService(() => require('./trackPlayerService').default);
   isRegistered = true;
 };

@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "ZPlayerApp",
-    "slug": "ZPlayerApp",
+    "name": "MamoPlayer",
+    "slug": "mamoplayer",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "zplayerapp",
+    "scheme": "mamoplayer",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
@@ -13,13 +13,16 @@
       "infoPlist": {
         "UIBackgroundModes": [
           "audio",
+          "audio",
+          "audio",
           "audio"
         ],
         "NSAppTransportSecurity": {
           "NSAllowsArbitraryLoads": true
-        }
+        },
+        "ITSAppUsesNonExemptEncryption": false
       },
-      "bundleIdentifier": "com.anonymous.ZPlayerApp"
+      "bundleIdentifier": "com.anonymous.MamoPlayer"
     },
     "android": {
       "permissions": [
@@ -39,7 +42,7 @@
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "usesCleartextTraffic": true,
-      "package": "com.anonymous.ZPlayerApp"
+      "package": "com.anonymous.MamoPlayer"
     },
     "web": {
       "output": "static",
@@ -63,6 +66,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "c617fbe9-a533-4051-b7a6-a373ca68eeb1"
+      }
     }
   }
 }

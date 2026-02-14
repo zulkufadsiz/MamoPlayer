@@ -1,22 +1,22 @@
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
-import ZPlayer from './ZPlayer';
+import MamoPlayer from './MamoPlayer';
 
-export const ZPlayerDemo: React.FC = () => {
+export const MamoPlayerDemo: React.FC = () => {
   // Example video URL (replace with your own)
   const videoSource = {
-    uri: 'http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+    uri: 'https://devstreaming-cdn.apple.com/videos/streaming/examples/img_bipbop_adv_example_ts/master.m3u8',
   };
 
   const videoSourcesByLanguage = {
     en: {
-      uri: 'http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+      uri: 'https://devstreaming-cdn.apple.com/videos/streaming/examples/img_bipbop_adv_example_ts/master.m3u8',
     },
     tr: {
-      uri: 'http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4',
+      uri: 'https://devstreaming-cdn.apple.com/videos/streaming/examples/img_bipbop_adv_example_ts/master.m3u8',
     },
     es: {
-      uri: 'http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4',
+      uri: 'https://devstreaming-cdn.apple.com/videos/streaming/examples/img_bipbop_adv_example_ts/master.m3u8',
     },
   };
 
@@ -99,7 +99,7 @@ export const ZPlayerDemo: React.FC = () => {
 
   return (
     <View style={styles.container}>
-        <ZPlayer
+        <MamoPlayer
           source={videoSource}
           videoSourcesByLanguage={videoSourcesByLanguage}
           autoPlay={true}
@@ -127,7 +127,7 @@ export const ZPlayerDemo: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     paddingTop: 80,
-    backgroundColor: '#000',
+    //backgroundColor: '#000',
     height: 400,
     //flex: 1,
   },
@@ -136,4 +136,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default ZPlayerDemo;
+export default MamoPlayerDemo;
