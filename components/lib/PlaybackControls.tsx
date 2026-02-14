@@ -57,6 +57,7 @@ interface PlaybackControlsProps {
   isPlaying: boolean;
   player: any;
   duration: number;
+  mediaUrl?: string | null;
   onPlayPause: () => void;
   onSeek: (time: number) => void;
   onSkipBackward?: () => void;
@@ -79,6 +80,7 @@ interface PlaybackControlsProps {
 export default function PlaybackControls({
   isPlaying,
   player,
+  mediaUrl,
   onPlayPause,
   onSeek,
   onSkipBackward,
@@ -346,6 +348,7 @@ export default function PlaybackControls({
               duration={currentDuration}
               onSeek={onSeek}
               isFullscreen={isFullscreen}
+              mediaUrl={mediaUrl}
             />
        )}
     </View>

@@ -2,10 +2,10 @@
 import { useEventListener } from 'expo';
 import * as ScreenOrientation from 'expo-screen-orientation';
 import {
-  isPictureInPictureSupported,
-  VideoView,
-  useVideoPlayer,
-  type VideoSource,
+    VideoView,
+    isPictureInPictureSupported,
+    useVideoPlayer,
+    type VideoSource,
 } from 'expo-video';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -430,6 +430,7 @@ export const SimplePlayer: React.FC<SimplePlayerProps> = ({
         isPlaying={isPlaying}
         player={player}
         duration={player.duration || 0}
+        mediaUrl={mediaUrl}
         onPlayPause={handlePlayPause}
         onSeek={(time) => {
           player.currentTime = time;
