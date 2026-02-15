@@ -5,19 +5,25 @@ import React from 'react';
 jest.mock('@/components/SimplePlayer', () => {
   const React = require('react');
   const { Text } = require('react-native');
-  return () => <Text>simple-player</Text>;
+  const SimplePlayerMock = () => <Text>simple-player</Text>;
+  SimplePlayerMock.displayName = 'SimplePlayerMock';
+  return SimplePlayerMock;
 });
 
 jest.mock('@/components/VerticalPlayer', () => {
   const React = require('react');
   const { Text } = require('react-native');
-  return () => <Text>vertical-player</Text>;
+  const VerticalPlayerMock = () => <Text>vertical-player</Text>;
+  VerticalPlayerMock.displayName = 'VerticalPlayerMock';
+  return VerticalPlayerMock;
 });
 
 jest.mock('@/components/LandscapePlayer', () => {
   const React = require('react');
   const { Text } = require('react-native');
-  return () => <Text>landscape-player</Text>;
+  const LandscapePlayerMock = () => <Text>landscape-player</Text>;
+  LandscapePlayerMock.displayName = 'LandscapePlayerMock';
+  return LandscapePlayerMock;
 });
 
 describe('MamoPlayer', () => {

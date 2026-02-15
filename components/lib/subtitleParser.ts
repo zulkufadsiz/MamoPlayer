@@ -11,10 +11,7 @@ const parseTimeToSeconds = (value: string): number => {
 
   const seconds = Number.parseFloat(parts[parts.length - 1]);
   const minutes = Number.parseInt(parts[parts.length - 2], 10);
-  const hours =
-    parts.length === 3
-      ? Number.parseInt(parts[0], 10)
-      : 0;
+  const hours = parts.length === 3 ? Number.parseInt(parts[0], 10) : 0;
 
   if (![seconds, minutes, hours].every((part) => Number.isFinite(part))) {
     return NaN;

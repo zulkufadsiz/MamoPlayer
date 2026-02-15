@@ -4,7 +4,7 @@ describe('useTransportControls', () => {
     jest.resetModules();
   });
 
-  const mockReactUseEffect = (cleanupCallbacks: Array<() => void>) => {
+  const mockReactUseEffect = (cleanupCallbacks: (() => void)[]) => {
     jest.doMock('react', () => {
       const actual = jest.requireActual('react');
       return {
@@ -20,7 +20,7 @@ describe('useTransportControls', () => {
   };
 
   it('warns when track player is unavailable', async () => {
-    const cleanupCallbacks: Array<() => void> = [];
+    const cleanupCallbacks: (() => void)[] = [];
     const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
 
     mockReactUseEffect(cleanupCallbacks);
@@ -38,12 +38,12 @@ describe('useTransportControls', () => {
     });
 
     expect(warnSpy).toHaveBeenCalledWith(
-      'TrackPlayer native module not available. Skipping transport controls.'
+      'TrackPlayer native module not available. Skipping transport controls.',
     );
   });
 
   it('registers listeners and updates player metadata when available', async () => {
-    const cleanupCallbacks: Array<() => void> = [];
+    const cleanupCallbacks: (() => void)[] = [];
     const logSpy = jest.spyOn(console, 'log').mockImplementation(() => undefined);
     const remove = jest.fn();
     const mockTrackPlayer = {

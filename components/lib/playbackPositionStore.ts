@@ -151,7 +151,7 @@ export const getPlaybackPosition = async (mediaUrl: string): Promise<number | nu
 export const savePlaybackPosition = async (
   mediaUrl: string,
   position: number,
-  duration: number
+  duration: number,
 ): Promise<void> => {
   if (!mediaUrl?.trim()) return;
   if (!Number.isFinite(position) || !Number.isFinite(duration) || duration <= 0) return;

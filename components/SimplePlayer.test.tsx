@@ -41,6 +41,7 @@ jest.mock('expo-video', () => {
     }));
     return <View accessibilityLabel="video-view" />;
   });
+  VideoView.displayName = 'VideoViewMock';
 
   return {
     VideoView,
@@ -61,12 +62,14 @@ jest.mock('@/components/lib/useTransportControls', () => ({
 jest.mock('@/components/lib/LoadingIndicator', () => {
   const React = require('react');
   const { View } = require('react-native');
-  return () => <View accessibilityLabel="loading-indicator" />;
+  const LoadingIndicatorMock = () => <View accessibilityLabel="loading-indicator" />;
+  LoadingIndicatorMock.displayName = 'LoadingIndicatorMock';
+  return LoadingIndicatorMock;
 });
 
 jest.mock('@/components/lib/SettingsDialog', () => ({
   __esModule: true,
-  default: ({ visible }: { visible: boolean }) => {
+  default: function SettingsDialogMock({ visible }: { visible: boolean }) {
     const React = require('react');
     const { View } = require('react-native');
     return <View accessibilityLabel={visible ? 'settings-open' : 'settings-closed'} />;
@@ -75,12 +78,19 @@ jest.mock('@/components/lib/SettingsDialog', () => ({
 
 jest.mock('@/components/lib/PlaybackControls', () => ({
   __esModule: true,
-  default: ({ onFullscreenChange, isFullscreen, onSettingsPress }: any) => {
+  default: function PlaybackControlsMock({
+    onFullscreenChange,
+    isFullscreen,
+    onSettingsPress,
+  }: any) {
     const React = require('react');
     const { Pressable, Text, View } = require('react-native');
     return (
       <View>
-        <Pressable accessibilityLabel="toggle-fullscreen" onPress={() => onFullscreenChange(!isFullscreen)}>
+        <Pressable
+          accessibilityLabel="toggle-fullscreen"
+          onPress={() => onFullscreenChange(!isFullscreen)}
+        >
           <Text>toggle</Text>
         </Pressable>
         <Pressable accessibilityLabel="open-settings" onPress={onSettingsPress}>
@@ -108,7 +118,7 @@ describe('SimplePlayer', () => {
 
   it('opens fullscreen modal when fullscreen toggle is pressed', async () => {
     const { getByLabelText, UNSAFE_getByType } = render(
-      <SimplePlayer source={{ uri: 'https://example.com/video.m3u8' }} />
+      <SimplePlayer source={{ uri: 'https://example.com/video.m3u8' }} />,
     );
 
     await flushAsyncState();
@@ -121,7 +131,7 @@ describe('SimplePlayer', () => {
 
   it('locks landscape on modal show and restores portrait on dismiss', async () => {
     const { getByLabelText, UNSAFE_getByType } = render(
-      <SimplePlayer source={{ uri: 'https://example.com/video.m3u8' }} />
+      <SimplePlayer source={{ uri: 'https://example.com/video.m3u8' }} />,
     );
 
     await flushAsyncState();
@@ -143,7 +153,7 @@ describe('SimplePlayer', () => {
 
   it('opens settings dialog when settings press callback is triggered', async () => {
     const { getByLabelText, getByLabelText: getByA11yLabel } = render(
-      <SimplePlayer source={{ uri: 'https://example.com/video.m3u8' }} />
+      <SimplePlayer source={{ uri: 'https://example.com/video.m3u8' }} />,
     );
 
     await flushAsyncState();

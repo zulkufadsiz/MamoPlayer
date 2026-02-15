@@ -29,7 +29,7 @@ const LoadingIndicator: React.FC<LoadingIndicatorProps> = ({
         duration: 900,
         easing: Easing.linear,
         useNativeDriver: true,
-      })
+      }),
     );
 
     const createDotLoop = (value: Animated.Value, delayMs: number) =>
@@ -48,7 +48,7 @@ const LoadingIndicator: React.FC<LoadingIndicatorProps> = ({
             easing: Easing.in(Easing.quad),
             useNativeDriver: true,
           }),
-        ])
+        ]),
       );
 
     const createWaveLoop = (value: Animated.Value, delayMs: number) =>
@@ -67,7 +67,7 @@ const LoadingIndicator: React.FC<LoadingIndicatorProps> = ({
             easing: Easing.in(Easing.cubic),
             useNativeDriver: true,
           }),
-        ])
+        ]),
       );
 
     const dot1Anim = createDotLoop(dot1, 0);
@@ -229,7 +229,7 @@ const LoadingIndicator: React.FC<LoadingIndicatorProps> = ({
                 width: dotSize,
                 height: dotSize,
                 borderRadius: dotSize / 2,
-                backgroundColor: variant === 'brand' ? brandColors[0] ?? color : color,
+                backgroundColor: variant === 'brand' ? (brandColors[0] ?? color) : color,
               },
               buildDotStyle(dot1),
             ]}
@@ -241,7 +241,7 @@ const LoadingIndicator: React.FC<LoadingIndicatorProps> = ({
                 width: dotSize,
                 height: dotSize,
                 borderRadius: dotSize / 2,
-                backgroundColor: variant === 'brand' ? brandColors[1] ?? color : color,
+                backgroundColor: variant === 'brand' ? (brandColors[1] ?? color) : color,
               },
               buildDotStyle(dot2),
             ]}
@@ -253,7 +253,7 @@ const LoadingIndicator: React.FC<LoadingIndicatorProps> = ({
                 width: dotSize,
                 height: dotSize,
                 borderRadius: dotSize / 2,
-                backgroundColor: variant === 'brand' ? brandColors[2] ?? color : color,
+                backgroundColor: variant === 'brand' ? (brandColors[2] ?? color) : color,
               },
               buildDotStyle(dot3),
             ]}

@@ -7,7 +7,11 @@ const mockGetOfflineLibraryItems = jest.fn(() => Promise.resolve([]));
 jest.mock('@/components/MamoPlayer', () => {
   const React = require('react');
   const { Text } = require('react-native');
-  return ({ title }: { title?: string }) => <Text>{`player-title:${title || 'none'}`}</Text>;
+  const MamoPlayerMock = ({ title }: { title?: string }) => (
+    <Text>{`player-title:${title || 'none'}`}</Text>
+  );
+  MamoPlayerMock.displayName = 'MamoPlayerMock';
+  return MamoPlayerMock;
 });
 
 jest.mock('@/components/lib/subtitleParser', () => ({

@@ -1,13 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
-import {
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
-} from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 interface LandscapeSettingsDialogProps {
   visible: boolean;
@@ -25,18 +18,18 @@ interface LandscapeSettingsDialogProps {
   onSubtitleFontSizeChange?: (size: number) => void;
   subtitleFontStyle?: 'normal' | 'bold' | 'thin' | 'italic';
   onSubtitleFontStyleChange?: (style: 'normal' | 'bold' | 'thin' | 'italic') => void;
-  audioTracks?: Array<{
+  audioTracks?: {
     id: string;
     label: string;
     language?: string;
-  }>;
+  }[];
   selectedAudioTrackId?: string | null;
   onAudioTrackChange?: (trackId: string | null) => void;
-  subtitleTracks?: Array<{
+  subtitleTracks?: {
     id: string;
     label: string;
     language?: string;
-  }>;
+  }[];
   selectedSubtitleTrackId?: string | null;
   onSubtitleTrackChange?: (trackId: string | null) => void;
 }
@@ -64,17 +57,29 @@ export const LandscapeSettingsDialog: React.FC<LandscapeSettingsDialogProps> = (
   selectedSubtitleTrackId = null,
   onSubtitleTrackChange,
 }) => {
-  type SectionKey = 'playback' | 'quality' | 'audio' | 'subtitles' | 'subtitleStyle' | 'preferences';
+  type SectionKey =
+    | 'playback'
+    | 'quality'
+    | 'audio'
+    | 'subtitles'
+    | 'subtitleStyle'
+    | 'preferences';
   const playbackSpeeds = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
   const subtitleFontSizes = [
     { label: 'Small', value: 14 },
     { label: 'Medium', value: 18 },
     { label: 'Large', value: 24 },
   ];
-  const subtitleFontStyles: Array<'normal' | 'bold' | 'thin' | 'italic'> = ['normal', 'bold', 'thin', 'italic'];
-  const qualities = qualityOptions && qualityOptions.length > 0
-    ? qualityOptions
-    : ['Auto', '4K', '1080p', '720p', '480p', '360p'];
+  const subtitleFontStyles: ('normal' | 'bold' | 'thin' | 'italic')[] = [
+    'normal',
+    'bold',
+    'thin',
+    'italic',
+  ];
+  const qualities =
+    qualityOptions && qualityOptions.length > 0
+      ? qualityOptions
+      : ['Auto', '4K', '1080p', '720p', '480p', '360p'];
   const [openSection, setOpenSection] = React.useState<SectionKey | null>('playback');
   const hasAudioTracks = audioTracks.length > 0;
   const hasSubtitleTracks = subtitleTracks.length > 0;
@@ -94,419 +99,220 @@ export const LandscapeSettingsDialog: React.FC<LandscapeSettingsDialogProps> = (
         accessibilityLabel="Close settings"
         accessibilityHint="Closes the settings dialog"
       />
-        
-        <View style={styles.container}>
-          {/* Header */}
-          <View style={styles.header}>
-            <Text style={styles.headerTitle}>Settings</Text>
+
+      <View style={styles.container}>
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Settings</Text>
+          <TouchableOpacity
+            style={styles.closeButton}
+            onPress={onClose}
+            accessibilityRole="button"
+            accessibilityLabel="Close settings"
+            hitSlop={10}
+          >
+            <Ionicons name="close" size={28} color="#fff" />
+          </TouchableOpacity>
+        </View>
+
+        <ScrollView
+          style={styles.content}
+          contentContainerStyle={styles.contentContainer}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Playback Speed Section */}
+          <View style={styles.section}>
             <TouchableOpacity
-              style={styles.closeButton}
-              onPress={onClose}
+              style={styles.sectionHeader}
+              onPress={() => toggleSection('playback')}
               accessibilityRole="button"
-              accessibilityLabel="Close settings"
-              hitSlop={10}
+              accessibilityLabel="Playback speed section"
+              accessibilityHint="Expands or collapses playback speed options"
             >
-              <Ionicons name="close" size={28} color="#fff" />
+              <View style={styles.sectionHeaderLeft}>
+                <Ionicons name="speedometer-outline" size={24} color="#fff" />
+                <Text style={styles.sectionTitle}>Playback Speed</Text>
+              </View>
+              <Ionicons
+                name={openSection === 'playback' ? 'chevron-down' : 'chevron-forward'}
+                size={22}
+                color="#fff"
+              />
             </TouchableOpacity>
+            {openSection === 'playback' && (
+              <View style={styles.optionsContainer}>
+                <View style={styles.optionsGrid}>
+                  {playbackSpeeds.map((speed) => (
+                    <TouchableOpacity
+                      key={speed}
+                      style={[
+                        styles.speedOption,
+                        playbackSpeed === speed && styles.speedOptionActive,
+                      ]}
+                      onPress={() => onPlaybackSpeedChange(speed)}
+                      accessibilityRole="radio"
+                      accessibilityLabel={`Playback speed ${speed}x`}
+                      accessibilityState={{ selected: playbackSpeed === speed }}
+                    >
+                      <Text
+                        style={[
+                          styles.speedText,
+                          playbackSpeed === speed && styles.speedTextActive,
+                        ]}
+                      >
+                        {speed}x
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            )}
           </View>
 
-          <ScrollView
-            style={styles.content}
-            contentContainerStyle={styles.contentContainer}
-            showsVerticalScrollIndicator={false}
-          >
-            {/* Playback Speed Section */}
-            <View style={styles.section}>
-              <TouchableOpacity
-                style={styles.sectionHeader}
-                onPress={() => toggleSection('playback')}
-                accessibilityRole="button"
-                accessibilityLabel="Playback speed section"
-                accessibilityHint="Expands or collapses playback speed options"
-              >
-                <View style={styles.sectionHeaderLeft}>
-                  <Ionicons name="speedometer-outline" size={24} color="#fff" />
-                  <Text style={styles.sectionTitle}>Playback Speed</Text>
-                </View>
-                <Ionicons
-                  name={openSection === 'playback' ? 'chevron-down' : 'chevron-forward'}
-                  size={22}
-                  color="#fff"
-                />
-              </TouchableOpacity>
-              {openSection === 'playback' && (
-                <View style={styles.optionsContainer}>
-                  <View style={styles.optionsGrid}>
-                    {playbackSpeeds.map((speed) => (
-                      <TouchableOpacity
-                        key={speed}
-                        style={[
-                          styles.speedOption,
-                          playbackSpeed === speed && styles.speedOptionActive,
-                        ]}
-                        onPress={() => onPlaybackSpeedChange(speed)}
-                        accessibilityRole="radio"
-                        accessibilityLabel={`Playback speed ${speed}x`}
-                        accessibilityState={{ selected: playbackSpeed === speed }}
-                      >
-                        <Text
-                          style={[
-                            styles.speedText,
-                            playbackSpeed === speed && styles.speedTextActive,
-                          ]}
-                        >
-                          {speed}x
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </View>
-              )}
-            </View>
-
-            {/* Quality Section */}
-            <View style={styles.section}>
-              <TouchableOpacity
-                style={styles.sectionHeader}
-                onPress={() => toggleSection('quality')}
-                accessibilityRole="button"
-                accessibilityLabel="Video quality section"
-                accessibilityHint="Expands or collapses quality options"
-              >
-                <View style={styles.sectionHeaderLeft}>
-                  <Ionicons name="videocam-outline" size={24} color="#fff" />
-                  <Text style={styles.sectionTitle}>Video Quality</Text>
-                </View>
-                <Ionicons
-                  name={openSection === 'quality' ? 'chevron-down' : 'chevron-forward'}
-                  size={22}
-                  color="#fff"
-                />
-              </TouchableOpacity>
-              {openSection === 'quality' && (
-                <View style={styles.optionsContainer}>
-                  <View style={styles.optionsList}>
-                    {qualities.map((q) => (
-                      <TouchableOpacity
-                        key={q}
-                        style={[
-                          styles.qualityOption,
-                          quality === q && styles.qualityOptionActive,
-                        ]}
-                        onPress={() => onQualityChange(q)}
-                        accessibilityRole="radio"
-                        accessibilityLabel={`Video quality ${q}`}
-                        accessibilityState={{ selected: quality === q }}
-                      >
-                        <Text
-                          style={[
-                            styles.qualityText,
-                            quality === q && styles.qualityTextActive,
-                          ]}
-                        >
-                          {q}
-                        </Text>
-                        {quality === q && (
-                          <Ionicons name="checkmark" size={20} color="#E50914" />
-                        )}
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </View>
-              )}
-            </View>
-
-            {/* Preferences Section */}
-            <View style={styles.section}>
-              <TouchableOpacity
-                style={styles.sectionHeader}
-                onPress={() => toggleSection('preferences')}
-                accessibilityRole="button"
-                accessibilityLabel="Preferences section"
-                accessibilityHint="Expands or collapses preference options"
-              >
-                <View style={styles.sectionHeaderLeft}>
-                  <Ionicons name="options-outline" size={24} color="#fff" />
-                  <Text style={styles.sectionTitle}>Preferences</Text>
-                </View>
-                <Ionicons
-                  name={openSection === 'preferences' ? 'chevron-down' : 'chevron-forward'}
-                  size={22}
-                  color="#fff"
-                />
-              </TouchableOpacity>
-              {openSection === 'preferences' && (
-                <View style={styles.optionsContainer}>
-                  <View style={styles.preferencesList}>
+          {/* Quality Section */}
+          <View style={styles.section}>
+            <TouchableOpacity
+              style={styles.sectionHeader}
+              onPress={() => toggleSection('quality')}
+              accessibilityRole="button"
+              accessibilityLabel="Video quality section"
+              accessibilityHint="Expands or collapses quality options"
+            >
+              <View style={styles.sectionHeaderLeft}>
+                <Ionicons name="videocam-outline" size={24} color="#fff" />
+                <Text style={styles.sectionTitle}>Video Quality</Text>
+              </View>
+              <Ionicons
+                name={openSection === 'quality' ? 'chevron-down' : 'chevron-forward'}
+                size={22}
+                color="#fff"
+              />
+            </TouchableOpacity>
+            {openSection === 'quality' && (
+              <View style={styles.optionsContainer}>
+                <View style={styles.optionsList}>
+                  {qualities.map((q) => (
                     <TouchableOpacity
-                      style={styles.preferenceItem}
-                      onPress={() => onAutoPlayChange(!autoPlay)}
-                      accessibilityRole="switch"
-                      accessibilityLabel="Auto Play"
-                      accessibilityHint="Automatically plays next episode"
-                      accessibilityState={{ checked: autoPlay }}
+                      key={q}
+                      style={[styles.qualityOption, quality === q && styles.qualityOptionActive]}
+                      onPress={() => onQualityChange(q)}
+                      accessibilityRole="radio"
+                      accessibilityLabel={`Video quality ${q}`}
+                      accessibilityState={{ selected: quality === q }}
                     >
-                      <View style={styles.preferenceInfo}>
-                        <Text style={styles.preferenceTitle}>Auto Play</Text>
-                        <Text style={styles.preferenceDescription}>
-                          Automatically play next episode
-                        </Text>
-                      </View>
-                      <View
-                        style={[
-                          styles.toggle,
-                          autoPlay && styles.toggleActive,
-                        ]}
-                      >
-                        <View
-                          style={[
-                            styles.toggleThumb,
-                            autoPlay && styles.toggleThumbActive,
-                          ]}
-                        />
-                      </View>
+                      <Text style={[styles.qualityText, quality === q && styles.qualityTextActive]}>
+                        {q}
+                      </Text>
+                      {quality === q && <Ionicons name="checkmark" size={20} color="#E50914" />}
                     </TouchableOpacity>
-
-                    <TouchableOpacity
-                      style={styles.preferenceItem}
-                      onPress={() => onShowSubtitlesChange(!showSubtitles)}
-                      accessibilityRole="switch"
-                      accessibilityLabel="Subtitles"
-                      accessibilityHint="Shows subtitles when available"
-                      accessibilityState={{ checked: showSubtitles }}
-                    >
-                      <View style={styles.preferenceInfo}>
-                        <Text style={styles.preferenceTitle}>Subtitles</Text>
-                        <Text style={styles.preferenceDescription}>
-                          Show subtitles when available
-                        </Text>
-                      </View>
-                      <View
-                        style={[
-                          styles.toggle,
-                          showSubtitles && styles.toggleActive,
-                        ]}
-                      >
-                        <View
-                          style={[
-                            styles.toggleThumb,
-                            showSubtitles && styles.toggleThumbActive,
-                          ]}
-                        />
-                      </View>
-                    </TouchableOpacity>
-                  </View>
+                  ))}
                 </View>
-              )}
-            </View>
-
-            {/* Audio Section */}
-            {hasAudioTracks && (
-              <View style={styles.section}>
-                <TouchableOpacity
-                  style={styles.sectionHeader}
-                  onPress={() => toggleSection('audio')}
-                  accessibilityRole="button"
-                  accessibilityLabel="Audio section"
-                  accessibilityHint="Expands or collapses audio track options"
-                >
-                  <View style={styles.sectionHeaderLeft}>
-                    <Ionicons name="volume-medium-outline" size={24} color="#fff" />
-                    <Text style={styles.sectionTitle}>Audio</Text>
-                  </View>
-                  <Ionicons
-                    name={openSection === 'audio' ? 'chevron-down' : 'chevron-forward'}
-                    size={22}
-                    color="#fff"
-                  />
-                </TouchableOpacity>
-                {openSection === 'audio' && (
-                  <View style={styles.optionsContainer}>
-                    <View style={styles.optionsList}>
-                      {audioTracks.map((track) => {
-                        const isActive = selectedAudioTrackId === track.id;
-                        return (
-                          <TouchableOpacity
-                            key={track.id}
-                            style={[
-                              styles.qualityOption,
-                              isActive && styles.qualityOptionActive,
-                            ]}
-                            onPress={() => onAudioTrackChange?.(track.id)}
-                            accessibilityRole="radio"
-                            accessibilityLabel={`Audio track ${track.label}`}
-                            accessibilityState={{ selected: isActive }}
-                          >
-                            <Text
-                              style={[
-                                styles.qualityText,
-                                isActive && styles.qualityTextActive,
-                              ]}
-                            >
-                              {track.label}
-                            </Text>
-                            {isActive && (
-                              <Ionicons name="checkmark" size={20} color="#E50914" />
-                            )}
-                          </TouchableOpacity>
-                        );
-                      })}
-                    </View>
-                  </View>
-                )}
               </View>
             )}
+          </View>
 
-            {/* Subtitles Section */}
-            {hasSubtitleTracks && (
-              <View style={styles.section}>
-                <TouchableOpacity
-                  style={styles.sectionHeader}
-                  onPress={() => toggleSection('subtitles')}
-                  accessibilityRole="button"
-                  accessibilityLabel="Subtitles section"
-                  accessibilityHint="Expands or collapses subtitle options"
-                >
-                  <View style={styles.sectionHeaderLeft}>
-                    <Ionicons name="chatbox-ellipses-outline" size={24} color="#fff" />
-                    <Text style={styles.sectionTitle}>Subtitles</Text>
-                  </View>
-                  <Ionicons
-                    name={openSection === 'subtitles' ? 'chevron-down' : 'chevron-forward'}
-                    size={22}
-                    color="#fff"
-                  />
-                </TouchableOpacity>
-                {openSection === 'subtitles' && (
-                  <View style={styles.optionsContainer}>
-                    <View style={styles.optionsList}>
-                      <TouchableOpacity
-                        style={[
-                          styles.qualityOption,
-                          !showSubtitles && styles.qualityOptionActive,
-                        ]}
-                        onPress={() => {
-                          onShowSubtitlesChange(false);
-                          onSubtitleTrackChange?.(null);
-                        }}
-                        accessibilityRole="radio"
-                        accessibilityLabel="Subtitles off"
-                        accessibilityState={{ selected: !showSubtitles }}
-                      >
-                        <Text
-                          style={[
-                            styles.qualityText,
-                            !showSubtitles && styles.qualityTextActive,
-                          ]}
-                        >
-                          Off
-                        </Text>
-                        {!showSubtitles && (
-                          <Ionicons name="checkmark" size={20} color="#E50914" />
-                        )}
-                      </TouchableOpacity>
-
-                      {subtitleTracks.map((track) => {
-                        const isActive = showSubtitles && selectedSubtitleTrackId === track.id;
-                        return (
-                          <TouchableOpacity
-                            key={track.id}
-                            style={[
-                              styles.qualityOption,
-                              isActive && styles.qualityOptionActive,
-                            ]}
-                            onPress={() => {
-                              onShowSubtitlesChange(true);
-                              onSubtitleTrackChange?.(track.id);
-                            }}
-                            accessibilityRole="radio"
-                            accessibilityLabel={`Subtitle track ${track.label}`}
-                            accessibilityState={{ selected: isActive }}
-                          >
-                            <Text
-                              style={[
-                                styles.qualityText,
-                                isActive && styles.qualityTextActive,
-                              ]}
-                            >
-                              {track.label}
-                            </Text>
-                            {isActive && (
-                              <Ionicons name="checkmark" size={20} color="#E50914" />
-                            )}
-                          </TouchableOpacity>
-                        );
-                      })}
+          {/* Preferences Section */}
+          <View style={styles.section}>
+            <TouchableOpacity
+              style={styles.sectionHeader}
+              onPress={() => toggleSection('preferences')}
+              accessibilityRole="button"
+              accessibilityLabel="Preferences section"
+              accessibilityHint="Expands or collapses preference options"
+            >
+              <View style={styles.sectionHeaderLeft}>
+                <Ionicons name="options-outline" size={24} color="#fff" />
+                <Text style={styles.sectionTitle}>Preferences</Text>
+              </View>
+              <Ionicons
+                name={openSection === 'preferences' ? 'chevron-down' : 'chevron-forward'}
+                size={22}
+                color="#fff"
+              />
+            </TouchableOpacity>
+            {openSection === 'preferences' && (
+              <View style={styles.optionsContainer}>
+                <View style={styles.preferencesList}>
+                  <TouchableOpacity
+                    style={styles.preferenceItem}
+                    onPress={() => onAutoPlayChange(!autoPlay)}
+                    accessibilityRole="switch"
+                    accessibilityLabel="Auto Play"
+                    accessibilityHint="Automatically plays next episode"
+                    accessibilityState={{ checked: autoPlay }}
+                  >
+                    <View style={styles.preferenceInfo}>
+                      <Text style={styles.preferenceTitle}>Auto Play</Text>
+                      <Text style={styles.preferenceDescription}>
+                        Automatically play next episode
+                      </Text>
                     </View>
-                  </View>
-                )}
+                    <View style={[styles.toggle, autoPlay && styles.toggleActive]}>
+                      <View style={[styles.toggleThumb, autoPlay && styles.toggleThumbActive]} />
+                    </View>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.preferenceItem}
+                    onPress={() => onShowSubtitlesChange(!showSubtitles)}
+                    accessibilityRole="switch"
+                    accessibilityLabel="Subtitles"
+                    accessibilityHint="Shows subtitles when available"
+                    accessibilityState={{ checked: showSubtitles }}
+                  >
+                    <View style={styles.preferenceInfo}>
+                      <Text style={styles.preferenceTitle}>Subtitles</Text>
+                      <Text style={styles.preferenceDescription}>
+                        Show subtitles when available
+                      </Text>
+                    </View>
+                    <View style={[styles.toggle, showSubtitles && styles.toggleActive]}>
+                      <View
+                        style={[styles.toggleThumb, showSubtitles && styles.toggleThumbActive]}
+                      />
+                    </View>
+                  </TouchableOpacity>
+                </View>
               </View>
             )}
+          </View>
 
-            {/* Subtitle Style Section */}
+          {/* Audio Section */}
+          {hasAudioTracks && (
             <View style={styles.section}>
               <TouchableOpacity
                 style={styles.sectionHeader}
-                onPress={() => toggleSection('subtitleStyle')}
+                onPress={() => toggleSection('audio')}
                 accessibilityRole="button"
-                accessibilityLabel="Subtitle style section"
-                accessibilityHint="Expands or collapses subtitle style options"
+                accessibilityLabel="Audio section"
+                accessibilityHint="Expands or collapses audio track options"
               >
                 <View style={styles.sectionHeaderLeft}>
-                  <Ionicons name="color-palette-outline" size={24} color="#fff" />
-                  <Text style={styles.sectionTitle}>Subtitle Style</Text>
+                  <Ionicons name="volume-medium-outline" size={24} color="#fff" />
+                  <Text style={styles.sectionTitle}>Audio</Text>
                 </View>
                 <Ionicons
-                  name={openSection === 'subtitleStyle' ? 'chevron-down' : 'chevron-forward'}
+                  name={openSection === 'audio' ? 'chevron-down' : 'chevron-forward'}
                   size={22}
                   color="#fff"
                 />
               </TouchableOpacity>
-              {openSection === 'subtitleStyle' && (
+              {openSection === 'audio' && (
                 <View style={styles.optionsContainer}>
-                  <Text style={styles.preferenceTitle}>Font Size</Text>
-                  <View style={styles.optionsGrid}>
-                    {subtitleFontSizes.map((sizeOption) => {
-                      const isActive = subtitleFontSize === sizeOption.value;
-                      return (
-                        <TouchableOpacity
-                          key={sizeOption.label}
-                          style={[styles.speedOption, isActive && styles.speedOptionActive]}
-                          onPress={() => onSubtitleFontSizeChange?.(sizeOption.value)}
-                          accessibilityRole="radio"
-                          accessibilityLabel={`Subtitle size ${sizeOption.label}`}
-                          accessibilityState={{ selected: isActive }}
-                        >
-                          <Text style={[styles.speedText, isActive && styles.speedTextActive]}>{sizeOption.label}</Text>
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </View>
-
-                  <View style={{ height: 12 }} />
-                  <Text style={styles.preferenceTitle}>Text Style</Text>
                   <View style={styles.optionsList}>
-                    {subtitleFontStyles.map((style) => {
-                      const isActive = subtitleFontStyle === style;
+                    {audioTracks.map((track) => {
+                      const isActive = selectedAudioTrackId === track.id;
                       return (
                         <TouchableOpacity
-                          key={style}
+                          key={track.id}
                           style={[styles.qualityOption, isActive && styles.qualityOptionActive]}
-                          onPress={() => onSubtitleFontStyleChange?.(style)}
+                          onPress={() => onAudioTrackChange?.(track.id)}
                           accessibilityRole="radio"
-                          accessibilityLabel={`Subtitle text style ${style}`}
+                          accessibilityLabel={`Audio track ${track.label}`}
                           accessibilityState={{ selected: isActive }}
                         >
-                          <Text
-                            style={[
-                              styles.qualityText,
-                              {
-                                fontWeight: style === 'bold' ? '700' : style === 'thin' ? '300' : '400',
-                                fontStyle: style === 'italic' ? 'italic' : 'normal',
-                              },
-                            ]}
-                          >
-                            {style.charAt(0).toUpperCase() + style.slice(1)}
+                          <Text style={[styles.qualityText, isActive && styles.qualityTextActive]}>
+                            {track.label}
                           </Text>
                           {isActive && <Ionicons name="checkmark" size={20} color="#E50914" />}
                         </TouchableOpacity>
@@ -516,9 +322,155 @@ export const LandscapeSettingsDialog: React.FC<LandscapeSettingsDialogProps> = (
                 </View>
               )}
             </View>
-          </ScrollView>
-        </View>
+          )}
+
+          {/* Subtitles Section */}
+          {hasSubtitleTracks && (
+            <View style={styles.section}>
+              <TouchableOpacity
+                style={styles.sectionHeader}
+                onPress={() => toggleSection('subtitles')}
+                accessibilityRole="button"
+                accessibilityLabel="Subtitles section"
+                accessibilityHint="Expands or collapses subtitle options"
+              >
+                <View style={styles.sectionHeaderLeft}>
+                  <Ionicons name="chatbox-ellipses-outline" size={24} color="#fff" />
+                  <Text style={styles.sectionTitle}>Subtitles</Text>
+                </View>
+                <Ionicons
+                  name={openSection === 'subtitles' ? 'chevron-down' : 'chevron-forward'}
+                  size={22}
+                  color="#fff"
+                />
+              </TouchableOpacity>
+              {openSection === 'subtitles' && (
+                <View style={styles.optionsContainer}>
+                  <View style={styles.optionsList}>
+                    <TouchableOpacity
+                      style={[styles.qualityOption, !showSubtitles && styles.qualityOptionActive]}
+                      onPress={() => {
+                        onShowSubtitlesChange(false);
+                        onSubtitleTrackChange?.(null);
+                      }}
+                      accessibilityRole="radio"
+                      accessibilityLabel="Subtitles off"
+                      accessibilityState={{ selected: !showSubtitles }}
+                    >
+                      <Text
+                        style={[styles.qualityText, !showSubtitles && styles.qualityTextActive]}
+                      >
+                        Off
+                      </Text>
+                      {!showSubtitles && <Ionicons name="checkmark" size={20} color="#E50914" />}
+                    </TouchableOpacity>
+
+                    {subtitleTracks.map((track) => {
+                      const isActive = showSubtitles && selectedSubtitleTrackId === track.id;
+                      return (
+                        <TouchableOpacity
+                          key={track.id}
+                          style={[styles.qualityOption, isActive && styles.qualityOptionActive]}
+                          onPress={() => {
+                            onShowSubtitlesChange(true);
+                            onSubtitleTrackChange?.(track.id);
+                          }}
+                          accessibilityRole="radio"
+                          accessibilityLabel={`Subtitle track ${track.label}`}
+                          accessibilityState={{ selected: isActive }}
+                        >
+                          <Text style={[styles.qualityText, isActive && styles.qualityTextActive]}>
+                            {track.label}
+                          </Text>
+                          {isActive && <Ionicons name="checkmark" size={20} color="#E50914" />}
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </View>
+              )}
+            </View>
+          )}
+
+          {/* Subtitle Style Section */}
+          <View style={styles.section}>
+            <TouchableOpacity
+              style={styles.sectionHeader}
+              onPress={() => toggleSection('subtitleStyle')}
+              accessibilityRole="button"
+              accessibilityLabel="Subtitle style section"
+              accessibilityHint="Expands or collapses subtitle style options"
+            >
+              <View style={styles.sectionHeaderLeft}>
+                <Ionicons name="color-palette-outline" size={24} color="#fff" />
+                <Text style={styles.sectionTitle}>Subtitle Style</Text>
+              </View>
+              <Ionicons
+                name={openSection === 'subtitleStyle' ? 'chevron-down' : 'chevron-forward'}
+                size={22}
+                color="#fff"
+              />
+            </TouchableOpacity>
+            {openSection === 'subtitleStyle' && (
+              <View style={styles.optionsContainer}>
+                <Text style={styles.preferenceTitle}>Font Size</Text>
+                <View style={styles.optionsGrid}>
+                  {subtitleFontSizes.map((sizeOption) => {
+                    const isActive = subtitleFontSize === sizeOption.value;
+                    return (
+                      <TouchableOpacity
+                        key={sizeOption.label}
+                        style={[styles.speedOption, isActive && styles.speedOptionActive]}
+                        onPress={() => onSubtitleFontSizeChange?.(sizeOption.value)}
+                        accessibilityRole="radio"
+                        accessibilityLabel={`Subtitle size ${sizeOption.label}`}
+                        accessibilityState={{ selected: isActive }}
+                      >
+                        <Text style={[styles.speedText, isActive && styles.speedTextActive]}>
+                          {sizeOption.label}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+
+                <View style={{ height: 12 }} />
+                <Text style={styles.preferenceTitle}>Text Style</Text>
+                <View style={styles.optionsList}>
+                  {subtitleFontStyles.map((style) => {
+                    const isActive = subtitleFontStyle === style;
+                    return (
+                      <TouchableOpacity
+                        key={style}
+                        style={[styles.qualityOption, isActive && styles.qualityOptionActive]}
+                        onPress={() => onSubtitleFontStyleChange?.(style)}
+                        accessibilityRole="radio"
+                        accessibilityLabel={`Subtitle text style ${style}`}
+                        accessibilityState={{ selected: isActive }}
+                      >
+                        <Text
+                          style={[
+                            styles.qualityText,
+                            {
+                              fontWeight:
+                                style === 'bold' ? '700' : style === 'thin' ? '300' : '400',
+                              fontStyle: style === 'italic' ? 'italic' : 'normal',
+                            },
+                          ]}
+                        >
+                          {style.charAt(0).toUpperCase() + style.slice(1)}
+                        </Text>
+                        {isActive && <Ionicons name="checkmark" size={20} color="#E50914" />}
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </View>
+            )}
+          </View>
+        </ScrollView>
       </View>
+    </View>
   );
 };
 

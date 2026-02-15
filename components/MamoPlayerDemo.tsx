@@ -11,13 +11,13 @@ import {
   View,
 } from 'react-native';
 import MamoPlayer from './MamoPlayer';
-import { parseSrtOrVtt } from './lib/subtitleParser';
 import {
   downloadVideoToLibrary,
   getOfflineLibraryItems,
   removeOfflineVideo,
   type OfflineLibraryItem,
 } from './lib/offlineLibraryStore';
+import { parseSrtOrVtt } from './lib/subtitleParser';
 
 type DemoVideo = {
   id: string;
@@ -64,7 +64,7 @@ export const MamoPlayerDemo: React.FC = () => {
     id: string;
     label: string;
     language?: string;
-    subtitles: Array<{ start: number; end: number; text: string }>;
+    subtitles: { start: number; end: number; text: string }[];
   } | null>(null);
 
   // Sample subtitle tracks (adjust timing for your video)
@@ -176,6 +176,32 @@ export const MamoPlayerDemo: React.FC = () => {
     },
   };
 
+  const streamQualitySourcesWithout1080 = {
+    Auto: { uri: selectedVideo.uri },
+    '720p': {
+      uri: 'https://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_16x9/gear3/prog_index.m3u8',
+    },
+    '480p': {
+      uri: 'https://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_16x9/gear2/prog_index.m3u8',
+    },
+    '360p': {
+      uri: 'https://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_16x9/gear1/prog_index.m3u8',
+    },
+  };
+
+  const streamQualitySourcesWithout480 = {
+    Auto: { uri: selectedVideo.uri },
+    '1080p': {
+      uri: 'https://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_16x9/gear4/prog_index.m3u8',
+    },
+    '720p': {
+      uri: 'https://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_16x9/gear3/prog_index.m3u8',
+    },
+    '360p': {
+      uri: 'https://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_16x9/gear1/prog_index.m3u8',
+    },
+  };
+
   const offlineQualitySources = {
     Auto: playerSource,
     '1080p': playerSource,
@@ -186,8 +212,8 @@ export const MamoPlayerDemo: React.FC = () => {
 
   const qualitySourcesByLanguage = {
     en: isPlayingOffline ? offlineQualitySources : streamQualitySources,
-    tr: isPlayingOffline ? offlineQualitySources : streamQualitySources,
-    es: isPlayingOffline ? offlineQualitySources : streamQualitySources,
+    tr: isPlayingOffline ? offlineQualitySources : streamQualitySourcesWithout480,
+    es: isPlayingOffline ? offlineQualitySources : streamQualitySourcesWithout1080,
   };
 
   const loadOfflineLibrary = useCallback(async () => {
@@ -230,7 +256,10 @@ export const MamoPlayerDemo: React.FC = () => {
     const parsedSubtitles = parseSrtOrVtt(content);
 
     if (parsedSubtitles.length === 0) {
-      Alert.alert('Import failed', 'No valid cues were found. Please provide a valid SRT or VTT file.');
+      Alert.alert(
+        'Import failed',
+        'No valid cues were found. Please provide a valid SRT or VTT file.',
+      );
       return;
     }
 
@@ -329,7 +358,9 @@ export const MamoPlayerDemo: React.FC = () => {
                 style={[styles.chip, isSelected && styles.chipSelected]}
                 onPress={() => setSelectedVideoId(video.id)}
               >
-                <Text style={[styles.chipText, isSelected && styles.chipTextSelected]}>{video.title}</Text>
+                <Text style={[styles.chipText, isSelected && styles.chipTextSelected]}>
+                  {video.title}
+                </Text>
               </Pressable>
             );
           })}
@@ -385,7 +416,10 @@ export const MamoPlayerDemo: React.FC = () => {
                       setSelectedVideoId(item.id);
                       setPreferOfflinePlayback(true);
                     }}
-                    style={[styles.librarySelectButton, isSelected && styles.librarySelectButtonSelected]}
+                    style={[
+                      styles.librarySelectButton,
+                      isSelected && styles.librarySelectButtonSelected,
+                    ]}
                   >
                     <Text style={styles.libraryTitle}>{item.title}</Text>
                     <Text style={styles.libraryMeta}>{formatFileSize(item.sizeBytes)}</Text>
@@ -447,7 +481,10 @@ export const MamoPlayerDemo: React.FC = () => {
         </Pressable>
 
         <Text style={styles.statusText}>
-          External track: {externalSubtitleTrack ? `${externalSubtitleTrack.label} (${externalSubtitleTrack.subtitles.length} cues)` : 'Not loaded'}
+          External track:{' '}
+          {externalSubtitleTrack
+            ? `${externalSubtitleTrack.label} (${externalSubtitleTrack.subtitles.length} cues)`
+            : 'Not loaded'}
         </Text>
       </View>
 
@@ -462,7 +499,7 @@ export const MamoPlayerDemo: React.FC = () => {
           subtitleTracks={effectiveSubtitleTracks}
           defaultSubtitleTrackId={externalSubtitleTrack ? 'external' : 'en'}
           onSettingsPress={handleSettingsPress}
-          playerType="simple"          
+          playerType="simple"
           contentFit="contain"
           title={selectedVideo.title}
           description={selectedVideo.description}
@@ -474,6 +511,12 @@ export const MamoPlayerDemo: React.FC = () => {
           onComment={handleComment}
           onShare={handleShare}
         />
+        {!isPlayingOffline && (
+          <Text style={styles.statusText}>
+            Demo note: Spanish (`es`) intentionally has no `1080p`, and Turkish (`tr`) has no `480p`
+            quality option.
+          </Text>
+        )}
       </View>
     </ScrollView>
   );

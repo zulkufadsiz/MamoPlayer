@@ -1,4 +1,3 @@
-
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import Slider from '@react-native-community/slider';
 import { useEventListener } from 'expo';
@@ -25,10 +24,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import LandscapeSettingsDialog from './lib/LandscapeSettingsDialog';
 import LoadingIndicator from './lib/LoadingIndicator';
 import { trackPlaybackEvent } from './lib/playbackAnalytics';
-import {
-  getPlaybackPosition,
-  savePlaybackPosition,
-} from './lib/playbackPositionStore';
+import { getPlaybackPosition, savePlaybackPosition } from './lib/playbackPositionStore';
 import { useTransportControls } from './lib/useTransportControls';
 
 interface Subtitle {
@@ -187,10 +183,10 @@ export const LandscapePlayer: React.FC<LandscapePlayerProps> = ({
 }) => {
   const insets = useSafeAreaInsets();
   const [selectedSubtitleTrackId, setSelectedSubtitleTrackId] = useState<string | null>(
-    defaultSubtitleTrackId
+    defaultSubtitleTrackId,
   );
   const [selectedAudioTrackId, setSelectedAudioTrackId] = useState<string | null>(
-    defaultAudioTrackId
+    defaultAudioTrackId,
   );
   const [quality, setQuality] = useState('Auto');
 
@@ -213,7 +209,7 @@ export const LandscapePlayer: React.FC<LandscapePlayerProps> = ({
     if (!videoSourcesByLanguage) return [];
     return Object.keys(videoSourcesByLanguage).map((key) => {
       const subtitleTrack = resolvedSubtitleTracks.find(
-        (track) => track.language === key || track.id === key
+        (track) => track.language === key || track.id === key,
       );
       return {
         id: key,
@@ -232,7 +228,7 @@ export const LandscapePlayer: React.FC<LandscapePlayerProps> = ({
     }
 
     const selectedTrack = resolvedSubtitleTracks.find(
-      (track) => track.id === selectedSubtitleTrackId
+      (track) => track.id === selectedSubtitleTrackId,
     );
     const languageKey = selectedTrack?.language ?? selectedSubtitleTrackId;
     if (languageKey && videoSourcesByLanguage[languageKey]) {
@@ -350,7 +346,9 @@ export const LandscapePlayer: React.FC<LandscapePlayerProps> = ({
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
   const [autoPlayEnabled, setAutoPlayEnabled] = useState(autoPlay);
   const [subtitleFontSize, setSubtitleFontSize] = useState(18);
-  const [subtitleFontStyle, setSubtitleFontStyle] = useState<'normal' | 'bold' | 'thin' | 'italic'>('normal');
+  const [subtitleFontStyle, setSubtitleFontStyle] = useState<'normal' | 'bold' | 'thin' | 'italic'>(
+    'normal',
+  );
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [isSeeking, setIsSeeking] = useState(false);
@@ -469,9 +467,7 @@ export const LandscapePlayer: React.FC<LandscapePlayerProps> = ({
   // Lock screen orientation to landscape
   useEffect(() => {
     const lockOrientation = async () => {
-      await ScreenOrientation.lockAsync(
-        ScreenOrientation.OrientationLock.LANDSCAPE
-      );
+      await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE);
     };
 
     lockOrientation();
@@ -530,7 +526,7 @@ export const LandscapePlayer: React.FC<LandscapePlayerProps> = ({
   }, [defaultAudioTrackId, resolvedAudioTracks, selectedAudioTrackId]);
 
   const activeSubtitleTrack = resolvedSubtitleTracks.find(
-    (track) => track.id === selectedSubtitleTrackId
+    (track) => track.id === selectedSubtitleTrackId,
   );
   const activeSubtitles = showSubtitles && activeSubtitleTrack ? activeSubtitleTrack.subtitles : [];
 
@@ -541,13 +537,11 @@ export const LandscapePlayer: React.FC<LandscapePlayerProps> = ({
       return;
     }
 
-    const subtitle = activeSubtitles.find(
-      (sub) => {
-        const start = parseTimeToSeconds(sub.start);
-        const end = parseTimeToSeconds(sub.end);
-        return currentTime >= start && currentTime <= end;
-      }
-    );
+    const subtitle = activeSubtitles.find((sub) => {
+      const start = parseTimeToSeconds(sub.start);
+      const end = parseTimeToSeconds(sub.end);
+      return currentTime >= start && currentTime <= end;
+    });
     setCurrentSubtitle(subtitle ? subtitle.text : '');
   }, [currentTime, activeSubtitles, player]);
 
@@ -745,10 +739,7 @@ export const LandscapePlayer: React.FC<LandscapePlayerProps> = ({
   const getTouchDistance = (event: GestureResponderEvent) => {
     const [firstTouch, secondTouch] = event.nativeEvent.touches;
     if (!firstTouch || !secondTouch) return 0;
-    return Math.hypot(
-      secondTouch.pageX - firstTouch.pageX,
-      secondTouch.pageY - firstTouch.pageY
-    );
+    return Math.hypot(secondTouch.pageX - firstTouch.pageX, secondTouch.pageY - firstTouch.pageY);
   };
 
   const handleTouchStart = (event: GestureResponderEvent) => {
@@ -770,8 +761,7 @@ export const LandscapePlayer: React.FC<LandscapePlayerProps> = ({
     touchStartYRef.current = firstTouch.locationY;
     touchStartVolumeRef.current = volume;
     touchStartBrightnessRef.current = brightnessLevel;
-    gestureModeRef.current =
-      firstTouch.locationX < width / 2 ? 'brightness' : 'volume';
+    gestureModeRef.current = firstTouch.locationX < width / 2 ? 'brightness' : 'volume';
   };
 
   const handleTouchMove = (event: GestureResponderEvent) => {
@@ -910,10 +900,7 @@ export const LandscapePlayer: React.FC<LandscapePlayerProps> = ({
 
       <View
         pointerEvents="none"
-        style={[
-          styles.brightnessOverlay,
-          { opacity: clamp((1 - brightnessLevel) * 0.6, 0, 0.6) },
-        ]}
+        style={[styles.brightnessOverlay, { opacity: clamp((1 - brightnessLevel) * 0.6, 0, 0.6) }]}
       />
 
       {(isBuffering || isError) && (
@@ -955,15 +942,18 @@ export const LandscapePlayer: React.FC<LandscapePlayerProps> = ({
         accessibilityHint="Shows playback controls when they are hidden"
       >
         {showControls && (
-          <Animated.View
-            style={[styles.controlsContainer, { opacity: controlsOpacity }]}
-          >
+          <Animated.View style={[styles.controlsContainer, { opacity: controlsOpacity }]}>
             {/* Top Bar */}
-            <View style={[styles.topBar, { 
-              paddingTop: Math.max(20, insets.top + 8),
-              paddingLeft: Math.max(20, insets.left + 12),
-              paddingRight: Math.max(20, insets.right + 12),
-            }]}>
+            <View
+              style={[
+                styles.topBar,
+                {
+                  paddingTop: Math.max(20, insets.top + 8),
+                  paddingLeft: Math.max(20, insets.left + 12),
+                  paddingRight: Math.max(20, insets.right + 12),
+                },
+              ]}
+            >
               <View style={styles.titleContainer}>
                 <Text style={styles.title}>{title}</Text>
                 {(season || episode) && (
@@ -1022,7 +1012,9 @@ export const LandscapePlayer: React.FC<LandscapePlayerProps> = ({
                     hitSlop={10}
                   >
                     <MaterialIcons
-                      name={isPictureInPictureActive ? 'picture-in-picture' : 'picture-in-picture-alt'}
+                      name={
+                        isPictureInPictureActive ? 'picture-in-picture' : 'picture-in-picture-alt'
+                      }
                       size={24}
                       color="#fff"
                     />
@@ -1055,11 +1047,7 @@ export const LandscapePlayer: React.FC<LandscapePlayerProps> = ({
                 accessibilityHint={isPlaying ? 'Pauses playback' : 'Starts playback'}
                 hitSlop={10}
               >
-                <Ionicons
-                  name={isPlaying ? 'pause' : 'play'}
-                  size={48}
-                  color="#fff"
-                />
+                <Ionicons name={isPlaying ? 'pause' : 'play'} size={48} color="#fff" />
               </TouchableOpacity>
 
               {showSkipButtons && (
@@ -1078,11 +1066,16 @@ export const LandscapePlayer: React.FC<LandscapePlayerProps> = ({
             </View>
 
             {/* Bottom Bar */}
-            <View style={[styles.bottomBar, { 
-              paddingBottom: Math.max(20, insets.bottom + 12),
-              paddingLeft: Math.max(20, insets.left + 12),
-              paddingRight: Math.max(20, insets.right + 12),
-            }]}>
+            <View
+              style={[
+                styles.bottomBar,
+                {
+                  paddingBottom: Math.max(20, insets.bottom + 12),
+                  paddingLeft: Math.max(20, insets.left + 12),
+                  paddingRight: Math.max(20, insets.right + 12),
+                },
+              ]}
+            >
               {/* Timeline */}
               <View style={styles.timelineContainer}>
                 <Text style={styles.timeText}>{formatTime(currentTime)}</Text>
@@ -1114,11 +1107,16 @@ export const LandscapePlayer: React.FC<LandscapePlayerProps> = ({
 
         {/* Subtitle Display */}
         {showSubtitles && currentSubtitle && (
-          <View style={[styles.subtitleContainer, {
-            bottom: Math.max(80, insets.bottom + 60),
-            left: Math.max(40, insets.left + 40),
-            right: Math.max(40, insets.right + 40),
-          }]}>
+          <View
+            style={[
+              styles.subtitleContainer,
+              {
+                bottom: Math.max(80, insets.bottom + 60),
+                left: Math.max(40, insets.left + 40),
+                right: Math.max(40, insets.right + 40),
+              },
+            ]}
+          >
             <Text
               style={[
                 styles.subtitleText,
@@ -1267,8 +1265,7 @@ const styles = StyleSheet.create({
     color: '#fff',
     bottom: 16,
   },
-  bottomBar: {
-  },
+  bottomBar: {},
   timelineContainer: {
     flexDirection: 'row',
     alignItems: 'center',

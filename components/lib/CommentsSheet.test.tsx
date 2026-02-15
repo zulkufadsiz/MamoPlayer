@@ -43,7 +43,7 @@ describe('CommentsSheet', () => {
         comments={sampleComments}
         onAddComment={jest.fn()}
         onLikeComment={onLikeComment}
-      />
+      />,
     );
 
     act(() => {
@@ -64,7 +64,7 @@ describe('CommentsSheet', () => {
         comments={sampleComments}
         onAddComment={onAddComment}
         onLikeComment={jest.fn()}
-      />
+      />,
     );
 
     act(() => {

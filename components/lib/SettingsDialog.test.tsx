@@ -34,7 +34,7 @@ describe('SettingsDialog', () => {
         onAutoPlayChange={jest.fn()}
         showSubtitles
         onShowSubtitlesChange={jest.fn()}
-      />
+      />,
     );
 
     fireEvent.press(getByLabelText('Playback speed'));
@@ -60,7 +60,7 @@ describe('SettingsDialog', () => {
         onAutoPlayChange={onAutoPlayChange}
         showSubtitles
         onShowSubtitlesChange={jest.fn()}
-      />
+      />,
     );
 
     fireEvent.press(getByLabelText('Preferences'));

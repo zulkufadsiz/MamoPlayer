@@ -15,7 +15,12 @@ jest.mock('expo-video-thumbnails', () => ({
 jest.mock('@react-native-community/slider', () => {
   const React = require('react');
   const { Pressable } = require('react-native');
-  return ({ onSlidingStart, onValueChange, onSlidingComplete, accessibilityLabel }: any) => (
+  const SliderMock = ({
+    onSlidingStart,
+    onValueChange,
+    onSlidingComplete,
+    accessibilityLabel,
+  }: any) => (
     <Pressable
       accessibilityLabel={accessibilityLabel ?? 'Playback position'}
       onPress={() => {
@@ -25,6 +30,8 @@ jest.mock('@react-native-community/slider', () => {
       }}
     />
   );
+  SliderMock.displayName = 'SliderMock';
+  return SliderMock;
 });
 
 describe('Timeline', () => {
@@ -39,7 +46,7 @@ describe('Timeline', () => {
         player={{ currentTime: 65, duration: 3605 }}
         duration={3605}
         onSeek={jest.fn()}
-      />
+      />,
     );
 
     expect(getByText('00:00:00')).toBeTruthy();
@@ -54,7 +61,7 @@ describe('Timeline', () => {
         player={{ currentTime: 10, duration: 100 }}
         duration={100}
         onSeek={onSeek}
-      />
+      />,
     );
 
     fireEvent.press(getByLabelText('Playback position'));
@@ -72,7 +79,7 @@ describe('Timeline', () => {
         duration={100}
         mediaUrl="https://example.com/video.mp4"
         onSeek={jest.fn()}
-      />
+      />,
     );
 
     fireEvent.press(getByLabelText('Playback position'));

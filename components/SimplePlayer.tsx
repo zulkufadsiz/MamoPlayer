@@ -1,4 +1,3 @@
-
 import { useEventListener } from 'expo';
 import * as ScreenOrientation from 'expo-screen-orientation';
 import {
@@ -20,10 +19,7 @@ import {
 import LoadingIndicator from './lib/LoadingIndicator';
 import { trackPlaybackEvent } from './lib/playbackAnalytics';
 import PlaybackControls from './lib/PlaybackControls';
-import {
-  getPlaybackPosition,
-  savePlaybackPosition,
-} from './lib/playbackPositionStore';
+import { getPlaybackPosition, savePlaybackPosition } from './lib/playbackPositionStore';
 import SettingsDialog from './lib/SettingsDialog';
 import { useTransportControls } from './lib/useTransportControls';
 
@@ -46,7 +42,7 @@ interface AudioTrack {
   language?: string;
 }
 
-interface SimplePlayerProps {
+export interface SimplePlayerProps {
   source: VideoSource;
   videoSourcesByLanguage?: Record<string, VideoSource>;
   qualitySources?: Record<string, VideoSource>;
@@ -70,6 +66,7 @@ interface SimplePlayerProps {
   title?: string;
   author?: string;
   artwork?: string;
+  isPremiumUser?: boolean;
 }
 
 const resolveMediaUrl = (source: VideoSource): string | null => {
@@ -103,13 +100,14 @@ export const SimplePlayer: React.FC<SimplePlayerProps> = ({
   title,
   author,
   artwork,
+  isPremiumUser = false,
   style,
 }) => {
   const [selectedSubtitleTrackId, setSelectedSubtitleTrackId] = useState<string | null>(
-    defaultSubtitleTrackId
+    defaultSubtitleTrackId,
   );
   const [selectedAudioTrackId, setSelectedAudioTrackId] = useState<string | null>(
-    defaultAudioTrackId
+    defaultAudioTrackId,
   );
   const [quality, setQuality] = useState('Auto');
 
@@ -127,12 +125,26 @@ export const SimplePlayer: React.FC<SimplePlayerProps> = ({
     return [];
   }, [subtitleTracks, subtitles]);
 
+  const availableLanguageSourceKeys = useMemo(() => {
+    const keys = new Set<string>();
+
+    if (videoSourcesByLanguage) {
+      Object.keys(videoSourcesByLanguage).forEach((key) => keys.add(key));
+    }
+
+    if (qualitySourcesByLanguage) {
+      Object.keys(qualitySourcesByLanguage).forEach((key) => keys.add(key));
+    }
+
+    return Array.from(keys);
+  }, [qualitySourcesByLanguage, videoSourcesByLanguage]);
+
   const resolvedAudioTracks: AudioTrack[] = useMemo(() => {
     if (audioTracks?.length) return audioTracks;
-    if (!videoSourcesByLanguage) return [];
-    return Object.keys(videoSourcesByLanguage).map((key) => {
+    if (availableLanguageSourceKeys.length === 0) return [];
+    return availableLanguageSourceKeys.map((key) => {
       const subtitleTrack = resolvedSubtitleTracks.find(
-        (track) => track.language === key || track.id === key
+        (track) => track.language === key || track.id === key,
       );
       return {
         id: key,
@@ -140,31 +152,31 @@ export const SimplePlayer: React.FC<SimplePlayerProps> = ({
         language: subtitleTrack?.language ?? key,
       };
     });
-  }, [audioTracks, resolvedSubtitleTracks, videoSourcesByLanguage]);
+  }, [audioTracks, availableLanguageSourceKeys, resolvedSubtitleTracks]);
 
   const selectedLanguageKey = useMemo(() => {
-    if (!videoSourcesByLanguage) return null;
+    if (availableLanguageSourceKeys.length === 0) return null;
 
     const audioTrackId = selectedAudioTrackId ?? resolvedAudioTracks[0]?.id;
-    if (audioTrackId && videoSourcesByLanguage[audioTrackId]) {
+    if (audioTrackId && availableLanguageSourceKeys.includes(audioTrackId)) {
       return audioTrackId;
     }
 
     const selectedTrack = resolvedSubtitleTracks.find(
-      (track) => track.id === selectedSubtitleTrackId
+      (track) => track.id === selectedSubtitleTrackId,
     );
     const languageKey = selectedTrack?.language ?? selectedSubtitleTrackId;
-    if (languageKey && videoSourcesByLanguage[languageKey]) {
+    if (languageKey && availableLanguageSourceKeys.includes(languageKey)) {
       return languageKey;
     }
 
     return null;
   }, [
     resolvedAudioTracks,
+    availableLanguageSourceKeys,
     resolvedSubtitleTracks,
     selectedAudioTrackId,
     selectedSubtitleTrackId,
-    videoSourcesByLanguage,
   ]);
 
   const resolvedSource = useMemo(() => {
@@ -235,7 +247,7 @@ export const SimplePlayer: React.FC<SimplePlayerProps> = ({
   const pictureInPictureSupported = isPictureInPictureSupported();
   const [resumeStartAt, setResumeStartAt] = useState<number | null>(null);
   const [resumeReady, setResumeReady] = useState(false);
-  const effectiveStartAt = resumeStartAt ?? startAt;
+  const effectiveStartAt = isPremiumUser ? (resumeStartAt ?? startAt) : startAt;
 
   const applyStartAt = () => {
     if (hasAppliedStartAt.current) return false;
@@ -269,18 +281,15 @@ export const SimplePlayer: React.FC<SimplePlayerProps> = ({
     hasStartedOnReadyRef.current = false;
     completionTrackedRef.current = false;
     setResumeStartAt(null);
-    setResumeReady(false);
+    setResumeReady(!isPremiumUser);
+
+    if (!isPremiumUser || !mediaUrl) {
+      return;
+    }
 
     let isCancelled = false;
 
     const loadResumePosition = async () => {
-      if (!mediaUrl) {
-        if (!isCancelled) {
-          setResumeReady(true);
-        }
-        return;
-      }
-
       const savedPosition = await getPlaybackPosition(mediaUrl);
       if (!isCancelled) {
         setResumeStartAt(savedPosition);
@@ -293,10 +302,16 @@ export const SimplePlayer: React.FC<SimplePlayerProps> = ({
     return () => {
       isCancelled = true;
     };
-  }, [mediaUrl]);
+  }, [isPremiumUser, mediaUrl]);
 
   useEffect(() => {
-    if (playerStatus !== 'readyToPlay' || !resumeReady || hasStartedOnReadyRef.current) return;
+    if (
+      playerStatus !== 'readyToPlay' ||
+      (isPremiumUser && !resumeReady) ||
+      hasStartedOnReadyRef.current
+    ) {
+      return;
+    }
 
     applyStartAt();
     if (autoPlay) {
@@ -304,10 +319,11 @@ export const SimplePlayer: React.FC<SimplePlayerProps> = ({
       setIsPlaying(true);
     }
     hasStartedOnReadyRef.current = true;
-  }, [autoPlay, player, playerStatus, resumeReady, effectiveStartAt]);
+  }, [autoPlay, isPremiumUser, player, playerStatus, resumeReady]);
 
   useEffect(() => {
-    if (!resumeReady) return;
+    if (isPremiumUser && !resumeReady) return;
+    if (playerStatus !== 'readyToPlay') return;
     if (typeof effectiveStartAt !== 'number' || Number.isNaN(effectiveStartAt)) return;
 
     const interval = setInterval(() => {
@@ -322,7 +338,7 @@ export const SimplePlayer: React.FC<SimplePlayerProps> = ({
     }, 150);
 
     return () => clearInterval(interval);
-  }, [player, resumeReady, effectiveStartAt]);
+  }, [effectiveStartAt, isPremiumUser, player, playerStatus, resumeReady]);
 
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showSubtitles, setShowSubtitles] = useState(true);
@@ -330,14 +346,17 @@ export const SimplePlayer: React.FC<SimplePlayerProps> = ({
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
   const [autoPlayEnabled, setAutoPlayEnabled] = useState(autoPlay);
   const [subtitleFontSize, setSubtitleFontSize] = useState(18);
-  const [subtitleFontStyle, setSubtitleFontStyle] = useState<'normal' | 'bold' | 'thin' | 'italic'>('normal');
+  const [subtitleFontStyle, setSubtitleFontStyle] = useState<'normal' | 'bold' | 'thin' | 'italic'>(
+    'normal',
+  );
   const [isPictureInPictureActive, setIsPictureInPictureActive] = useState(false);
   const isBuffering = playerStatus === 'loading' || playerStatus === 'buffering';
   const isError = !!errorMessage || playerStatus === 'error';
-  const canUsePictureInPicture = allowsPictureInPicture && pictureInPictureSupported;
+  const canUsePictureInPicture =
+    isPremiumUser && allowsPictureInPicture && pictureInPictureSupported;
 
   const persistPlaybackProgress = async () => {
-    if (!mediaUrl) return;
+    if (!isPremiumUser || !mediaUrl) return;
 
     let duration = 0;
     let currentTime = 0;
@@ -364,7 +383,7 @@ export const SimplePlayer: React.FC<SimplePlayerProps> = ({
     void ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(
       (error) => {
         console.warn('Failed to enforce portrait orientation', error);
-      }
+      },
     );
   }, [isFullscreen]);
 
@@ -407,7 +426,7 @@ export const SimplePlayer: React.FC<SimplePlayerProps> = ({
   }, [defaultAudioTrackId, resolvedAudioTracks, selectedAudioTrackId]);
 
   const activeSubtitleTrack = resolvedSubtitleTracks.find(
-    (track) => track.id === selectedSubtitleTrackId
+    (track) => track.id === selectedSubtitleTrackId,
   );
   const activeSubtitles = showSubtitles && activeSubtitleTrack ? activeSubtitleTrack.subtitles : [];
 
@@ -427,26 +446,32 @@ export const SimplePlayer: React.FC<SimplePlayerProps> = ({
   const handlePlayPause = () => {
     const { currentTime, duration } = getSafePlaybackSnapshot();
     if (isPlaying) {
-      void persistPlaybackProgress();
+      if (isPremiumUser) {
+        void persistPlaybackProgress();
+      }
       player.pause();
       setIsPlaying(false);
-      trackPlaybackEvent({
-        type: 'pause',
-        playerType: 'simple',
-        mediaUrl,
-        currentTime,
-        duration,
-      });
+      if (isPremiumUser) {
+        trackPlaybackEvent({
+          type: 'pause',
+          playerType: 'simple',
+          mediaUrl,
+          currentTime,
+          duration,
+        });
+      }
     } else {
       player.play();
       setIsPlaying(true);
-      trackPlaybackEvent({
-        type: 'play',
-        playerType: 'simple',
-        mediaUrl,
-        currentTime,
-        duration,
-      });
+      if (isPremiumUser) {
+        trackPlaybackEvent({
+          type: 'play',
+          playerType: 'simple',
+          mediaUrl,
+          currentTime,
+          duration,
+        });
+      }
     }
   };
 
@@ -454,14 +479,17 @@ export const SimplePlayer: React.FC<SimplePlayerProps> = ({
     const { currentTime, duration } = getSafePlaybackSnapshot();
     player.currentTime = time;
     completionTrackedRef.current = false;
-    trackPlaybackEvent({
-      type: 'seek',
-      playerType: 'simple',
-      mediaUrl,
-      fromTime: currentTime,
-      toTime: time,
-      duration,
-    });
+
+    if (isPremiumUser) {
+      trackPlaybackEvent({
+        type: 'seek',
+        playerType: 'simple',
+        mediaUrl,
+        fromTime: currentTime,
+        toTime: time,
+        duration,
+      });
+    }
   };
 
   const handlePlaybackSpeedChange = (speed: number) => {
@@ -474,14 +502,15 @@ export const SimplePlayer: React.FC<SimplePlayerProps> = ({
   const handleSkip = (seconds: number) => {
     const duration = player.duration ?? 0;
     const currentTime = player.currentTime ?? 0;
-    const nextTime = duration > 0
-      ? Math.max(0, Math.min(duration, currentTime + seconds))
-      : Math.max(0, currentTime + seconds);
+    const nextTime =
+      duration > 0
+        ? Math.max(0, Math.min(duration, currentTime + seconds))
+        : Math.max(0, currentTime + seconds);
     handleSeek(nextTime);
   };
 
   useEffect(() => {
-    if (!mediaUrl) return;
+    if (!isPremiumUser || !mediaUrl) return;
 
     const interval = setInterval(() => {
       if (!isPlaying) return;
@@ -489,15 +518,19 @@ export const SimplePlayer: React.FC<SimplePlayerProps> = ({
     }, 5000);
 
     return () => clearInterval(interval);
-  }, [isPlaying, mediaUrl, player]);
+  }, [isPlaying, isPremiumUser, mediaUrl]);
 
   useEffect(() => {
+    if (!isPremiumUser) return;
+
     return () => {
       void persistPlaybackProgress();
     };
-  }, [mediaUrl, player]);
+  }, [isPremiumUser, mediaUrl]);
 
   useEffect(() => {
+    if (!isPremiumUser) return;
+
     const interval = setInterval(() => {
       if (!isPlaying) return;
 
@@ -521,10 +554,10 @@ export const SimplePlayer: React.FC<SimplePlayerProps> = ({
     }, 400);
 
     return () => clearInterval(interval);
-  }, [isPlaying, mediaUrl, player]);
+  }, [isPlaying, isPremiumUser, mediaUrl]);
 
   useTransportControls({
-    enabled: Boolean(mediaUrl),
+    enabled: isPremiumUser && Boolean(mediaUrl),
     isPlaying,
     mediaUrl,
     title,
@@ -610,7 +643,7 @@ export const SimplePlayer: React.FC<SimplePlayerProps> = ({
           player={player}
           nativeControls={false}
           allowsFullscreen={allowsFullscreen}
-          allowsPictureInPicture={allowsPictureInPicture}
+          allowsPictureInPicture={canUsePictureInPicture}
           onPictureInPictureStart={() => setIsPictureInPictureActive(true)}
           onPictureInPictureStop={() => setIsPictureInPictureActive(false)}
           contentFit={contentFit}
@@ -660,6 +693,7 @@ export const SimplePlayer: React.FC<SimplePlayerProps> = ({
           subtitleFontStyle={subtitleFontStyle}
           onSubtitlesToggle={() => setShowSubtitles(!showSubtitles)}
           onSettingsPress={handleSettingsPress}
+          settingsOpen={showSettings}
           allowsPictureInPicture={canUsePictureInPicture}
           isPictureInPictureActive={isPictureInPictureActive}
           onPictureInPictureToggle={handlePictureInPictureToggle}
@@ -667,37 +701,41 @@ export const SimplePlayer: React.FC<SimplePlayerProps> = ({
           autoHideControls
           autoHideDelayMs={3000}
         />
-
-        <SettingsDialog
-          visible={showSettings}
-          onClose={() => setShowSettings(false)}
-          playbackSpeed={playbackSpeed}
-          onPlaybackSpeedChange={handlePlaybackSpeedChange}
-          quality={quality}
-          onQualityChange={setQuality}
-          qualityOptions={qualityOptions}
-          autoPlay={autoPlayEnabled}
-          onAutoPlayChange={setAutoPlayEnabled}
-          showSubtitles={showSubtitles}
-          onShowSubtitlesChange={setShowSubtitles}
-          subtitleFontSize={subtitleFontSize}
-          onSubtitleFontSizeChange={setSubtitleFontSize}
-          subtitleFontStyle={subtitleFontStyle}
-          onSubtitleFontStyleChange={setSubtitleFontStyle}
-          audioTracks={resolvedAudioTracks}
-          selectedAudioTrackId={selectedAudioTrackId}
-          onAudioTrackChange={setSelectedAudioTrackId}
-          subtitleTracks={resolvedSubtitleTracks}
-          selectedSubtitleTrackId={selectedSubtitleTrackId}
-          onSubtitleTrackChange={setSelectedSubtitleTrackId}
-        />
       </View>
     );
   };
 
+  const renderSettingsDialog = () => (
+    <SettingsDialog
+      visible={showSettings}
+      renderInPlace={isFullscreen}
+      onClose={() => setShowSettings(false)}
+      playbackSpeed={playbackSpeed}
+      onPlaybackSpeedChange={handlePlaybackSpeedChange}
+      quality={quality}
+      onQualityChange={setQuality}
+      qualityOptions={qualityOptions}
+      autoPlay={autoPlayEnabled}
+      onAutoPlayChange={setAutoPlayEnabled}
+      showSubtitles={showSubtitles}
+      onShowSubtitlesChange={setShowSubtitles}
+      subtitleFontSize={subtitleFontSize}
+      onSubtitleFontSizeChange={isPremiumUser ? setSubtitleFontSize : undefined}
+      subtitleFontStyle={subtitleFontStyle}
+      onSubtitleFontStyleChange={isPremiumUser ? setSubtitleFontStyle : undefined}
+      audioTracks={resolvedAudioTracks}
+      selectedAudioTrackId={selectedAudioTrackId}
+      onAudioTrackChange={setSelectedAudioTrackId}
+      subtitleTracks={resolvedSubtitleTracks}
+      selectedSubtitleTrackId={selectedSubtitleTrackId}
+      onSubtitleTrackChange={setSelectedSubtitleTrackId}
+    />
+  );
+
   return (
     <>
       {renderPlayerContent(false)}
+      {!isFullscreen && renderSettingsDialog()}
       <Modal
         visible={isFullscreen}
         animationType="fade"
@@ -714,23 +752,24 @@ export const SimplePlayer: React.FC<SimplePlayerProps> = ({
           void ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE).catch(
             (error) => {
               console.warn('Failed to lock landscape orientation', error);
-            }
+            },
           );
         }}
         onDismiss={() => {
           void ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(
             (error) => {
               console.warn('Failed to restore portrait orientation', error);
-            }
+            },
           );
         }}
         onRequestClose={() => handleFullscreenChange(false)}
       >
         {renderPlayerContent(true)}
+        {isFullscreen && renderSettingsDialog()}
       </Modal>
     </>
   );
-}
+};
 
 const styles = StyleSheet.create({
   container: {

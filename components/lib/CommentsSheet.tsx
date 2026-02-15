@@ -1,16 +1,16 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import {
-    FlatList,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    Pressable,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  FlatList,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 export interface Comment {
@@ -105,16 +105,16 @@ export default function CommentsSheet({
           >
             <Text style={styles.commentActionText}>Reply</Text>
           </TouchableOpacity>
-          {item.likes > 0 && (
-            <Text style={styles.likesCount}>{formatCount(item.likes)} likes</Text>
-          )}
+          {item.likes > 0 && <Text style={styles.likesCount}>{formatCount(item.likes)} likes</Text>}
         </View>
       </View>
       <TouchableOpacity
         style={styles.likeButton}
         onPress={() => onLikeComment(item.id)}
         accessibilityRole="button"
-        accessibilityLabel={item.isLiked ? `Unlike comment by ${item.userName}` : `Like comment by ${item.userName}`}
+        accessibilityLabel={
+          item.isLiked ? `Unlike comment by ${item.userName}` : `Like comment by ${item.userName}`
+        }
         hitSlop={10}
       >
         <Ionicons
@@ -145,9 +145,7 @@ export default function CommentsSheet({
           {/* Header */}
           <View style={styles.header}>
             <View style={styles.dragHandle} />
-            <Text style={styles.headerTitle}>
-              {totalComments || comments.length} Comments
-            </Text>
+            <Text style={styles.headerTitle}>{totalComments || comments.length} Comments</Text>
             <TouchableOpacity
               onPress={onClose}
               style={styles.closeButton}
@@ -210,10 +208,7 @@ export default function CommentsSheet({
                 accessibilityHint="Type your comment"
               />
               <TouchableOpacity
-                style={[
-                  styles.sendButton,
-                  !commentText.trim() && styles.sendButtonDisabled,
-                ]}
+                style={[styles.sendButton, !commentText.trim() && styles.sendButtonDisabled]}
                 onPress={handleSendComment}
                 disabled={!commentText.trim()}
                 accessibilityRole="button"
@@ -221,11 +216,7 @@ export default function CommentsSheet({
                 accessibilityHint="Posts your comment"
                 accessibilityState={{ disabled: !commentText.trim() }}
               >
-                <Ionicons
-                  name="send"
-                  size={20}
-                  color={commentText.trim() ? '#007AFF' : '#ccc'}
-                />
+                <Ionicons name="send" size={20} color={commentText.trim() ? '#007AFF' : '#ccc'} />
               </TouchableOpacity>
             </View>
           </KeyboardAvoidingView>

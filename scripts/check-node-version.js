@@ -10,6 +10,6 @@ if (!Number.isFinite(major)) {
 if (major !== REQUIRED_MAJOR) {
   console.warn(
     `\n[env] Warning: Detected Node.js ${current}. This project is pinned to Node.js ${REQUIRED_MAJOR}.x via .nvmrc.\n` +
-      '[env] Recommended: run "nvm use" before starting the app.\n'
+      '[env] Recommended: run "nvm use" before starting the app.\n',
   );
 }
