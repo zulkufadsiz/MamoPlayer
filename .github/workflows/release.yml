@@ -73,6 +73,17 @@ jobs:
       - name: Build package
         run: yarn build
 
+      - name: Check NPM_TOKEN presence
+        run: |
+          if [ -z "${NPM_TOKEN}" ]; then
+            echo "NPM_TOKEN is NOT set"
+            exit 1
+          else
+            echo "NPM_TOKEN is set"
+          fi
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
       - name: Release
         run: yarn release
         env:
