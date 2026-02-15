@@ -1,0 +1,14 @@
+{
+  "$schema": "node_modules/lerna/schemas/lerna-schema.json",
+  "version": "independent",
+  "packages": ["."],
+  "command": {
+    "version": {
+      "conventionalCommits": true,
+      "createRelease": "github"
+    },
+    "publish": {
+      "conventionalCommits": true
+    }
+  }
+}
