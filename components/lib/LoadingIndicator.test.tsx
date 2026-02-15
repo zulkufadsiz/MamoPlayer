@@ -7,10 +7,15 @@ describe('LoadingIndicator', () => {
     'renders %s variant',
     (variant) => {
       const { toJSON } = render(
-        <LoadingIndicator size={42} color="#FFF" variant={variant} brandColors={['#111', '#222', '#333']} />
+        <LoadingIndicator
+          size={42}
+          color="#FFF"
+          variant={variant}
+          brandColors={['#111', '#222', '#333']}
+        />,
       );
 
       expect(toJSON()).toBeTruthy();
-    }
+    },
   );
 });

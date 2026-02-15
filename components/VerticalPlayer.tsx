@@ -1,27 +1,23 @@
-
 import { Ionicons } from '@expo/vector-icons';
 import { useEventListener } from 'expo';
 import * as ScreenOrientation from 'expo-screen-orientation';
 import { VideoView, useVideoPlayer, type VideoSource } from 'expo-video';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-    Animated,
-    Pressable,
-    StatusBar,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
-    useWindowDimensions,
+  Animated,
+  Pressable,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+  useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import CommentsSheet, { type Comment } from './lib/CommentsSheet';
 import LoadingIndicator from './lib/LoadingIndicator';
 import { trackPlaybackEvent } from './lib/playbackAnalytics';
-import {
-    getPlaybackPosition,
-    savePlaybackPosition,
-} from './lib/playbackPositionStore';
+import { getPlaybackPosition, savePlaybackPosition } from './lib/playbackPositionStore';
 import SettingsDialog from './lib/SettingsDialog';
 import { useTransportControls } from './lib/useTransportControls';
 
@@ -121,8 +117,8 @@ interface VerticalPlayerProps {
   onSwipeDown?: () => void;
 }
 
-export const VerticalPlayer: React.FC<VerticalPlayerProps> = ({ 
-  source, 
+export const VerticalPlayer: React.FC<VerticalPlayerProps> = ({
+  source,
   videoSourcesByLanguage,
   qualitySources,
   qualitySourcesByLanguage,
@@ -151,10 +147,10 @@ export const VerticalPlayer: React.FC<VerticalPlayerProps> = ({
 }) => {
   const insets = useSafeAreaInsets();
   const [selectedSubtitleTrackId, setSelectedSubtitleTrackId] = useState<string | null>(
-    defaultSubtitleTrackId
+    defaultSubtitleTrackId,
   );
   const [selectedAudioTrackId, setSelectedAudioTrackId] = useState<string | null>(
-    defaultAudioTrackId
+    defaultAudioTrackId,
   );
   const [quality, setQuality] = useState('Auto');
 
@@ -177,7 +173,7 @@ export const VerticalPlayer: React.FC<VerticalPlayerProps> = ({
     if (!videoSourcesByLanguage) return [];
     return Object.keys(videoSourcesByLanguage).map((key) => {
       const subtitleTrack = resolvedSubtitleTracks.find(
-        (track) => track.language === key || track.id === key
+        (track) => track.language === key || track.id === key,
       );
       return {
         id: key,
@@ -196,7 +192,7 @@ export const VerticalPlayer: React.FC<VerticalPlayerProps> = ({
     }
 
     const selectedTrack = resolvedSubtitleTracks.find(
-      (track) => track.id === selectedSubtitleTrackId
+      (track) => track.id === selectedSubtitleTrackId,
     );
     const languageKey = selectedTrack?.language ?? selectedSubtitleTrackId;
     if (languageKey && videoSourcesByLanguage[languageKey]) {
@@ -267,7 +263,7 @@ export const VerticalPlayer: React.FC<VerticalPlayerProps> = ({
   }, [source]);
   const mediaUrl = useMemo(() => resolveMediaUrl(resolvedSource), [resolvedSource]);
 
-  const player = useVideoPlayer(resolvedSource, player => {
+  const player = useVideoPlayer(resolvedSource, (player) => {
     player.loop = true;
     player.volume = 1;
   });
@@ -333,7 +329,7 @@ export const VerticalPlayer: React.FC<VerticalPlayerProps> = ({
       id: '3',
       userId: 'user3',
       userName: 'MikeBrown',
-      text: 'Can\'t wait for more content like this 🔥',
+      text: "Can't wait for more content like this 🔥",
       timestamp: new Date(Date.now() - 86400000),
       likes: 42,
       isLiked: true,
@@ -342,7 +338,9 @@ export const VerticalPlayer: React.FC<VerticalPlayerProps> = ({
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
   const [autoPlayEnabled, setAutoPlayEnabled] = useState(autoPlay);
   const [subtitleFontSize, setSubtitleFontSize] = useState(18);
-  const [subtitleFontStyle, setSubtitleFontStyle] = useState<'normal' | 'bold' | 'thin' | 'italic'>('normal');
+  const [subtitleFontStyle, setSubtitleFontStyle] = useState<'normal' | 'bold' | 'thin' | 'italic'>(
+    'normal',
+  );
   const [isLiked, setIsLiked] = useState(false);
   const [currentSubtitle, setCurrentSubtitle] = useState<string>('');
   const [controlsOpacity] = useState(new Animated.Value(1));
@@ -429,9 +427,7 @@ export const VerticalPlayer: React.FC<VerticalPlayerProps> = ({
   // Lock screen orientation to portrait
   useEffect(() => {
     const lockOrientation = async () => {
-      await ScreenOrientation.lockAsync(
-        ScreenOrientation.OrientationLock.PORTRAIT_UP
-      );
+      await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP);
     };
 
     lockOrientation();
@@ -477,7 +473,7 @@ export const VerticalPlayer: React.FC<VerticalPlayerProps> = ({
   }, [defaultAudioTrackId, resolvedAudioTracks, selectedAudioTrackId]);
 
   const activeSubtitleTrack = resolvedSubtitleTracks.find(
-    (track) => track.id === selectedSubtitleTrackId
+    (track) => track.id === selectedSubtitleTrackId,
   );
   const activeSubtitles = showSubtitles && activeSubtitleTrack ? activeSubtitleTrack.subtitles : [];
 
@@ -503,13 +499,11 @@ export const VerticalPlayer: React.FC<VerticalPlayerProps> = ({
 
     const interval = setInterval(() => {
       const currentTime = player.currentTime || 0;
-      const subtitle = activeSubtitles.find(
-        (sub) => {
-          const start = parseTimeToSeconds(sub.start);
-          const end = parseTimeToSeconds(sub.end);
-          return currentTime >= start && currentTime <= end;
-        }
-      );
+      const subtitle = activeSubtitles.find((sub) => {
+        const start = parseTimeToSeconds(sub.start);
+        const end = parseTimeToSeconds(sub.end);
+        return currentTime >= start && currentTime <= end;
+      });
       setCurrentSubtitle(subtitle ? subtitle.text : '');
     }, 100);
 
@@ -593,9 +587,10 @@ export const VerticalPlayer: React.FC<VerticalPlayerProps> = ({
   const handleSkip = (seconds: number) => {
     const duration = player.duration ?? 0;
     const currentTime = player.currentTime ?? 0;
-    const nextTime = duration > 0
-      ? Math.max(0, Math.min(duration, currentTime + seconds))
-      : Math.max(0, currentTime + seconds);
+    const nextTime =
+      duration > 0
+        ? Math.max(0, Math.min(duration, currentTime + seconds))
+        : Math.max(0, currentTime + seconds);
     handleSeek(nextTime);
     void persistPlaybackProgress();
   };
@@ -731,8 +726,8 @@ export const VerticalPlayer: React.FC<VerticalPlayerProps> = ({
               isLiked: !comment.isLiked,
               likes: comment.isLiked ? comment.likes - 1 : comment.likes + 1,
             }
-          : comment
-      )
+          : comment,
+      ),
     );
   };
 
@@ -747,14 +742,9 @@ export const VerticalPlayer: React.FC<VerticalPlayerProps> = ({
   return (
     <SafeAreaView style={styles.contentContainer} edges={['top', 'bottom']}>
       <StatusBar hidden />
-      
+
       {/* Video Background */}
-      <VideoView 
-        style={styles.video} 
-        player={player} 
-        nativeControls={false} 
-        contentFit="cover"
-      />
+      <VideoView style={styles.video} player={player} nativeControls={false} contentFit="cover" />
 
       {(isBuffering || isError) && (
         <View style={styles.overlay} pointerEvents={isError ? 'auto' : 'none'}>
@@ -787,11 +777,13 @@ export const VerticalPlayer: React.FC<VerticalPlayerProps> = ({
       <View style={styles.bottomGradient} />
 
       {/* Main Touch Area for Play/Pause */}
-      <Pressable 
+      <Pressable
         style={styles.touchArea}
         onPress={handleScreenPress}
         accessibilityRole="button"
-        accessibilityLabel={showControls ? (isPlaying ? 'Pause video' : 'Play video') : 'Show playback controls'}
+        accessibilityLabel={
+          showControls ? (isPlaying ? 'Pause video' : 'Play video') : 'Show playback controls'
+        }
         accessibilityHint={showControls ? 'Toggles playback' : 'Shows playback controls'}
       >
         {/* Center Play/Pause Icon */}
@@ -858,10 +850,10 @@ export const VerticalPlayer: React.FC<VerticalPlayerProps> = ({
           accessibilityHint="Toggles like on this video"
           hitSlop={10}
         >
-          <Ionicons 
-            name={isLiked ? 'heart' : 'heart-outline'} 
-            size={32} 
-            color={isLiked ? '#FF0050' : '#fff'} 
+          <Ionicons
+            name={isLiked ? 'heart' : 'heart-outline'}
+            size={32}
+            color={isLiked ? '#FF0050' : '#fff'}
           />
           <Text style={styles.actionText}>{formatCount(likes + (isLiked ? 1 : 0))}</Text>
         </TouchableOpacity>
@@ -910,7 +902,11 @@ export const VerticalPlayer: React.FC<VerticalPlayerProps> = ({
         <View style={styles.authorInfo}>
           <Text style={styles.authorName}>@{author}</Text>
           {title && <Text style={styles.title}>{title}</Text>}
-          {description && <Text style={styles.description} numberOfLines={2}>{description}</Text>}
+          {description && (
+            <Text style={styles.description} numberOfLines={2}>
+              {description}
+            </Text>
+          )}
         </View>
       </View>
 
@@ -937,7 +933,7 @@ export const VerticalPlayer: React.FC<VerticalPlayerProps> = ({
           </Text>
         </View>
       )}
-      
+
       <SettingsDialog
         visible={showSettings}
         onClose={() => setShowSettings(false)}
@@ -972,7 +968,7 @@ export const VerticalPlayer: React.FC<VerticalPlayerProps> = ({
       />
     </SafeAreaView>
   );
-}
+};
 
 const styles = StyleSheet.create({
   contentContainer: {

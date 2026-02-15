@@ -693,6 +693,7 @@ export const SimplePlayer: React.FC<SimplePlayerProps> = ({
           subtitleFontStyle={subtitleFontStyle}
           onSubtitlesToggle={() => setShowSubtitles(!showSubtitles)}
           onSettingsPress={handleSettingsPress}
+          settingsOpen={showSettings}
           allowsPictureInPicture={canUsePictureInPicture}
           isPictureInPictureActive={isPictureInPictureActive}
           onPictureInPictureToggle={handlePictureInPictureToggle}
@@ -700,37 +701,41 @@ export const SimplePlayer: React.FC<SimplePlayerProps> = ({
           autoHideControls
           autoHideDelayMs={3000}
         />
-
-        <SettingsDialog
-          visible={showSettings}
-          onClose={() => setShowSettings(false)}
-          playbackSpeed={playbackSpeed}
-          onPlaybackSpeedChange={handlePlaybackSpeedChange}
-          quality={quality}
-          onQualityChange={setQuality}
-          qualityOptions={qualityOptions}
-          autoPlay={autoPlayEnabled}
-          onAutoPlayChange={setAutoPlayEnabled}
-          showSubtitles={showSubtitles}
-          onShowSubtitlesChange={setShowSubtitles}
-          subtitleFontSize={subtitleFontSize}
-          onSubtitleFontSizeChange={isPremiumUser ? setSubtitleFontSize : undefined}
-          subtitleFontStyle={subtitleFontStyle}
-          onSubtitleFontStyleChange={isPremiumUser ? setSubtitleFontStyle : undefined}
-          audioTracks={resolvedAudioTracks}
-          selectedAudioTrackId={selectedAudioTrackId}
-          onAudioTrackChange={setSelectedAudioTrackId}
-          subtitleTracks={resolvedSubtitleTracks}
-          selectedSubtitleTrackId={selectedSubtitleTrackId}
-          onSubtitleTrackChange={setSelectedSubtitleTrackId}
-        />
       </View>
     );
   };
 
+  const renderSettingsDialog = () => (
+    <SettingsDialog
+      visible={showSettings}
+      renderInPlace={isFullscreen}
+      onClose={() => setShowSettings(false)}
+      playbackSpeed={playbackSpeed}
+      onPlaybackSpeedChange={handlePlaybackSpeedChange}
+      quality={quality}
+      onQualityChange={setQuality}
+      qualityOptions={qualityOptions}
+      autoPlay={autoPlayEnabled}
+      onAutoPlayChange={setAutoPlayEnabled}
+      showSubtitles={showSubtitles}
+      onShowSubtitlesChange={setShowSubtitles}
+      subtitleFontSize={subtitleFontSize}
+      onSubtitleFontSizeChange={isPremiumUser ? setSubtitleFontSize : undefined}
+      subtitleFontStyle={subtitleFontStyle}
+      onSubtitleFontStyleChange={isPremiumUser ? setSubtitleFontStyle : undefined}
+      audioTracks={resolvedAudioTracks}
+      selectedAudioTrackId={selectedAudioTrackId}
+      onAudioTrackChange={setSelectedAudioTrackId}
+      subtitleTracks={resolvedSubtitleTracks}
+      selectedSubtitleTrackId={selectedSubtitleTrackId}
+      onSubtitleTrackChange={setSelectedSubtitleTrackId}
+    />
+  );
+
   return (
     <>
       {renderPlayerContent(false)}
+      {!isFullscreen && renderSettingsDialog()}
       <Modal
         visible={isFullscreen}
         animationType="fade"
@@ -760,6 +765,7 @@ export const SimplePlayer: React.FC<SimplePlayerProps> = ({
         onRequestClose={() => handleFullscreenChange(false)}
       >
         {renderPlayerContent(true)}
+        {isFullscreen && renderSettingsDialog()}
       </Modal>
     </>
   );

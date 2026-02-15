@@ -13,6 +13,7 @@ import {
 
 interface SettingsDialogProps {
   visible: boolean;
+  renderInPlace?: boolean;
   onClose: () => void;
   playbackSpeed: number;
   onPlaybackSpeedChange: (speed: number) => void;
@@ -68,6 +69,7 @@ type SettingsMenuItem =
 
 export default function SettingsDialog({
   visible,
+  renderInPlace = false,
   onClose,
   playbackSpeed,
   onPlaybackSpeedChange,
@@ -132,7 +134,7 @@ export default function SettingsDialog({
         </TouchableOpacity>
       </View>
 
-      <View style={styles.menuList}>
+      <ScrollView style={styles.menuScroll} contentContainerStyle={styles.menuList}>
         <TouchableOpacity
           style={styles.menuItem}
           onPress={() => handleMenuItemPress('playbackSpeed')}
@@ -239,7 +241,7 @@ export default function SettingsDialog({
             <Ionicons name="chevron-forward" size={20} color="#999" />
           </View>
         </TouchableOpacity>
-      </View>
+      </ScrollView>
     </>
   );
 
@@ -561,6 +563,39 @@ export default function SettingsDialog({
     </>
   );
 
+  const dialogContent = (
+    <Pressable
+      style={styles.overlay}
+      onPress={handleClose}
+      accessibilityRole="button"
+      accessibilityLabel="Close settings"
+      accessibilityHint="Closes the settings dialog"
+    >
+      <Pressable
+        style={[styles.container, renderInPlace && styles.inPlaceContainer]}
+        onPress={(e) => e.stopPropagation()}
+        accessible={false}
+      >
+        <View style={styles.dragHandle} />
+
+        {!activeMenu && renderMainMenu()}
+        {activeMenu === 'playbackSpeed' && renderPlaybackSpeedSheet()}
+        {activeMenu === 'quality' && renderQualitySheet()}
+        {activeMenu === 'audio' && renderAudioSheet()}
+        {activeMenu === 'subtitles' && renderSubtitlesSheet()}
+        {subtitleStyleCustomizationEnabled &&
+          activeMenu === 'subtitleStyle' &&
+          renderSubtitleStyleSheet()}
+        {activeMenu === 'preferences' && renderPreferencesSheet()}
+      </Pressable>
+    </Pressable>
+  );
+
+  if (renderInPlace) {
+    if (!visible) return null;
+    return <View style={styles.inlineRoot}>{dialogContent}</View>;
+  }
+
   return (
     <Modal
       visible={visible}
@@ -569,36 +604,27 @@ export default function SettingsDialog({
       onRequestClose={handleClose}
       accessibilityViewIsModal
     >
-      <Pressable
-        style={styles.overlay}
-        onPress={handleClose}
-        accessibilityRole="button"
-        accessibilityLabel="Close settings"
-        accessibilityHint="Closes the settings dialog"
-      >
-        <Pressable style={styles.container} onPress={(e) => e.stopPropagation()} accessible={false}>
-          <View style={styles.dragHandle} />
-
-          {!activeMenu && renderMainMenu()}
-          {activeMenu === 'playbackSpeed' && renderPlaybackSpeedSheet()}
-          {activeMenu === 'quality' && renderQualitySheet()}
-          {activeMenu === 'audio' && renderAudioSheet()}
-          {activeMenu === 'subtitles' && renderSubtitlesSheet()}
-          {subtitleStyleCustomizationEnabled &&
-            activeMenu === 'subtitleStyle' &&
-            renderSubtitleStyleSheet()}
-          {activeMenu === 'preferences' && renderPreferencesSheet()}
-        </Pressable>
-      </Pressable>
+      {dialogContent}
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
+  inlineRoot: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 2000,
+    elevation: 2000,
+  },
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'flex-end',
+  },
+  inPlaceContainer: {
+    maxHeight: '92%',
+    width: '92%',
+    alignSelf: 'center',
+    borderRadius: 16,
   },
   container: {
     backgroundColor: '#fff',
@@ -636,6 +662,9 @@ const styles = StyleSheet.create({
     minHeight: 44,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  menuScroll: {
+    flexGrow: 0,
   },
   menuList: {
     paddingVertical: 8,

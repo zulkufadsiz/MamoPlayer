@@ -15,8 +15,10 @@ const mockPlayer = {
 jest.mock('@expo/vector-icons', () => {
   const React = require('react');
   const { Text } = require('react-native');
+  const IoniconsMock = ({ name }: { name: string }) => <Text>{name}</Text>;
+  IoniconsMock.displayName = 'IoniconsMock';
   return {
-    Ionicons: ({ name }: { name: string }) => <Text>{name}</Text>,
+    Ionicons: IoniconsMock,
   };
 });
 
@@ -35,8 +37,10 @@ jest.mock('expo-screen-orientation', () => ({
 jest.mock('expo-video', () => {
   const React = require('react');
   const { View } = require('react-native');
+  const VideoViewMock = () => <View accessibilityLabel="video-view" />;
+  VideoViewMock.displayName = 'VideoViewMock';
   return {
-    VideoView: () => <View accessibilityLabel="video-view" />,
+    VideoView: VideoViewMock,
     useVideoPlayer: jest.fn((_source: unknown, setup: (player: typeof mockPlayer) => void) => {
       setup?.(mockPlayer);
       return mockPlayer;
@@ -47,8 +51,10 @@ jest.mock('expo-video', () => {
 jest.mock('react-native-safe-area-context', () => {
   const React = require('react');
   const { View } = require('react-native');
+  const SafeAreaViewMock = ({ children }: { children: React.ReactNode }) => <View>{children}</View>;
+  SafeAreaViewMock.displayName = 'SafeAreaViewMock';
   return {
-    SafeAreaView: ({ children }: { children: React.ReactNode }) => <View>{children}</View>,
+    SafeAreaView: SafeAreaViewMock,
     useSafeAreaInsets: () => ({ top: 0, right: 0, bottom: 0, left: 0 }),
   };
 });
@@ -69,23 +75,29 @@ jest.mock('@/components/lib/useTransportControls', () => ({
 jest.mock('@/components/lib/LoadingIndicator', () => {
   const React = require('react');
   const { View } = require('react-native');
-  return () => <View accessibilityLabel="loading-indicator" />;
+  const LoadingIndicatorMock = () => <View accessibilityLabel="loading-indicator" />;
+  LoadingIndicatorMock.displayName = 'LoadingIndicatorMock';
+  return LoadingIndicatorMock;
 });
 
 jest.mock('@/components/lib/SettingsDialog', () => {
   const React = require('react');
   const { View } = require('react-native');
-  return ({ visible }: { visible: boolean }) => (
+  const SettingsDialogMock = ({ visible }: { visible: boolean }) => (
     <View accessibilityLabel={visible ? 'settings-open' : 'settings-closed'} />
   );
+  SettingsDialogMock.displayName = 'SettingsDialogMock';
+  return SettingsDialogMock;
 });
 
 jest.mock('@/components/lib/CommentsSheet', () => {
   const React = require('react');
   const { View } = require('react-native');
-  return ({ visible }: { visible: boolean }) => (
+  const CommentsSheetMock = ({ visible }: { visible: boolean }) => (
     <View accessibilityLabel={visible ? 'comments-open' : 'comments-closed'} />
   );
+  CommentsSheetMock.displayName = 'CommentsSheetMock';
+  return CommentsSheetMock;
 });
 
 describe('VerticalPlayer', () => {
@@ -98,7 +110,9 @@ describe('VerticalPlayer', () => {
   };
 
   it('renders and opens settings and comments overlays', async () => {
-    const { getByLabelText } = render(<VerticalPlayer source={source} title="Demo" description="Desc" />);
+    const { getByLabelText } = render(
+      <VerticalPlayer source={source} title="Demo" description="Desc" />,
+    );
 
     await flushAsyncState();
 

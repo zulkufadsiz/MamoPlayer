@@ -48,11 +48,14 @@ export default function Timeline({
   };
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      if (isSeeking) return;
-      const currentTime = getSafeCurrentTime();
-      setSeekPosition(Number.isFinite(currentTime) ? currentTime : 0);
-    }, isPlaying ? 250 : 500);
+    const interval = setInterval(
+      () => {
+        if (isSeeking) return;
+        const currentTime = getSafeCurrentTime();
+        setSeekPosition(Number.isFinite(currentTime) ? currentTime : 0);
+      },
+      isPlaying ? 250 : 500,
+    );
 
     return () => clearInterval(interval);
   }, [isPlaying, isSeeking, player]);
@@ -106,8 +109,8 @@ export default function Timeline({
     0,
     Math.min(
       sliderWidth - previewBubbleWidth,
-      previewProgress * sliderWidth - previewBubbleWidth / 2
-    )
+      previewProgress * sliderWidth - previewBubbleWidth / 2,
+    ),
   );
 
   const loadThumbnail = async (timeSeconds: number) => {
@@ -155,14 +158,16 @@ export default function Timeline({
   };
 
   return (
-    <View style={[
-      styles.container,
-      isFullscreen && {
-        paddingLeft: Math.max(12, fullscreenHorizontalInset + 8),
-        paddingRight: Math.max(12, fullscreenHorizontalInset + 8),
-        paddingBottom: Math.max(8, insets.bottom + 4),
-      }
-    ]}>
+    <View
+      style={[
+        styles.container,
+        isFullscreen && {
+          paddingLeft: Math.max(12, fullscreenHorizontalInset + 8),
+          paddingRight: Math.max(12, fullscreenHorizontalInset + 8),
+          paddingBottom: Math.max(8, insets.bottom + 4),
+        },
+      ]}
+    >
       {/* Timeline */}
       <View style={styles.timelineContainer}>
         <Text

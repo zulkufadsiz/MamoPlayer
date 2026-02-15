@@ -24,9 +24,11 @@ jest.mock('@expo/vector-icons', () => {
 jest.mock('@react-native-community/slider', () => {
   const React = require('react');
   const { View } = require('react-native');
-  return ({ accessibilityLabel }: { accessibilityLabel?: string }) => (
+  const SliderMock = ({ accessibilityLabel }: { accessibilityLabel?: string }) => (
     <View accessibilityLabel={accessibilityLabel || 'slider'} />
   );
+  SliderMock.displayName = 'SliderMock';
+  return SliderMock;
 });
 
 jest.mock('expo', () => ({
@@ -75,15 +77,19 @@ jest.mock('@/components/lib/useTransportControls', () => ({
 jest.mock('@/components/lib/LoadingIndicator', () => {
   const React = require('react');
   const { View } = require('react-native');
-  return () => <View accessibilityLabel="loading-indicator" />;
+  const LoadingIndicatorMock = () => <View accessibilityLabel="loading-indicator" />;
+  LoadingIndicatorMock.displayName = 'LoadingIndicatorMock';
+  return LoadingIndicatorMock;
 });
 
 jest.mock('@/components/lib/LandscapeSettingsDialog', () => {
   const React = require('react');
   const { View } = require('react-native');
-  return ({ visible }: { visible: boolean }) => (
+  const LandscapeSettingsDialogMock = ({ visible }: { visible: boolean }) => (
     <View accessibilityLabel={visible ? 'landscape-settings-open' : 'landscape-settings-closed'} />
   );
+  LandscapeSettingsDialogMock.displayName = 'LandscapeSettingsDialogMock';
+  return LandscapeSettingsDialogMock;
 });
 
 describe('LandscapePlayer', () => {

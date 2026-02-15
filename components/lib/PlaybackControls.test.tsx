@@ -14,7 +14,11 @@ jest.mock('@expo/vector-icons', () => {
 jest.mock('@/components/lib/Timeline', () => {
   const React = require('react');
   const { View } = require('react-native');
-  return ({ duration }: { duration: number }) => <View accessibilityLabel={`timeline-${duration}`} />;
+  const TimelineMock = ({ duration }: { duration: number }) => (
+    <View accessibilityLabel={`timeline-${duration}`} />
+  );
+  TimelineMock.displayName = 'TimelineMock';
+  return TimelineMock;
 });
 
 jest.mock('react-native-safe-area-context', () => ({
@@ -39,7 +43,7 @@ describe('PlaybackControls', () => {
   it('calls onPlayPause when play button is pressed', () => {
     const onPlayPause = jest.fn();
     const { getByLabelText } = render(
-      <PlaybackControls {...baseProps} onPlayPause={onPlayPause} />
+      <PlaybackControls {...baseProps} onPlayPause={onPlayPause} />,
     );
 
     fireEvent.press(getByLabelText('Play video'));
@@ -53,7 +57,7 @@ describe('PlaybackControls', () => {
         {...baseProps}
         isFullscreen={false}
         onFullscreenChange={onFullscreenChange}
-      />
+      />,
     );
 
     fireEvent.press(getByLabelText('Enter fullscreen'));
@@ -64,7 +68,7 @@ describe('PlaybackControls', () => {
         {...baseProps}
         isFullscreen={true}
         onFullscreenChange={onFullscreenChange}
-      />
+      />,
     );
 
     fireEvent.press(getByLabelText('Exit fullscreen'));
@@ -80,7 +84,7 @@ describe('PlaybackControls', () => {
           { start: '00:00:00', end: '00:00:05', text: 'Hello subtitle' },
           { start: '00:00:06', end: '00:00:08', text: 'Other subtitle' },
         ]}
-      />
+      />,
     );
 
     act(() => {
@@ -94,12 +98,7 @@ describe('PlaybackControls', () => {
   it('auto-hides controls and shows again when tapping overlay', () => {
     jest.useFakeTimers();
     const { queryByLabelText, getByLabelText } = render(
-      <PlaybackControls
-        {...baseProps}
-        isPlaying={true}
-        autoHideControls
-        autoHideDelayMs={100}
-      />
+      <PlaybackControls {...baseProps} isPlaying={true} autoHideControls autoHideDelayMs={100} />,
     );
 
     act(() => {

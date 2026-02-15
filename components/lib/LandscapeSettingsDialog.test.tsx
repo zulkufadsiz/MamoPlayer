@@ -24,7 +24,7 @@ describe('LandscapeSettingsDialog', () => {
         onAutoPlayChange={jest.fn()}
         showSubtitles
         onShowSubtitlesChange={jest.fn()}
-      />
+      />,
     );
 
     expect(queryByText('Settings')).toBeNull();
@@ -47,7 +47,7 @@ describe('LandscapeSettingsDialog', () => {
         onAutoPlayChange={onAutoPlayChange}
         showSubtitles
         onShowSubtitlesChange={jest.fn()}
-      />
+      />,
     );
 
     fireEvent.press(getByLabelText('Video quality section'));

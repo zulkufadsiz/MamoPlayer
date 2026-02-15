@@ -70,6 +70,7 @@ interface PlaybackControlsProps {
   subtitleFontStyle?: 'normal' | 'bold' | 'thin' | 'italic';
   onSubtitlesToggle?: () => void;
   onSettingsPress?: () => void;
+  settingsOpen?: boolean;
   allowsPictureInPicture?: boolean;
   isPictureInPictureActive?: boolean;
   onPictureInPictureToggle?: () => void;
@@ -95,6 +96,7 @@ export default function PlaybackControls({
   subtitleFontStyle = 'normal',
   onSubtitlesToggle,
   onSettingsPress,
+  settingsOpen = false,
   allowsPictureInPicture = false,
   isPictureInPictureActive = false,
   onPictureInPictureToggle,
@@ -113,13 +115,11 @@ export default function PlaybackControls({
 
     const interval = setInterval(() => {
       const currentTime = player.currentTime || 0;
-      const subtitle = subtitles.find(
-        (sub) => {
-          const start = parseTimeToSeconds(sub.start);
-          const end = parseTimeToSeconds(sub.end);
-          return currentTime >= start && currentTime <= end;
-        }
-      );
+      const subtitle = subtitles.find((sub) => {
+        const start = parseTimeToSeconds(sub.start);
+        const end = parseTimeToSeconds(sub.end);
+        return currentTime >= start && currentTime <= end;
+      });
       setCurrentSubtitle(subtitle ? subtitle.text : '');
     }, 100);
 
@@ -128,6 +128,11 @@ export default function PlaybackControls({
 
   const handlePlayPause = () => {
     onPlayPause();
+  };
+
+  const handleSettingsPress = () => {
+    setControlsVisible(true);
+    onSettingsPress?.();
   };
 
   const currentDuration = player?.duration ?? 0;
@@ -145,6 +150,11 @@ export default function PlaybackControls({
   };
 
   useEffect(() => {
+    if (settingsOpen) {
+      setControlsVisible(true);
+      return;
+    }
+
     if (!autoHideControls) {
       setControlsVisible(true);
       return;
@@ -160,7 +170,7 @@ export default function PlaybackControls({
     }, autoHideDelayMs);
 
     return () => clearTimeout(timer);
-  }, [autoHideControls, autoHideDelayMs, isPlaying, controlsVisible]);
+  }, [autoHideControls, autoHideDelayMs, controlsVisible, isPlaying, settingsOpen]);
 
   return (
     <View style={styles.container}>
@@ -180,145 +190,138 @@ export default function PlaybackControls({
           style={styles.controlsOverlay}
           importantForAccessibility={controlsVisible ? 'yes' : 'no-hide-descendants'}
         >
-        {/* Center Play/Pause Button */}
-        <View style={styles.centerControls}>
-          {onSkipBackward && (
+          {/* Center Play/Pause Button */}
+          <View style={styles.centerControls}>
+            {onSkipBackward && (
+              <TouchableOpacity
+                style={styles.skipButton}
+                onPress={onSkipBackward}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel={`Skip backward ${skipSeconds} seconds`}
+                accessibilityHint="Moves playback position backward"
+                hitSlop={10}
+              >
+                <Ionicons name="play-back" size={28} color="#FFFFFF" />
+                <Text style={styles.skipText}>{skipSeconds}</Text>
+              </TouchableOpacity>
+            )}
             <TouchableOpacity
-              style={styles.skipButton}
-              onPress={onSkipBackward}
+              style={styles.playButton}
+              onPress={handlePlayPause}
               activeOpacity={0.7}
               accessibilityRole="button"
-              accessibilityLabel={`Skip backward ${skipSeconds} seconds`}
-              accessibilityHint="Moves playback position backward"
+              accessibilityLabel={isPlaying ? 'Pause video' : 'Play video'}
+              accessibilityHint={isPlaying ? 'Pauses playback' : 'Starts playback'}
               hitSlop={10}
             >
-              <Ionicons name="play-back" size={28} color="#FFFFFF" />
-              <Text style={styles.skipText}>{skipSeconds}</Text>
+              <Ionicons name={isPlaying ? 'pause' : 'play'} size={48} color="#FFFFFF" />
             </TouchableOpacity>
-          )}
-          <TouchableOpacity
-            style={styles.playButton}
-            onPress={handlePlayPause}
-            activeOpacity={0.7}
-            accessibilityRole="button"
-            accessibilityLabel={isPlaying ? 'Pause video' : 'Play video'}
-            accessibilityHint={isPlaying ? 'Pauses playback' : 'Starts playback'}
-            hitSlop={10}
-          >
-            <Ionicons
-              name={isPlaying ? 'pause' : 'play'}
-              size={48}
-              color="#FFFFFF"
-            />
-          </TouchableOpacity>
-          {onSkipForward && (
-            <TouchableOpacity
-              style={styles.skipButton}
-              onPress={onSkipForward}
-              activeOpacity={0.7}
-              accessibilityRole="button"
-              accessibilityLabel={`Skip forward ${skipSeconds} seconds`}
-              accessibilityHint="Moves playback position forward"
-              hitSlop={10}
-            >
-              <Ionicons name="play-forward" size={28} color="#FFFFFF" />
-              <Text style={styles.skipText}>{skipSeconds}</Text>
-            </TouchableOpacity>
-          )}
-        </View>
+            {onSkipForward && (
+              <TouchableOpacity
+                style={styles.skipButton}
+                onPress={onSkipForward}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel={`Skip forward ${skipSeconds} seconds`}
+                accessibilityHint="Moves playback position forward"
+                hitSlop={10}
+              >
+                <Ionicons name="play-forward" size={28} color="#FFFFFF" />
+                <Text style={styles.skipText}>{skipSeconds}</Text>
+              </TouchableOpacity>
+            )}
+          </View>
 
-        {/* Bottom Controls */}
-        <View style={[
-          styles.bottomControls,
-          isFullscreen && {
-            top: 8,
-            right: Math.max(12, insets.right + 8),
-          }
-        ]}>
-          {onSettingsPress && (
-            <TouchableOpacity
-              style={styles.fullscreenButton}
-              onPress={onSettingsPress}
-              activeOpacity={0.7}
-              accessibilityRole="button"
-              accessibilityLabel="Open settings"
-              accessibilityHint="Opens playback and subtitle settings"
-              hitSlop={10}
-            >
-              <Ionicons
-                name="settings-outline"
-                size={24}
-                color="#FFFFFF"
-              />
-            </TouchableOpacity>
-          )}
-          {onSubtitlesToggle && (hasSubtitles ?? subtitles.length > 0) && (
-            <TouchableOpacity
-              style={styles.fullscreenButton}
-              onPress={onSubtitlesToggle}
-              activeOpacity={0.7}
-              accessibilityRole="button"
-              accessibilityLabel={showSubtitles ? 'Hide subtitles' : 'Show subtitles'}
-              accessibilityHint="Toggles subtitle visibility"
-              hitSlop={10}
-            >
-              <Ionicons
-                name={showSubtitles ? 'chatbox' : 'chatbox-outline'}
-                size={24}
-                color="#FFFFFF"
-              />
-            </TouchableOpacity>
-          )}
-          {allowsPictureInPicture && onPictureInPictureToggle && (
-            <TouchableOpacity
-              style={styles.fullscreenButton}
-              onPress={onPictureInPictureToggle}
-              activeOpacity={0.7}
-              accessibilityRole="button"
-              accessibilityLabel={
-                isPictureInPictureActive
-                  ? 'Exit picture in picture'
-                  : 'Enter picture in picture'
-              }
-              accessibilityHint="Toggles picture in picture mode"
-              hitSlop={10}
-            >
-              <MaterialIcons
-                name={isPictureInPictureActive ? 'picture-in-picture' : 'picture-in-picture-alt'}
-                size={24}
-                color="#FFFFFF"
-              />
-            </TouchableOpacity>
-          )}
-          <TouchableOpacity
-            style={styles.fullscreenButton}
-            onPress={handleFullscreen}
-            activeOpacity={0.7}
-            accessibilityRole="button"
-            accessibilityLabel={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
-            accessibilityHint={isFullscreen ? 'Returns to inline player' : 'Expands video to fullscreen'}
-            hitSlop={10}
+          {/* Bottom Controls */}
+          <View
+            style={[
+              styles.bottomControls,
+              isFullscreen && {
+                top: 8,
+                right: Math.max(12, insets.right + 8),
+              },
+            ]}
           >
-            <Ionicons
-              name={isFullscreen ? 'contract' : 'expand'}
-              size={24}
-              color="#FFFFFF"
-            />
-          </TouchableOpacity>
+            {onSettingsPress && (
+              <TouchableOpacity
+                style={styles.fullscreenButton}
+                onPress={handleSettingsPress}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel="Open settings"
+                accessibilityHint="Opens playback and subtitle settings"
+                hitSlop={10}
+              >
+                <Ionicons name="settings-outline" size={24} color="#FFFFFF" />
+              </TouchableOpacity>
+            )}
+            {onSubtitlesToggle && (hasSubtitles ?? subtitles.length > 0) && (
+              <TouchableOpacity
+                style={styles.fullscreenButton}
+                onPress={onSubtitlesToggle}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel={showSubtitles ? 'Hide subtitles' : 'Show subtitles'}
+                accessibilityHint="Toggles subtitle visibility"
+                hitSlop={10}
+              >
+                <Ionicons
+                  name={showSubtitles ? 'chatbox' : 'chatbox-outline'}
+                  size={24}
+                  color="#FFFFFF"
+                />
+              </TouchableOpacity>
+            )}
+            {allowsPictureInPicture && onPictureInPictureToggle && (
+              <TouchableOpacity
+                style={styles.fullscreenButton}
+                onPress={onPictureInPictureToggle}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel={
+                  isPictureInPictureActive ? 'Exit picture in picture' : 'Enter picture in picture'
+                }
+                accessibilityHint="Toggles picture in picture mode"
+                hitSlop={10}
+              >
+                <MaterialIcons
+                  name={isPictureInPictureActive ? 'picture-in-picture' : 'picture-in-picture-alt'}
+                  size={24}
+                  color="#FFFFFF"
+                />
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity
+              style={styles.fullscreenButton}
+              onPress={handleFullscreen}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
+              accessibilityHint={
+                isFullscreen ? 'Returns to inline player' : 'Expands video to fullscreen'
+              }
+              hitSlop={10}
+            >
+              <Ionicons name={isFullscreen ? 'contract' : 'expand'} size={24} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
       )}
 
       {/* Subtitle Display */}
       {showSubtitles && currentSubtitle && (
-        <View style={[
-          styles.subtitleContainer,
-          isFullscreen && {
-            bottom: Math.max(100, insets.bottom + 80),
-            paddingLeft: Math.max(20, insets.left + 16),
-            paddingRight: Math.max(20, insets.right + 16),
-          }
-        ]} pointerEvents="none">
+        <View
+          style={[
+            styles.subtitleContainer,
+            isFullscreen && {
+              bottom: Math.max(100, insets.bottom + 80),
+              paddingLeft: Math.max(20, insets.left + 16),
+              paddingRight: Math.max(20, insets.right + 16),
+            },
+          ]}
+          pointerEvents="none"
+        >
           <Text
             style={[
               styles.subtitleText,
@@ -340,16 +343,16 @@ export default function PlaybackControls({
         </View>
       )}
 
-       {controlsVisible && (
-         <Timeline
-              isPlaying={isPlaying}
-              player={player}
-              duration={currentDuration}
-              onSeek={onSeek}
-              isFullscreen={isFullscreen}
-              mediaUrl={mediaUrl}
-            />
-       )}
+      {controlsVisible && (
+        <Timeline
+          isPlaying={isPlaying}
+          player={player}
+          duration={currentDuration}
+          onSeek={onSeek}
+          isFullscreen={isFullscreen}
+          mediaUrl={mediaUrl}
+        />
+      )}
     </View>
   );
 }
