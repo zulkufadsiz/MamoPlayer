@@ -129,7 +129,6 @@ The core player includes premium feature code paths that are gated by `isPremium
 Default behavior (`isPremiumUser` omitted or `false`):
 
 - Playback analytics disabled
-- Picture in picture disabled
 - Subtitle size/style customization hidden
 - Resume position persistence disabled
 - Media transport integration disabled
@@ -149,7 +148,6 @@ Most-used props:
 - `startAt`: start time in seconds
 - `contentFit`: `'contain' | 'cover' | 'fill'`
 - `allowsFullscreen`: enable fullscreen button/flow
-- `allowsPictureInPicture`: allows PiP only when `isPremiumUser` is `true`
 - `skipSeconds`: skip interval for forward/back controls
 - `showSkipButtons`: show/hide skip controls
 - `subtitles` / `subtitleTracks`: subtitle data
