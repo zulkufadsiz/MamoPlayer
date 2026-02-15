@@ -1,0 +1,47 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "quality: lint",
+      "type": "shell",
+      "command": "npm run lint",
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "quality: format check",
+      "type": "shell",
+      "command": "npm run format:check",
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "quality: commitlint (last commit)",
+      "type": "shell",
+      "command": "npm run commitlint",
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "release: lerna version",
+      "type": "shell",
+      "command": "npm run lerna:version",
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "release: lerna publish",
+      "type": "shell",
+      "command": "npm run lerna:publish",
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "release: semantic-release dry run",
+      "type": "shell",
+      "command": "npm run release:dry",
+      "group": "build",
+      "problemMatcher": []
+    }
+  ]
+}

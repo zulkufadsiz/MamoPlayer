@@ -30,6 +30,39 @@ nvm use
    yarn test
    ```
 
+## Code quality and release workflow
+
+This repository now includes:
+
+- Commitlint (Conventional Commits)
+- Prettier
+- ESLint (Expo)
+- Lerna
+- Semantic Release
+
+Useful commands:
+
+```bash
+npm run lint
+npm run lint:fix
+npm run format
+npm run format:check
+npm run commitlint
+npm run release:dry
+npm run release
+npm run lerna:version
+npm run lerna:publish
+```
+
+Release environment variables (CI):
+
+```bash
+GITHUB_TOKEN=<github-token>
+NPM_TOKEN=<npm-token>
+```
+
+`NPM_TOKEN` is optional here because semantic-release is configured with `npmPublish: false`.
+
 ### iOS device run (recommended)
 
 For physical iPhone runs, prefer passing the exact UDID:
