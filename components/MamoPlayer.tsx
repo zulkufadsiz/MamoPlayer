@@ -4,29 +4,29 @@ import LandscapePlayer from './LandscapePlayer';
 import SimplePlayer from './SimplePlayer';
 import VerticalPlayer from './VerticalPlayer';
 
-interface Subtitle {
+export interface Subtitle {
   start: number | string;
   end: number | string;
   text: string;
 }
 
-interface SubtitleTrack {
+export interface SubtitleTrack {
   id: string;
   label: string;
   language?: string;
   subtitles: Subtitle[];
 }
 
-interface MamoPlayerProps {
+export interface MamoPlayerProps {
   source: VideoSource;
   videoSourcesByLanguage?: Record<string, VideoSource>;
   qualitySources?: Record<string, VideoSource>;
   qualitySourcesByLanguage?: Record<string, Record<string, VideoSource>>;
-  audioTracks?: Array<{
+  audioTracks?: {
     id: string;
     label: string;
     language?: string;
-  }>;
+  }[];
   defaultAudioTrackId?: string | null;
   style?: any;
   autoPlay?: boolean;
@@ -42,6 +42,7 @@ interface MamoPlayerProps {
   onSettingsPress?: () => void;
   skipSeconds?: number;
   showSkipButtons?: boolean;
+  isPremiumUser?: boolean;
   playerType?: 'simple' | 'vertical' | 'landscape';
   // VerticalPlayer specific props
   title?: string;
@@ -62,10 +63,7 @@ interface MamoPlayerProps {
   onBack?: () => void;
 }
 
-export const MamoPlayer: React.FC<MamoPlayerProps> = ({ 
-  playerType = 'simple',
-  ...props 
-}) => {
+export const MamoPlayer: React.FC<MamoPlayerProps> = ({ playerType = 'simple', ...props }) => {
   switch (playerType) {
     case 'vertical':
       return <VerticalPlayer {...props} />;

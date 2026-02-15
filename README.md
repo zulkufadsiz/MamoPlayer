@@ -61,7 +61,7 @@ GITHUB_TOKEN=<github-token>
 NPM_TOKEN=<npm-token>
 ```
 
-`NPM_TOKEN` is optional here because semantic-release is configured with `npmPublish: false`.
+`NPM_TOKEN` is required for `semantic-release` npm publishing.
 
 ### iOS device run (recommended)
 
@@ -157,3 +157,57 @@ Join our community of developers creating universal apps.
 
 - [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
 - [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+
+## Publishing as npm package
+
+This repository now exposes a package entry point:
+
+- `mamoplayer/core` → core player surface
+
+Developer integration guide: [Core package usage](docs/core-package.md)
+
+Internal premium/licensing source files may remain in this repository for future use,
+but they are not published to npm in the current package build.
+
+Core package hides premium capabilities by default for non-premium users:
+
+- Playback analytics
+- Picture in picture support
+- Subtitle size/style customization
+- Resume position persistence
+- Media transport integration
+
+Build outputs are generated into `dist/` with declaration files:
+
+```bash
+npm run build
+```
+
+Before publishing:
+
+```bash
+npm run build
+npm pack
+npm publish
+```
+
+Automated release is configured in GitHub Actions via [release workflow](.github/workflows/release.yml):
+
+- Pull requests run `build` + `npm pack --dry-run`
+- Pushes to `main` run `semantic-release` (GitHub release + npm publish)
+
+Consumer install and imports:
+
+```bash
+npm install mamoplayer
+```
+
+```ts
+import { MamoPlayerCore } from 'mamoplayer/core';
+```
+
+Example usage in a client app:
+
+```ts
+import { MamoPlayerCore } from 'mamoplayer/core';
+```

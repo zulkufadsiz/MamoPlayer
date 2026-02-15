@@ -1,14 +1,14 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import {
-    Modal,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Switch,
-    Text,
-    TouchableOpacity,
-    View,
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 interface SettingsDialogProps {
@@ -27,18 +27,18 @@ interface SettingsDialogProps {
   onSubtitleFontSizeChange?: (size: number) => void;
   subtitleFontStyle?: 'normal' | 'bold' | 'thin' | 'italic';
   onSubtitleFontStyleChange?: (style: 'normal' | 'bold' | 'thin' | 'italic') => void;
-  audioTracks?: Array<{
+  audioTracks?: {
     id: string;
     label: string;
     language?: string;
-  }>;
+  }[];
   selectedAudioTrackId?: string | null;
   onAudioTrackChange?: (trackId: string | null) => void;
-  subtitleTracks?: Array<{
+  subtitleTracks?: {
     id: string;
     label: string;
     language?: string;
-  }>;
+  }[];
   selectedSubtitleTrackId?: string | null;
   onSubtitleTrackChange?: (trackId: string | null) => void;
 }
@@ -50,7 +50,12 @@ const subtitleFontSizes = [
   { label: 'Medium', value: 18 },
   { label: 'Large', value: 24 },
 ];
-const subtitleFontStyles: Array<'normal' | 'bold' | 'thin' | 'italic'> = ['normal', 'bold', 'thin', 'italic'];
+const subtitleFontStyles: ('normal' | 'bold' | 'thin' | 'italic')[] = [
+  'normal',
+  'bold',
+  'thin',
+  'italic',
+];
 
 type SettingsMenuItem =
   | 'playbackSpeed'
@@ -87,20 +92,17 @@ export default function SettingsDialog({
   const [activeMenu, setActiveMenu] = useState<SettingsMenuItem>(null);
   const hasAudioTracks = audioTracks.length > 0;
   const hasSubtitleTracks = subtitleTracks.length > 0;
-  const selectedAudioLabel = audioTracks.find(
-    (track) => track.id === selectedAudioTrackId
-  )?.label;
+  const selectedAudioLabel = audioTracks.find((track) => track.id === selectedAudioTrackId)?.label;
   const selectedSubtitleLabel = subtitleTracks.find(
-    (track) => track.id === selectedSubtitleTrackId
+    (track) => track.id === selectedSubtitleTrackId,
   )?.label;
   const audioValue = selectedAudioLabel || 'Auto';
-  const subtitlesValue = showSubtitles
-    ? selectedSubtitleLabel || 'On'
-    : 'Off';
+  const subtitlesValue = showSubtitles ? selectedSubtitleLabel || 'On' : 'Off';
+  const subtitleStyleCustomizationEnabled = Boolean(
+    onSubtitleFontSizeChange || onSubtitleFontStyleChange,
+  );
   const videoQualities =
-    qualityOptions && qualityOptions.length > 0
-      ? qualityOptions
-      : defaultVideoQualities;
+    qualityOptions && qualityOptions.length > 0 ? qualityOptions : defaultVideoQualities;
 
   const handleClose = () => {
     setActiveMenu(null);
@@ -203,22 +205,24 @@ export default function SettingsDialog({
           </TouchableOpacity>
         )}
 
-        <TouchableOpacity
-          style={styles.menuItem}
-          onPress={() => handleMenuItemPress('subtitleStyle')}
-          accessibilityRole="button"
-          accessibilityLabel="Subtitle style"
-          accessibilityHint="Opens subtitle style options"
-        >
-          <View style={styles.menuItemLeft}>
-            <Ionicons name="color-palette-outline" size={24} color="#007AFF" />
-            <Text style={styles.menuItemTitle}>Subtitle Style</Text>
-          </View>
-          <View style={styles.menuItemRight}>
-            <Text style={styles.menuItemValue}>{subtitleFontStyle}</Text>
-            <Ionicons name="chevron-forward" size={20} color="#999" />
-          </View>
-        </TouchableOpacity>
+        {subtitleStyleCustomizationEnabled && (
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => handleMenuItemPress('subtitleStyle')}
+            accessibilityRole="button"
+            accessibilityLabel="Subtitle style"
+            accessibilityHint="Opens subtitle style options"
+          >
+            <View style={styles.menuItemLeft}>
+              <Ionicons name="color-palette-outline" size={24} color="#007AFF" />
+              <Text style={styles.menuItemTitle}>Subtitle Style</Text>
+            </View>
+            <View style={styles.menuItemRight}>
+              <Text style={styles.menuItemValue}>{subtitleFontStyle}</Text>
+              <Ionicons name="chevron-forward" size={20} color="#999" />
+            </View>
+          </TouchableOpacity>
+        )}
 
         <TouchableOpacity
           style={styles.menuItem}
@@ -260,10 +264,7 @@ export default function SettingsDialog({
           {playbackSpeeds.map((speed) => (
             <TouchableOpacity
               key={speed}
-              style={[
-                styles.speedButton,
-                playbackSpeed === speed && styles.speedButtonActive,
-              ]}
+              style={[styles.speedButton, playbackSpeed === speed && styles.speedButtonActive]}
               onPress={() => {
                 onPlaybackSpeedChange(speed);
                 setTimeout(handleBackToMenu, 300);
@@ -272,12 +273,7 @@ export default function SettingsDialog({
               accessibilityLabel={`Playback speed ${speed}x`}
               accessibilityState={{ selected: playbackSpeed === speed }}
             >
-              <Text
-                style={[
-                  styles.speedText,
-                  playbackSpeed === speed && styles.speedTextActive,
-                ]}
-              >
+              <Text style={[styles.speedText, playbackSpeed === speed && styles.speedTextActive]}>
                 {speed}x
               </Text>
               {playbackSpeed === speed && (
@@ -311,10 +307,7 @@ export default function SettingsDialog({
           {videoQualities.map((q) => (
             <TouchableOpacity
               key={q}
-              style={[
-                styles.qualityItem,
-                quality === q && styles.qualityItemActive,
-              ]}
+              style={[styles.qualityItem, quality === q && styles.qualityItemActive]}
               onPress={() => {
                 onQualityChange(q);
                 setTimeout(handleBackToMenu, 300);
@@ -323,17 +316,10 @@ export default function SettingsDialog({
               accessibilityLabel={`Video quality ${q}`}
               accessibilityState={{ selected: quality === q }}
             >
-              <Text
-                style={[
-                  styles.qualityText,
-                  quality === q && styles.qualityTextActive,
-                ]}
-              >
+              <Text style={[styles.qualityText, quality === q && styles.qualityTextActive]}>
                 {q}
               </Text>
-              {quality === q && (
-                <Ionicons name="checkmark-circle" size={24} color="#007AFF" />
-              )}
+              {quality === q && <Ionicons name="checkmark-circle" size={24} color="#007AFF" />}
             </TouchableOpacity>
           ))}
         </View>
@@ -380,9 +366,7 @@ export default function SettingsDialog({
           <View style={styles.preferenceItem}>
             <View style={styles.preferenceInfo}>
               <Text style={styles.preferenceTitle}>Show Subtitles</Text>
-              <Text style={styles.preferenceDescription}>
-                Display subtitles when available
-              </Text>
+              <Text style={styles.preferenceDescription}>Display subtitles when available</Text>
             </View>
             <Switch
               value={showSubtitles}
@@ -418,10 +402,7 @@ export default function SettingsDialog({
       <ScrollView style={styles.sheetContent}>
         <View style={styles.qualityList}>
           <TouchableOpacity
-            style={[
-              styles.qualityItem,
-              !showSubtitles && styles.qualityItemActive,
-            ]}
+            style={[styles.qualityItem, !showSubtitles && styles.qualityItemActive]}
             onPress={() => {
               onShowSubtitlesChange(false);
               onSubtitleTrackChange?.(null);
@@ -431,17 +412,10 @@ export default function SettingsDialog({
             accessibilityLabel="Subtitles off"
             accessibilityState={{ selected: !showSubtitles }}
           >
-            <Text
-              style={[
-                styles.qualityText,
-                !showSubtitles && styles.qualityTextActive,
-              ]}
-            >
+            <Text style={[styles.qualityText, !showSubtitles && styles.qualityTextActive]}>
               Off
             </Text>
-            {!showSubtitles && (
-              <Ionicons name="checkmark-circle" size={24} color="#007AFF" />
-            )}
+            {!showSubtitles && <Ionicons name="checkmark-circle" size={24} color="#007AFF" />}
           </TouchableOpacity>
 
           {subtitleTracks.map((track) => {
@@ -459,14 +433,10 @@ export default function SettingsDialog({
                 accessibilityLabel={`Subtitle track ${track.label}`}
                 accessibilityState={{ selected: isActive }}
               >
-                <Text
-                  style={[styles.qualityText, isActive && styles.qualityTextActive]}
-                >
+                <Text style={[styles.qualityText, isActive && styles.qualityTextActive]}>
                   {track.label}
                 </Text>
-                {isActive && (
-                  <Ionicons name="checkmark-circle" size={24} color="#007AFF" />
-                )}
+                {isActive && <Ionicons name="checkmark-circle" size={24} color="#007AFF" />}
               </TouchableOpacity>
             );
           })}
@@ -507,14 +477,10 @@ export default function SettingsDialog({
                 accessibilityLabel={`Audio track ${track.label}`}
                 accessibilityState={{ selected: isActive }}
               >
-                <Text
-                  style={[styles.qualityText, isActive && styles.qualityTextActive]}
-                >
+                <Text style={[styles.qualityText, isActive && styles.qualityTextActive]}>
                   {track.label}
                 </Text>
-                {isActive && (
-                  <Ionicons name="checkmark-circle" size={24} color="#007AFF" />
-                )}
+                {isActive && <Ionicons name="checkmark-circle" size={24} color="#007AFF" />}
               </TouchableOpacity>
             );
           })}
@@ -553,7 +519,9 @@ export default function SettingsDialog({
                 accessibilityLabel={`Subtitle size ${sizeOption.label}`}
                 accessibilityState={{ selected: isActive }}
               >
-                <Text style={[styles.speedText, isActive && styles.speedTextActive]}>{sizeOption.label}</Text>
+                <Text style={[styles.speedText, isActive && styles.speedTextActive]}>
+                  {sizeOption.label}
+                </Text>
               </TouchableOpacity>
             );
           })}
@@ -608,19 +576,17 @@ export default function SettingsDialog({
         accessibilityLabel="Close settings"
         accessibilityHint="Closes the settings dialog"
       >
-        <Pressable
-          style={styles.container}
-          onPress={(e) => e.stopPropagation()}
-          accessible={false}
-        >
+        <Pressable style={styles.container} onPress={(e) => e.stopPropagation()} accessible={false}>
           <View style={styles.dragHandle} />
-          
+
           {!activeMenu && renderMainMenu()}
           {activeMenu === 'playbackSpeed' && renderPlaybackSpeedSheet()}
           {activeMenu === 'quality' && renderQualitySheet()}
           {activeMenu === 'audio' && renderAudioSheet()}
           {activeMenu === 'subtitles' && renderSubtitlesSheet()}
-          {activeMenu === 'subtitleStyle' && renderSubtitleStyleSheet()}
+          {subtitleStyleCustomizationEnabled &&
+            activeMenu === 'subtitleStyle' &&
+            renderSubtitleStyleSheet()}
           {activeMenu === 'preferences' && renderPreferencesSheet()}
         </Pressable>
       </Pressable>

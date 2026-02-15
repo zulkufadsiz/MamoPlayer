@@ -1,6 +1,28 @@
 {
   "name": "mamoplayer",
   "main": "expo-router/entry",
+  "types": "./dist/core.d.mts",
+  "react-native": "./dist/core.js",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/core.d.mts",
+      "react-native": "./dist/core.js",
+      "import": "./dist/core.js",
+      "default": "./dist/core.js"
+    },
+    "./core": {
+      "types": "./dist/core.d.mts",
+      "react-native": "./dist/core.js",
+      "import": "./dist/core.js",
+      "default": "./dist/core.js"
+    },
+    "./package.json": "./package.json"
+  },
   "version": "1.0.0",
   "scripts": {
     "prepare": "husky",
@@ -14,6 +36,9 @@
     "lint:fix": "expo lint --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "build": "tsup",
+    "build:watch": "tsup --watch",
+    "prepack": "npm run build",
     "commitlint": "commitlint --from=HEAD~1 --to=HEAD",
     "release": "semantic-release",
     "release:dry": "semantic-release --dry-run",
@@ -83,9 +108,15 @@
     "prettier": "^3.8.1",
     "react-test-renderer": "19.1.0",
     "semantic-release": "^25.0.3",
+    "tsup": "^8.5.0",
     "typescript": "~5.9.2"
   },
-  "private": true,
+  "peerDependencies": {
+    "expo": "^54.0.0",
+    "react": "^19.0.0",
+    "react-native": ">=0.81.0"
+  },
+  "private": false,
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [
       "eslint --fix",
