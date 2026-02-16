@@ -101,6 +101,14 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Create Pull Request for Release
+        uses: peter-evans/create-pull-request@v6
+        with:
+          branch: release/auto
+          title: 'chore(release): automated release'
+          commit-message: 'chore(release): automated release'
+          base: main
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
   release-dry-run:
