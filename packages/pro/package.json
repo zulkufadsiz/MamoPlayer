@@ -17,6 +17,7 @@
     "typescript": "^5"
   },
   "scripts": {
-    "build": "tsup src/index.tsx --format esm,cjs --dts"
+    "build": "tsup src/index.tsx --format esm,cjs --dts",
+    "test": "echo \"No tests for @mamoplayer/pro\""
   }
 }
