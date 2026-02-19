@@ -5,7 +5,8 @@
     "apps/*"
   ],
   "scripts": {
-    "commitlint": "commitlint --edit"
+    "commitlint": "commitlint --edit",
+    "test:packages": "yarn workspace @mamoplayer/core test && yarn workspace @mamoplayer/pro test"
   },
   "devDependencies": {
     "@commitlint/cli": "^20.1.0",
