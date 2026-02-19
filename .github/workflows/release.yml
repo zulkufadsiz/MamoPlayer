@@ -49,8 +49,8 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - name: Validate pack contents
-        run: yarn pack --dry-run
+      - name: Validate package pack contents
+        run: yarn pack:all:dry
 
   release:
     name: Release
@@ -96,8 +96,8 @@ jobs:
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - name: Release
-        run: yarn release
+      - name: Release packages
+        run: yarn release:packages
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
@@ -138,8 +138,8 @@ jobs:
       - name: Build package
         run: yarn build
 
-      - name: Release Dry Run
-        run: yarn release --dry-run
+      - name: Semantic release dry run
+        run: yarn release:dry
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
