@@ -1,5 +1,4 @@
 import { act, render } from '@testing-library/react-native';
-import React from 'react';
 import type { ReactVideoProps } from 'react-native-video';
 import { MamoPlayerCore } from './MamoPlayer';
 

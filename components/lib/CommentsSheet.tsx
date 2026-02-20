@@ -1,16 +1,16 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
-  FlatList,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    FlatList,
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
+    Pressable,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 
 export interface Comment {
@@ -40,7 +40,7 @@ export default function CommentsSheet({
   comments,
   onAddComment,
   onLikeComment,
-  onDeleteComment,
+  onDeleteComment: _onDeleteComment,
   totalComments,
 }: CommentsSheetProps) {
   const [commentText, setCommentText] = useState('');

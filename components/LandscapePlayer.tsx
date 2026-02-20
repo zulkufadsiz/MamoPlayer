@@ -3,22 +3,22 @@ import Slider from '@react-native-community/slider';
 import { useEventListener } from 'expo';
 import * as ScreenOrientation from 'expo-screen-orientation';
 import {
-  VideoView,
-  isPictureInPictureSupported,
-  useVideoPlayer,
-  type VideoSource,
+    VideoView,
+    isPictureInPictureSupported,
+    useVideoPlayer,
+    type VideoSource,
 } from 'expo-video';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Animated,
-  GestureResponderEvent,
-  Pressable,
-  StatusBar,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-  useWindowDimensions,
+    Animated,
+    GestureResponderEvent,
+    Pressable,
+    StatusBar,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+    useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import LandscapeSettingsDialog from './lib/LandscapeSettingsDialog';
@@ -179,7 +179,7 @@ export const LandscapePlayer: React.FC<LandscapePlayerProps> = ({
   season,
   author,
   artwork,
-  onBack,
+  onBack: _onBack,
 }) => {
   const insets = useSafeAreaInsets();
   const [selectedSubtitleTrackId, setSelectedSubtitleTrackId] = useState<string | null>(

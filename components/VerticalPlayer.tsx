@@ -4,14 +4,14 @@ import * as ScreenOrientation from 'expo-screen-orientation';
 import { VideoView, useVideoPlayer, type VideoSource } from 'expo-video';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Animated,
-  Pressable,
-  StatusBar,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-  useWindowDimensions,
+    Animated,
+    Pressable,
+    StatusBar,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+    useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import CommentsSheet, { type Comment } from './lib/CommentsSheet';
@@ -142,8 +142,8 @@ export const VerticalPlayer: React.FC<VerticalPlayerProps> = ({
   onLike,
   onComment,
   onShare,
-  onSwipeUp,
-  onSwipeDown,
+  onSwipeUp: _onSwipeUp,
+  onSwipeDown: _onSwipeDown,
 }) => {
   const insets = useSafeAreaInsets();
   const [selectedSubtitleTrackId, setSelectedSubtitleTrackId] = useState<string | null>(
@@ -267,7 +267,7 @@ export const VerticalPlayer: React.FC<VerticalPlayerProps> = ({
     player.loop = true;
     player.volume = 1;
   });
-  const { width, height } = useWindowDimensions();
+  const { width: _width, height: _height } = useWindowDimensions();
   const hasAppliedStartAt = useRef(false);
   const hasStartedOnReadyRef = useRef(false);
   const completionTrackedRef = useRef(false);

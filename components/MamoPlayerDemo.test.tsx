@@ -1,6 +1,5 @@
 import MamoPlayerDemo from '@/components/MamoPlayerDemo';
 import { act, fireEvent, render } from '@testing-library/react-native';
-import React from 'react';
 
 const mockGetOfflineLibraryItems = jest.fn(() => Promise.resolve([]));
 

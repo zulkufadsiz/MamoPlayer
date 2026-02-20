@@ -10,7 +10,7 @@ try {
   if (!isExpoGo) {
     TrackPlayerModule = require('react-native-track-player');
   }
-} catch (error) {
+} catch {
   TrackPlayerModule = null;
 }
 
@@ -83,7 +83,7 @@ export const useTransportControls = ({
       }
       return;
     }
-    let cancelled = false;
+    let _cancelled = false;
 
     const setup = async () => {
       try {
@@ -96,7 +96,7 @@ export const useTransportControls = ({
     void setup();
 
     return () => {
-      cancelled = true;
+      _cancelled = true;
     };
   }, [enabled]);
 

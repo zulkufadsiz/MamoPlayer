@@ -1,6 +1,5 @@
 import MamoPlayer from '@/components/MamoPlayer';
 import { render } from '@testing-library/react-native';
-import React from 'react';
 
 jest.mock('@/components/SimplePlayer', () => {
   const React = require('react');
