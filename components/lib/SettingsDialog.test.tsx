@@ -1,6 +1,5 @@
 import SettingsDialog from '@/components/lib/SettingsDialog';
 import { act, fireEvent, render } from '@testing-library/react-native';
-import React from 'react';
 
 jest.mock('@expo/vector-icons', () => {
   const React = require('react');

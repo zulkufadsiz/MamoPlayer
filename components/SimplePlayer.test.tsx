@@ -1,6 +1,5 @@
 import SimplePlayer from '@/components/SimplePlayer';
 import { act, fireEvent, render } from '@testing-library/react-native';
-import React from 'react';
 import { Modal } from 'react-native';
 
 const mockLockAsync = jest.fn(() => Promise.resolve());

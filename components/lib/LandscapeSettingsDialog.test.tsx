@@ -1,6 +1,5 @@
 import LandscapeSettingsDialog from '@/components/lib/LandscapeSettingsDialog';
 import { fireEvent, render } from '@testing-library/react-native';
-import React from 'react';
 
 jest.mock('@expo/vector-icons', () => {
   const React = require('react');

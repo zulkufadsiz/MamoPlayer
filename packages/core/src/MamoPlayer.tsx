@@ -34,10 +34,10 @@ export const MamoPlayerCore: React.FC<MamoPlayerCoreProps> = ({
   onPlaybackEvent,
   ...rest
 }) => {
-  const [duration, setDuration] = React.useState<number>(0);
-  const [position, setPosition] = React.useState<number>(0);
+  const [, setDuration] = React.useState<number>(0);
+  const [, setPosition] = React.useState<number>(0);
   const [isPlaying, setIsPlaying] = React.useState<boolean>(false);
-  const [isBuffering, setIsBuffering] = React.useState<boolean>(false);
+  const [, setIsBuffering] = React.useState<boolean>(false);
   const durationRef = React.useRef(0);
   const positionRef = React.useRef(0);
   const isBufferingRef = React.useRef(false);

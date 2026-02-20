@@ -1,6 +1,5 @@
 import VerticalPlayer from '@/components/VerticalPlayer';
 import { act, fireEvent, render } from '@testing-library/react-native';
-import React from 'react';
 
 const mockPlayer = {
   currentTime: 0,

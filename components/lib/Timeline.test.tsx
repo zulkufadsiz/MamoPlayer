@@ -1,6 +1,5 @@
 import Timeline from '@/components/lib/Timeline';
 import { act, fireEvent, render } from '@testing-library/react-native';
-import React from 'react';
 
 const mockGetThumbnailAsync = jest.fn();
 
