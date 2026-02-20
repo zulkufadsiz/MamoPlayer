@@ -1,13 +1,13 @@
 export type PlaybackEventType =
-  | "ready"
-  | "play"
-  | "pause"
-  | "ended"
-  | "buffer_start"
-  | "buffer_end"
-  | "seek"
-  | "time_update"
-  | "error";
+  | 'ready'
+  | 'play'
+  | 'pause'
+  | 'ended'
+  | 'buffer_start'
+  | 'buffer_end'
+  | 'seek'
+  | 'time_update'
+  | 'error';
 
 export type PlaybackEventBase = {
   type: PlaybackEventType;
@@ -21,7 +21,7 @@ export type PlaybackTimePayload = {
 
 export type PlaybackEvent = PlaybackEventBase &
   PlaybackTimePayload & {
-    reason?: "user" | "auto" | "programmatic";
+    reason?: 'user' | 'auto' | 'programmatic';
     error?: {
       message: string;
       code?: string | number;

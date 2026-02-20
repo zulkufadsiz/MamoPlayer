@@ -1,13 +1,15 @@
 export {
-  MamoPlayerCore as MamoPlayer, MamoPlayerCore, type MamoPlayerCoreProps,
+  MamoPlayerCore as MamoPlayer,
+  MamoPlayerCore,
+  type MamoPlayerCoreProps,
   type MamoPlayerCoreProps as MamoPlayerProps,
-  type MamoPlayerSource
+  type MamoPlayerSource,
 } from './MamoPlayer';
 export type {
   PlaybackEvent,
   PlaybackEventBase,
   PlaybackEventType,
-  PlaybackTimePayload
+  PlaybackTimePayload,
 } from './types/playback';
 
 export { default } from './MamoPlayer';

@@ -1,28 +1,20 @@
 import React from 'react';
 import Video, {
-    type OnBufferData,
-    type OnLoadData,
-    type OnProgressData,
-    type OnSeekData,
-    type OnVideoErrorData,
-    type ReactVideoProps,
+  type OnBufferData,
+  type OnLoadData,
+  type OnProgressData,
+  type OnSeekData,
+  type OnVideoErrorData,
+  type ReactVideoProps,
 } from 'react-native-video';
 import { type PlaybackEvent } from './types/playback';
 
 export type MamoPlayerSource = { uri: string } | number;
 
-export interface MamoPlayerCoreProps
-  extends Omit<
-    ReactVideoProps,
-    | 'source'
-    | 'paused'
-    | 'onLoad'
-    | 'onProgress'
-    | 'onEnd'
-    | 'onError'
-    | 'onSeek'
-    | 'onBuffer'
-  > {
+export interface MamoPlayerCoreProps extends Omit<
+  ReactVideoProps,
+  'source' | 'paused' | 'onLoad' | 'onProgress' | 'onEnd' | 'onError' | 'onSeek' | 'onBuffer'
+> {
   source: MamoPlayerSource;
   autoPlay?: boolean;
   onPlaybackEvent?: (event: PlaybackEvent) => void;
@@ -47,7 +39,7 @@ export const MamoPlayerCore: React.FC<MamoPlayerCoreProps> = ({
       event: Omit<PlaybackEvent, 'timestamp' | 'duration' | 'position'> & {
         duration?: number;
         position?: number;
-      }
+      },
     ) => {
       onPlaybackEvent?.({
         ...event,
@@ -56,7 +48,7 @@ export const MamoPlayerCore: React.FC<MamoPlayerCoreProps> = ({
         position: event.position ?? positionRef.current,
       });
     },
-    [onPlaybackEvent]
+    [onPlaybackEvent],
   );
 
   const handleLoad = React.useCallback(
@@ -73,7 +65,7 @@ export const MamoPlayerCore: React.FC<MamoPlayerCoreProps> = ({
         emit({ type: 'play', reason: 'auto' });
       }
     },
-    [autoPlay, emit]
+    [autoPlay, emit],
   );
 
   const handleProgress = React.useCallback(
@@ -85,7 +77,7 @@ export const MamoPlayerCore: React.FC<MamoPlayerCoreProps> = ({
 
       emit({ type: 'time_update', position: nextPosition });
     },
-    [emit]
+    [emit],
   );
 
   const handleEnd = React.useCallback(() => {
@@ -113,21 +105,19 @@ export const MamoPlayerCore: React.FC<MamoPlayerCoreProps> = ({
         },
       });
     },
-    [emit]
+    [emit],
   );
 
   const handleSeek = React.useCallback(
     (data: OnSeekData) => {
-      const nextPosition = Number.isFinite(data.currentTime)
-        ? data.currentTime
-        : data.seekTime;
+      const nextPosition = Number.isFinite(data.currentTime) ? data.currentTime : data.seekTime;
 
       positionRef.current = nextPosition;
       setPosition(nextPosition);
 
       emit({ type: 'seek', reason: 'user', position: nextPosition });
     },
-    [emit]
+    [emit],
   );
 
   const handleBuffer = React.useCallback(
@@ -142,7 +132,7 @@ export const MamoPlayerCore: React.FC<MamoPlayerCoreProps> = ({
       setIsBuffering(buffering);
       emit({ type: buffering ? 'buffer_start' : 'buffer_end' });
     },
-    [emit]
+    [emit],
   );
 
   return (
