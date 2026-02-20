@@ -4,13 +4,7 @@ const tsPlugin = require('@typescript-eslint/eslint-plugin');
 
 module.exports = [
   {
-    ignores: [
-      '**/dist/**',
-      'coverage/**',
-      'ios/**',
-      'android/**',
-      'node_modules/**',
-    ],
+    ignores: ['**/dist/**', 'coverage/**', 'ios/**', 'android/**', 'node_modules/**'],
   },
   js.configs.recommended,
   {

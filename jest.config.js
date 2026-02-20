@@ -1,5 +1,5 @@
 module.exports = {
-  preset: 'jest-expo',
+  preset: 'react-native',
   setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
   collectCoverageFrom: ['<rootDir>/components/lib/playbackAnalytics.ts'],
   coverageThreshold: {

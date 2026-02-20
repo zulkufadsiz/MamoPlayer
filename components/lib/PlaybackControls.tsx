@@ -1,12 +1,12 @@
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { useEffect, useState } from 'react';
 import {
-    Pressable,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    useWindowDimensions,
-    View,
+  Pressable,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  useWindowDimensions,
+  View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Timeline from './Timeline';

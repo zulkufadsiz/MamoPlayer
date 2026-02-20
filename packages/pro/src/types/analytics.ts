@@ -1,15 +1,15 @@
-import type { PlaybackEvent } from "@mamoplayer/core";
+import type { PlaybackEvent } from '@mamoplayer/core';
 
 export type AnalyticsEventType =
-  | "session_start"
-  | "session_end"
-  | "play"
-  | "pause"
-  | "ended"
-  | "buffer_start"
-  | "buffer_end"
-  | "seek"
-  | "quartile";
+  | 'session_start'
+  | 'session_end'
+  | 'play'
+  | 'pause'
+  | 'ended'
+  | 'buffer_start'
+  | 'buffer_end'
+  | 'seek'
+  | 'quartile';
 
 export interface AnalyticsEventBase {
   type: AnalyticsEventType;
