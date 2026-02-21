@@ -88,6 +88,97 @@ export default function ProPlayerScreen() {
 }
 ```
 
+## Ad Breaks (Pre-roll, Mid-roll, Post-roll)
+
+`@mamoplayer/pro` supports client-configured ad breaks through the `ads` prop on `ProMamoPlayer`.
+
+### `AdsConfig` format
+
+```ts
+type AdsConfig = {
+  adBreaks: AdBreak[];
+  skipButtonEnabled?: boolean;
+  skipAfterSeconds?: number;
+};
+```
+
+### `AdBreak` format
+
+```ts
+type AdBreak = {
+  type: 'preroll' | 'midroll' | 'postroll';
+  time?: number; // required for midroll; ignored for preroll/postroll
+  source: {
+    uri: string;
+    type?: 'video/mp4' | 'application/x-mpegURL';
+  };
+};
+```
+
+### Example usage
+
+```tsx
+import React from 'react';
+import { View } from 'react-native';
+import { ProMamoPlayer } from '@mamoplayer/pro';
+
+export default function ProAdsScreen() {
+  return (
+    <View style={{ flex: 1, backgroundColor: '#000' }}>
+      <ProMamoPlayer
+        source={{ uri: 'https://cdn.example.com/content/main.mp4' }}
+        ads={{
+          adBreaks: [
+            { type: 'preroll', source: { uri: 'https://cdn.example.com/ads/pre.mp4' } },
+            {
+              type: 'midroll',
+              time: 120,
+              source: { uri: 'https://cdn.example.com/ads/mid.m3u8', type: 'application/x-mpegURL' },
+            },
+            { type: 'postroll', source: { uri: 'https://cdn.example.com/ads/post.mp4' } },
+          ],
+          skipButtonEnabled: true,
+          skipAfterSeconds: 5,
+        }}
+        analytics={{
+          sessionId: 'session-ads-001',
+          onEvent: (event) => {
+            console.log('analytics', event.type, event.position);
+          },
+        }}
+      />
+    </View>
+  );
+}
+```
+
+### Analytics events related to ads
+
+When `analytics.onEvent` is configured, ad playback emits:
+
+- `ad_start`: fired when an ad break starts.
+- `ad_complete`: fired when an ad break finishes (including manual skip).
+- `ad_error`: fired when ad playback fails and the player resumes main content.
+
+All ad analytics events include the standard analytics shape (`type`, `timestamp`, `position`, optional `duration`, optional `playbackEvent`).
+
+### Skip button behavior
+
+- The skip UI is shown only when `skipButtonEnabled: true`.
+- If `skipAfterSeconds` is set and greater than `0`, the button is initially disabled and shows `Skip in Ns`.
+- After the countdown reaches `0`, the button switches to `Skip ad`.
+- Pressing `Skip ad` ends the active ad break and resumes the main content immediately.
+
+### Limitations (current)
+
+- This implementation is currently client-configured ad switching (`source` swap + ad state machine).
+- Native Google IMA SDK integration is not included yet.
+- Server-side VAST/VMAP orchestration and native ad decisioning are out of scope in the current phase.
+
+### Upcoming
+
+- **Phase 3:** native IMA support is planned for Android/iOS integration.
+
 ## Why OTT developers should use it
 
 - **Ship faster:** production-ready player surface instead of custom-building from scratch.
