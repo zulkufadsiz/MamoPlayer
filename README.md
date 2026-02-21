@@ -33,6 +33,22 @@ You can start with Core and upgrade to Pro without rewriting your player integra
 - **Policy enforcement hooks** for seek and playback-rate restrictions (Pro).
 - **Type-safe SDK surface** with bundled `.d.ts` files.
 
+### Premium UI & Theming
+
+- Built-in OTT-style theme
+- Dark/Light modes
+- Customizable tokens for colors/typography/shapes
+- Icon override support
+- Layout variants for different use cases
+
+```tsx
+<ProMamoPlayer
+  themeName="ott"
+  layoutVariant="ott"
+  icons={{ Play: CustomPlayIcon }}
+/>
+```
+
 ## Code example for Core
 
 ```tsx
@@ -87,6 +103,139 @@ export default function ProPlayerScreen() {
   );
 }
 ```
+
+## Theming & Skins
+
+`ProMamoPlayer` supports two props for styling:
+
+| Prop | Type | Purpose | Priority |
+| --- | --- | --- | --- |
+| `themeName` | `'light' \| 'dark' \| 'ott'` | Applies one of the built-in themes. | Used when `theme` is not provided. |
+| `theme` | `PlayerThemeConfig` | Applies your custom design tokens (colors, typography, shape). | Highest priority (overrides `themeName`). |
+
+If neither prop is provided, Pro uses the default `dark` theme.
+
+### Built-in themes
+
+| Theme | Best for |
+| --- | --- |
+| `light` | Bright UI surfaces and daytime viewing contexts |
+| `dark` | Low-light apps and cinema-style playback |
+| `ott` | Streaming-brand style UI with stronger accent emphasis |
+
+### Example: use a built-in theme
+
+```tsx
+import React from 'react';
+import { View } from 'react-native';
+import { ProMamoPlayer } from '@mamoplayer/pro';
+
+export default function ProDarkThemeScreen() {
+  return (
+    <View style={{ flex: 1 }}>
+      <ProMamoPlayer
+        source={{ uri: 'https://cdn.example.com/ott/premium/master.m3u8' }}
+        themeName="ott"
+      />
+    </View>
+  );
+}
+```
+
+### Example: pass a custom theme object
+
+```tsx
+import React from 'react';
+import { View } from 'react-native';
+import { ProMamoPlayer } from '@mamoplayer/pro';
+
+const brandTheme = {
+  tokens: {
+    colors: {
+      background: '#0B1220',
+      backgroundOverlay: '#0B1220CC',
+      primary: '#7C3AED',
+      primaryText: '#F8FAFC',
+      secondaryText: '#CBD5E1',
+      accent: '#22D3EE',
+      danger: '#F43F5E',
+      border: '#1E293B',
+      sliderTrack: '#64748B',
+      sliderThumb: '#22D3EE',
+    },
+    typography: {
+      fontFamily: 'System',
+      fontSizeSmall: 12,
+      fontSizeMedium: 14,
+      fontSizeLarge: 20,
+    },
+    shape: {
+      borderRadiusSmall: 8,
+      borderRadiusMedium: 12,
+      borderRadiusLarge: 18,
+    },
+  },
+};
+
+export default function ProCustomThemeScreen() {
+  return (
+    <View style={{ flex: 1 }}>
+      <ProMamoPlayer
+        source={{ uri: 'https://cdn.example.com/ott/premium/master.m3u8' }}
+        theme={brandTheme}
+      />
+    </View>
+  );
+}
+```
+
+### Theme structure
+
+`PlayerThemeConfig` is token-based and contains three sections:
+
+| Section | Description | Key fields |
+| --- | --- | --- |
+| `colors` | Visual palette used by overlays and controls | `background`, `backgroundOverlay`, `primary`, `primaryText`, `secondaryText`, `accent`, `danger`, `border`, `sliderTrack`, `sliderThumb` |
+| `typography` | Text sizing and optional font family | `fontFamily?`, `fontSizeSmall`, `fontSizeMedium`, `fontSizeLarge` |
+| `shape` | Corner radius scale for UI components | `borderRadiusSmall`, `borderRadiusMedium`, `borderRadiusLarge` |
+
+```ts
+type PlayerThemeConfig = {
+  name?: 'light' | 'dark' | 'ott';
+  tokens: {
+    colors: {
+      background: string;
+      backgroundOverlay: string;
+      primary: string;
+      primaryText: string;
+      secondaryText: string;
+      accent: string;
+      danger: string;
+      border: string;
+      sliderTrack: string;
+      sliderThumb: string;
+    };
+    typography: {
+      fontFamily?: string;
+      fontSizeSmall: number;
+      fontSizeMedium: number;
+      fontSizeLarge: number;
+    };
+    shape: {
+      borderRadiusSmall: number;
+      borderRadiusMedium: number;
+      borderRadiusLarge: number;
+    };
+  };
+};
+```
+
+### Design Guidelines
+
+- Choose colors with strong contrast between `background` and `primaryText`/`secondaryText` to keep controls readable in bright and dark scenes.
+- Keep accessibility in mind: test subtitle text, seek labels, and button states against your background and accent colors.
+- Recommended sizing baseline: `fontSizeSmall` 12, `fontSizeMedium` 14, `fontSizeLarge` 18-20 for clear TV/mobile readability.
+- For an OTT-style feel, use a dark base (`background`), a bold accent (`primary`/`accent`), subtle borders, and medium/large corner radii for modern cards and controls.
 
 ## Ad Breaks (Pre-roll, Mid-roll, Post-roll)
 
