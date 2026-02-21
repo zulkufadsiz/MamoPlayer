@@ -321,6 +321,45 @@ describe('ProMamoPlayer', () => {
     expect(latestVideoProps?.source).toEqual(mainSource);
   });
 
+  it('plays each midroll only once', () => {
+    const mainSource = { uri: 'https://example.com/main-midroll-once.mp4' };
+    const adSource = { uri: 'https://example.com/midroll-once-ad.mp4', type: 'video/mp4' as const };
+
+    render(
+      <ProMamoPlayer
+        source={mainSource}
+        ads={{
+          adBreaks: [
+            {
+              type: 'midroll',
+              time: 30,
+              source: adSource,
+            },
+          ],
+        }}
+      />,
+    );
+
+    act(() => {
+      emitPlayback({ type: 'time_update', duration: 100, position: 30 });
+    });
+
+    expect(latestVideoProps?.source).toEqual(adSource);
+
+    act(() => {
+      emitPlayback({ type: 'ended', duration: 5, position: 5 });
+    });
+
+    expect(latestVideoProps?.source).toEqual(mainSource);
+
+    act(() => {
+      emitPlayback({ type: 'time_update', duration: 100, position: 30 });
+      emitPlayback({ type: 'time_update', duration: 100, position: 45 });
+    });
+
+    expect(latestVideoProps?.source).toEqual(mainSource);
+  });
+
   it('switches to postroll ad only on ended event and then restores main source', () => {
     const mainSource = { uri: 'https://example.com/main-postroll.mp4' };
     const adSource = { uri: 'https://example.com/postroll-ad.mp4', type: 'video/mp4' as const };

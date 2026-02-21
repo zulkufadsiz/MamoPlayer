@@ -192,10 +192,37 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
         }
       }
 
-      const shouldPlayAd = adRef.current.getNextAd(
-        playbackEvent.position,
-        playbackEvent.type === 'ended',
-      );
+      if (playbackEvent.type === 'time_update') {
+        const ad = adRef.current.getNextAd(playbackEvent.position, false);
+
+        if (ad?.type === 'midroll') {
+          const offset = ad.offset;
+
+          if (typeof offset === 'number' && adRef.current.playedMidrolls.has(offset)) {
+            return;
+          }
+
+          const adBreak = adSourceMapRef.current.get(createAdBreakKey(ad.type, ad.offset));
+
+          if (adBreak?.source) {
+            adRef.current.markAdStarted(ad);
+
+            if (typeof offset === 'number') {
+              adRef.current.playedMidrolls.add(offset);
+            }
+
+            mainSourceRef.current = rest.source;
+            setActiveSource(adBreak.source as MamoPlayerProps['source']);
+            setIsAdMode(true);
+            return;
+          }
+        }
+      }
+
+      const shouldPlayAd =
+        playbackEvent.type === 'ended'
+          ? adRef.current.getNextAd(playbackEvent.position, true)
+          : null;
 
       if (shouldPlayAd) {
         const adBreak = adSourceMapRef.current.get(
