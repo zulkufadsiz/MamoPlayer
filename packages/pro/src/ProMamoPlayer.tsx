@@ -1,11 +1,14 @@
 import { MamoPlayer, type MamoPlayerProps, type PlaybackEvent } from '@mamoplayer/core';
-import React from 'react';
+import React, { useRef } from 'react';
 import { Text, View } from 'react-native';
+import { AdStateMachine } from './ads/AdState';
+import type { AdBreak, AdsConfig } from './types/ads';
 import type { AnalyticsConfig, AnalyticsEvent } from './types/analytics';
 import type { PlaybackRestrictions } from './types/restrictions';
 import type { WatermarkConfig } from './types/watermark';
 
 export interface ProMamoPlayerProps extends MamoPlayerProps {
+  ads?: AdsConfig;
   analytics?: AnalyticsConfig;
   restrictions?: PlaybackRestrictions;
   watermark?: WatermarkConfig;
@@ -22,6 +25,8 @@ const createQuartileState = (): Record<Quartile, boolean> => ({
   100: false,
 });
 
+const createAdBreakKey = (type: AdBreak['type'], time?: number) => `${type}:${time ?? 'none'}`;
+
 const emitAnalytics = (
   analytics: AnalyticsConfig | undefined,
   event: Omit<AnalyticsEvent, 'timestamp'>,
@@ -37,15 +42,50 @@ const emitAnalytics = (
 };
 
 export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
+  ads,
   analytics,
   restrictions,
   watermark,
   onPlaybackEvent,
   ...rest
 }) => {
+  const adRef = useRef(new AdStateMachine());
   const quartileStateRef = React.useRef<Record<Quartile, boolean>>(createQuartileState());
   const positionRef = React.useRef(0);
+  const mainSourceRef = React.useRef(rest.source);
+  const adSourceMapRef = React.useRef<Map<string, AdBreak>>(new Map());
+  const [isAdMode, setIsAdMode] = React.useState(false);
+  const [activeSource, setActiveSource] = React.useState<MamoPlayerProps['source']>(rest.source);
   const [watermarkPosition, setWatermarkPosition] = React.useState({ top: 10, left: 10 });
+
+  React.useEffect(() => {
+    const adBreaks = ads?.adBreaks;
+
+    if (!adBreaks) {
+      adSourceMapRef.current = new Map();
+      return;
+    }
+
+    adSourceMapRef.current = new Map(
+      adBreaks.map((adBreak) => [createAdBreakKey(adBreak.type, adBreak.time), adBreak]),
+    );
+
+    adRef.current.setAdBreaks(
+      adBreaks.map((adBreak) => ({
+        type: adBreak.type,
+        offset: adBreak.time,
+      })),
+    );
+  }, [ads?.adBreaks]);
+
+  React.useEffect(() => {
+    if (isAdMode) {
+      return;
+    }
+
+    mainSourceRef.current = rest.source;
+    setActiveSource(rest.source);
+  }, [isAdMode, rest.source]);
 
   const rate = React.useMemo(() => {
     if (typeof rest.rate !== 'number') {
@@ -107,6 +147,40 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
 
   const handlePlaybackEvent = React.useCallback(
     (playbackEvent: PlaybackEvent) => {
+      if (isAdMode) {
+        if (playbackEvent.type === 'ended') {
+          const currentAdBreak = adRef.current.currentAdBreak;
+
+          if (currentAdBreak) {
+            adRef.current.markAdCompleted(currentAdBreak);
+          }
+
+          setIsAdMode(false);
+          setActiveSource(mainSourceRef.current);
+        }
+
+        return;
+      }
+
+      const shouldPlayAd = adRef.current.getNextAd(
+        playbackEvent.position,
+        playbackEvent.type === 'ended',
+      );
+
+      if (shouldPlayAd) {
+        const adBreak = adSourceMapRef.current.get(
+          createAdBreakKey(shouldPlayAd.type, shouldPlayAd.offset),
+        );
+
+        if (adBreak?.source) {
+          adRef.current.markAdStarted(shouldPlayAd);
+          mainSourceRef.current = rest.source;
+          setActiveSource(adBreak.source as MamoPlayerProps['source']);
+          setIsAdMode(true);
+          return;
+        }
+      }
+
       const previousPosition = positionRef.current;
 
       if (playbackEvent.type === 'seek') {
@@ -196,12 +270,17 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
 
       trackQuartiles(playbackEvent);
     },
-    [analytics, onPlaybackEvent, restrictions, trackQuartiles],
+    [analytics, isAdMode, onPlaybackEvent, restrictions, rest.source, trackQuartiles],
   );
 
   return (
     <View style={{ position: 'relative' }}>
-      <MamoPlayer {...rest} rate={rate} onPlaybackEvent={handlePlaybackEvent} />
+      <MamoPlayer
+        {...rest}
+        source={activeSource}
+        rate={rate}
+        onPlaybackEvent={handlePlaybackEvent}
+      />
       {watermark ? (
         <Text
           pointerEvents="none"
