@@ -156,6 +156,57 @@ Most-used props:
 - `audioTracks`: explicit audio track labels/options
 - `isPremiumUser`: runtime gate for premium-only behavior
 
+## Pro ads quick start
+
+Use `ProMamoPlayer` when you need pre-roll, mid-roll, and post-roll ad breaks.
+
+```ts
+type AdsConfig = {
+  adBreaks: AdBreak[];
+  skipButtonEnabled?: boolean;
+  skipAfterSeconds?: number;
+};
+
+type AdBreak = {
+  type: 'preroll' | 'midroll' | 'postroll';
+  time?: number; // set for midroll
+  source: {
+    uri: string;
+    type?: 'video/mp4' | 'application/x-mpegURL';
+  };
+};
+```
+
+```tsx
+import { ProMamoPlayer } from '@mamoplayer/pro';
+
+<ProMamoPlayer
+  source={{ uri: 'https://cdn.example.com/content/main.mp4' }}
+  ads={{
+    adBreaks: [
+      { type: 'preroll', source: { uri: 'https://cdn.example.com/ads/pre.mp4' } },
+      { type: 'midroll', time: 90, source: { uri: 'https://cdn.example.com/ads/mid.mp4' } },
+      { type: 'postroll', source: { uri: 'https://cdn.example.com/ads/post.mp4' } },
+    ],
+    skipButtonEnabled: true,
+    skipAfterSeconds: 5,
+  }}
+  analytics={{
+    onEvent: (event) => {
+      // ad-related events: ad_start, ad_complete, ad_error
+      console.log(event.type, event.position);
+    },
+  }}
+/>
+```
+
+Skip behavior:
+
+- `skipButtonEnabled: true` shows the skip UI during ads.
+- With `skipAfterSeconds > 0`, UI shows a countdown (`Skip in Ns`) then enables `Skip ad`.
+
+Current limitation: native Google IMA is not integrated yet. Planned roadmap: Phase 3 native IMA support on Android/iOS.
+
 ## Notes
 
 - `MamoPlayerCore` always renders the simple player mode.
