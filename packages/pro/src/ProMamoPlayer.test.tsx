@@ -270,11 +270,12 @@ describe('ProMamoPlayer', () => {
 
   it('emits ad_start analytics when preroll begins on ready', () => {
     const onEvent = jest.fn();
+    const sessionId = 'session-preroll-start';
 
     render(
       <ProMamoPlayer
         source={{ uri: 'https://example.com/main.mp4' }}
-        analytics={{ onEvent }}
+        analytics={{ onEvent, sessionId }}
         ads={{
           adBreaks: [
             {
@@ -293,6 +294,9 @@ describe('ProMamoPlayer', () => {
     expect(onEvent).toHaveBeenCalledWith(
       expect.objectContaining({
         type: 'ad_start',
+        adPosition: 'preroll',
+        mainContentPositionAtAdStart: 0,
+        sessionId,
       }),
     );
   });
@@ -329,11 +333,12 @@ describe('ProMamoPlayer', () => {
 
   it('emits ad_complete analytics when ad playback ends successfully', () => {
     const onEvent = jest.fn();
+    const sessionId = 'session-ad-complete';
 
     render(
       <ProMamoPlayer
         source={{ uri: 'https://example.com/main-for-ad-complete.mp4' }}
-        analytics={{ onEvent }}
+        analytics={{ onEvent, sessionId }}
         ads={{
           adBreaks: [
             {
@@ -353,17 +358,21 @@ describe('ProMamoPlayer', () => {
     expect(onEvent).toHaveBeenCalledWith(
       expect.objectContaining({
         type: 'ad_complete',
+        adPosition: 'preroll',
+        mainContentPositionAtAdStart: 0,
+        sessionId,
       }),
     );
   });
 
   it('emits ad_error analytics when ad video fails to load', () => {
     const onEvent = jest.fn();
+    const sessionId = 'session-ad-error';
 
     render(
       <ProMamoPlayer
         source={{ uri: 'https://example.com/main-for-ad-error.mp4' }}
-        analytics={{ onEvent }}
+        analytics={{ onEvent, sessionId }}
         ads={{
           adBreaks: [
             {
@@ -388,6 +397,10 @@ describe('ProMamoPlayer', () => {
     expect(onEvent).toHaveBeenCalledWith(
       expect.objectContaining({
         type: 'ad_error',
+        adPosition: 'preroll',
+        errorMessage: 'Ad load failed',
+        mainContentPositionAtAdStart: 0,
+        sessionId,
       }),
     );
   });
@@ -585,13 +598,15 @@ describe('ProMamoPlayer', () => {
 
   it('handles native IMA events and falls back to simulated ads after native error', async () => {
     const onEvent = jest.fn();
+    const sessionId = 'session-native-ads';
+    const nativeAdTagUrl = 'https://example.com/native-adtag-events';
     const adSource = { uri: 'https://example.com/simulated-fallback-preroll.mp4', type: 'video/mp4' as const };
 
     render(
       <ProMamoPlayer
         source={{ uri: 'https://example.com/main-native-events.mp4' }}
-        analytics={{ onEvent }}
-        ima={{ enabled: true, adTagUrl: 'https://example.com/native-adtag-events' }}
+        analytics={{ onEvent, sessionId }}
+        ima={{ enabled: true, adTagUrl: nativeAdTagUrl }}
         ads={{
           adBreaks: [
             {
@@ -612,24 +627,53 @@ describe('ProMamoPlayer', () => {
     }
 
     act(() => {
-      latestNativeAdsHandler?.('mamo_ads_started');
+      emitPlayback({ type: 'time_update', duration: 100, position: 12 });
+      latestNativeAdsHandler?.('mamo_ads_started', { adPosition: 'preroll' });
     });
 
-    expect(onEvent).toHaveBeenCalledWith(expect.objectContaining({ type: 'ad_start' }));
+    expect(onEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'ad_start',
+        adTagUrl: nativeAdTagUrl,
+        adPosition: 'preroll',
+        mainContentPositionAtAdStart: 12,
+        sessionId,
+      }),
+    );
     expect(latestVideoProps?.autoPlay).toBe(false);
 
     act(() => {
-      latestNativeAdsHandler?.('mamo_ads_completed');
+      latestNativeAdsHandler?.('mamo_ads_completed', { adPosition: 'preroll' });
     });
 
-    expect(onEvent).toHaveBeenCalledWith(expect.objectContaining({ type: 'ad_complete' }));
+    expect(onEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'ad_complete',
+        adTagUrl: nativeAdTagUrl,
+        adPosition: 'preroll',
+        mainContentPositionAtAdStart: 12,
+        sessionId,
+      }),
+    );
     expect(latestVideoProps?.autoPlay).toBe(true);
 
     act(() => {
-      latestNativeAdsHandler?.('mamo_ads_error', { message: 'native failure' });
+      latestNativeAdsHandler?.('mamo_ads_error', {
+        adPosition: 'preroll',
+        message: 'native failure',
+      });
     });
 
-    expect(onEvent).toHaveBeenCalledWith(expect.objectContaining({ type: 'ad_error' }));
+    expect(onEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'ad_error',
+        adTagUrl: nativeAdTagUrl,
+        adPosition: 'preroll',
+        errorMessage: 'native failure',
+        mainContentPositionAtAdStart: 12,
+        sessionId,
+      }),
+    );
 
     act(() => {
       emitPlayback({ type: 'ready', duration: 100, position: 0 });

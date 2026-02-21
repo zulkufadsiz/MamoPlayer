@@ -24,6 +24,11 @@ export interface AnalyticsEvent extends AnalyticsEventBase {
   duration?: number;
   playbackEvent?: PlaybackEvent;
   quartile?: 25 | 50 | 75 | 100;
+  adTagUrl?: string;
+  adPosition?: 'preroll' | 'midroll' | 'postroll';
+  errorMessage?: string;
+  mainContentPositionAtAdStart?: number;
+  sessionId?: string;
 }
 
 export interface AnalyticsConfig {
