@@ -2,10 +2,12 @@ import { MamoPlayer, type MamoPlayerProps, type PlaybackEvent } from '@mamoplaye
 import React from 'react';
 import { Text, View } from 'react-native';
 import type { AnalyticsConfig, AnalyticsEvent } from './types/analytics';
+import type { PlaybackRestrictions } from './types/restrictions';
 import type { WatermarkConfig } from './types/watermark';
 
 export interface ProMamoPlayerProps extends MamoPlayerProps {
   analytics?: AnalyticsConfig;
+  restrictions?: PlaybackRestrictions;
   watermark?: WatermarkConfig;
 }
 
@@ -36,12 +38,26 @@ const emitAnalytics = (
 
 export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
   analytics,
+  restrictions,
   watermark,
   onPlaybackEvent,
   ...rest
 }) => {
   const quartileStateRef = React.useRef<Record<Quartile, boolean>>(createQuartileState());
+  const positionRef = React.useRef(0);
   const [watermarkPosition, setWatermarkPosition] = React.useState({ top: 10, left: 10 });
+
+  const rate = React.useMemo(() => {
+    if (typeof rest.rate !== 'number') {
+      return rest.rate;
+    }
+
+    if (typeof restrictions?.maxPlaybackRate !== 'number') {
+      return rest.rate;
+    }
+
+    return Math.min(rest.rate, restrictions.maxPlaybackRate);
+  }, [rest.rate, restrictions?.maxPlaybackRate]);
 
   React.useEffect(() => {
     if (!watermark?.randomizePosition) {
@@ -91,10 +107,24 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
 
   const handlePlaybackEvent = React.useCallback(
     (playbackEvent: PlaybackEvent) => {
+      const previousPosition = positionRef.current;
+
+      if (playbackEvent.type === 'seek') {
+        if (restrictions?.disableSeekingForward && playbackEvent.position > previousPosition) {
+          return;
+        }
+
+        if (restrictions?.disableSeekingBackward && playbackEvent.position < previousPosition) {
+          return;
+        }
+      }
+
+      positionRef.current = playbackEvent.position;
       onPlaybackEvent?.(playbackEvent);
 
       if (playbackEvent.type === 'ready') {
         quartileStateRef.current = createQuartileState();
+        positionRef.current = playbackEvent.position;
       }
 
       switch (playbackEvent.type) {
@@ -166,12 +196,12 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
 
       trackQuartiles(playbackEvent);
     },
-    [analytics, onPlaybackEvent, trackQuartiles],
+    [analytics, onPlaybackEvent, restrictions, trackQuartiles],
   );
 
   return (
     <View style={{ position: 'relative' }}>
-      <MamoPlayer {...rest} onPlaybackEvent={handlePlaybackEvent} />
+      <MamoPlayer {...rest} rate={rate} onPlaybackEvent={handlePlaybackEvent} />
       {watermark ? (
         <Text
           pointerEvents="none"
