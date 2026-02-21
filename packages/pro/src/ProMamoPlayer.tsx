@@ -2,6 +2,7 @@ import { MamoPlayer, type MamoPlayerProps, type PlaybackEvent } from '@mamoplaye
 import React, { useRef } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { AdStateMachine } from './ads/AdState';
+import { loadAds, startAds } from './ima/nativeBridge';
 import type { AdBreak, AdsConfig } from './types/ads';
 import type { AnalyticsConfig, AnalyticsEvent } from './types/analytics';
 import type { IMAConfig } from './types/ima';
@@ -59,6 +60,7 @@ const emitAdAnalytics = (
 
 export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
   ads,
+  ima,
   analytics,
   restrictions,
   watermark,
@@ -77,6 +79,8 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
   const [watermarkPosition, setWatermarkPosition] = React.useState({ top: 10, left: 10 });
   const [adStartedAt, setAdStartedAt] = React.useState<number | null>(null);
   const [overlayTimestamp, setOverlayTimestamp] = React.useState(() => Date.now());
+  const shouldUseNativeIMA = Boolean(ima?.enabled && ima.adTagUrl);
+  const hasRequestedNativeIMARef = React.useRef(false);
   const hasConfiguredPreroll = React.useMemo(
     () => Boolean(ads?.adBreaks.some((adBreak) => adBreak.type === 'preroll')),
     [ads?.adBreaks],
@@ -89,28 +93,26 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
   }, []);
 
   const loadIMASdk = React.useCallback(async (): Promise<boolean> => {
-    // TODO: Phase 3 – Native IMA Integration
-    logIMAPlaceholderWarning();
-    return false;
+    return true;
   }, [logIMAPlaceholderWarning]);
 
   const initializeIMAAds = React.useCallback(async (): Promise<boolean> => {
-    // TODO: Phase 3 – Native IMA Integration
-    logIMAPlaceholderWarning();
-    return false;
+    return true;
   }, [logIMAPlaceholderWarning]);
 
-  const requestAds = React.useCallback(async (): Promise<null> => {
-    // TODO: Phase 3 – Native IMA Integration
-    logIMAPlaceholderWarning();
-    return null;
-  }, [logIMAPlaceholderWarning]);
+  const requestAds = React.useCallback(async (): Promise<boolean> => {
+    if (!ima?.adTagUrl) {
+      return false;
+    }
+
+    await loadAds(ima.adTagUrl);
+    return true;
+  }, [ima?.adTagUrl]);
 
   const startIMAAdPlayback = React.useCallback(async (): Promise<boolean> => {
-    // TODO: Phase 3 – Native IMA Integration
-    logIMAPlaceholderWarning();
-    return false;
-  }, [logIMAPlaceholderWarning]);
+    await startAds();
+    return true;
+  }, []);
 
   const _imaPlaceholderMethods = React.useMemo(
     () => ({
@@ -121,6 +123,16 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
     }),
     [initializeIMAAds, loadIMASdk, requestAds, startIMAAdPlayback],
   );
+
+  React.useEffect(() => {
+    if (!shouldUseNativeIMA) {
+      hasRequestedNativeIMARef.current = false;
+    }
+  }, [shouldUseNativeIMA]);
+
+  React.useEffect(() => {
+    hasRequestedNativeIMARef.current = false;
+  }, [rest.source]);
 
   React.useEffect(() => {
     const adBreaks = ads?.adBreaks;
@@ -275,6 +287,118 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
 
   const handlePlaybackEvent = React.useCallback(
     (playbackEvent: PlaybackEvent) => {
+      // Native IMA path
+      if (shouldUseNativeIMA) {
+        if (playbackEvent.type === 'ready' && !hasRequestedNativeIMARef.current) {
+          hasRequestedNativeIMARef.current = true;
+
+          void (async () => {
+            try {
+              const hasSdk = await loadIMASdk();
+
+              if (!hasSdk) {
+                return;
+              }
+
+              const isInitialized = await initializeIMAAds();
+
+              if (!isInitialized) {
+                return;
+              }
+
+              const hasRequestedAds = await requestAds();
+
+              if (!hasRequestedAds) {
+                return;
+              }
+
+              await startIMAAdPlayback();
+            } catch {
+              hasRequestedNativeIMARef.current = false;
+              logIMAPlaceholderWarning();
+            }
+          })();
+        }
+
+        positionRef.current = playbackEvent.position;
+        onPlaybackEvent?.(playbackEvent);
+
+        if (playbackEvent.type === 'ready') {
+          quartileStateRef.current = createQuartileState();
+        }
+
+        switch (playbackEvent.type) {
+          case 'ready':
+            emitAnalytics(analytics, {
+              type: 'session_start',
+              position: playbackEvent.position,
+              duration: playbackEvent.duration,
+              playbackEvent,
+            });
+            break;
+          case 'play':
+            emitAnalytics(analytics, {
+              type: 'play',
+              position: playbackEvent.position,
+              duration: playbackEvent.duration,
+              playbackEvent,
+            });
+            break;
+          case 'pause':
+            emitAnalytics(analytics, {
+              type: 'pause',
+              position: playbackEvent.position,
+              duration: playbackEvent.duration,
+              playbackEvent,
+            });
+            break;
+          case 'ended':
+            emitAnalytics(analytics, {
+              type: 'ended',
+              position: playbackEvent.position,
+              duration: playbackEvent.duration,
+              playbackEvent,
+            });
+            emitAnalytics(analytics, {
+              type: 'session_end',
+              position: playbackEvent.position,
+              duration: playbackEvent.duration,
+              playbackEvent,
+            });
+            break;
+          case 'buffer_start':
+            emitAnalytics(analytics, {
+              type: 'buffer_start',
+              position: playbackEvent.position,
+              duration: playbackEvent.duration,
+              playbackEvent,
+            });
+            break;
+          case 'buffer_end':
+            emitAnalytics(analytics, {
+              type: 'buffer_end',
+              position: playbackEvent.position,
+              duration: playbackEvent.duration,
+              playbackEvent,
+            });
+            break;
+          case 'seek':
+            emitAnalytics(analytics, {
+              type: 'seek',
+              position: playbackEvent.position,
+              duration: playbackEvent.duration,
+              playbackEvent,
+            });
+            break;
+          default:
+            break;
+        }
+
+        trackQuartiles(playbackEvent);
+        return;
+      }
+
+      // Simulated ads fallback path
       if (adRef.current.isAdPlaying || isAdMode) {
         if (playbackEvent.type === 'ended') {
           completeAdPlayback(playbackEvent);
@@ -470,10 +594,16 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
       beginAdPlayback,
       completeAdPlayback,
       failAdPlayback,
+      initializeIMAAds,
       isAdMode,
+      loadIMASdk,
+      logIMAPlaceholderWarning,
       onPlaybackEvent,
+      requestAds,
       restrictions,
       resumeMainAfterAd,
+      shouldUseNativeIMA,
+      startIMAAdPlayback,
       trackQuartiles,
     ],
   );
