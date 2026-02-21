@@ -398,4 +398,41 @@ describe('ProMamoPlayer', () => {
 
     expect(latestVideoProps?.source).toEqual(mainSource);
   });
+
+  it('delays session_end analytics until postroll ad ends', () => {
+    const onEvent = jest.fn();
+
+    render(
+      <ProMamoPlayer
+        source={{ uri: 'https://example.com/main-with-postroll.mp4' }}
+        analytics={{ onEvent }}
+        ads={{
+          adBreaks: [
+            {
+              type: 'postroll',
+              source: { uri: 'https://example.com/postroll-for-session-end.mp4', type: 'video/mp4' },
+            },
+          ],
+        }}
+      />,
+    );
+
+    act(() => {
+      emitPlayback({ type: 'ready', duration: 100, position: 0 });
+      emitPlayback({ type: 'ended', duration: 100, position: 100 });
+    });
+
+    const analyticsTypesBeforeAdEnd = onEvent.mock.calls.map(([event]) => event.type);
+
+    expect(analyticsTypesBeforeAdEnd).toContain('ended');
+    expect(analyticsTypesBeforeAdEnd).not.toContain('session_end');
+
+    act(() => {
+      emitPlayback({ type: 'ended', duration: 5, position: 5 });
+    });
+
+    const analyticsTypesAfterAdEnd = onEvent.mock.calls.map(([event]) => event.type);
+
+    expect(analyticsTypesAfterAdEnd.filter((type) => type === 'session_end')).toHaveLength(1);
+  });
 });
