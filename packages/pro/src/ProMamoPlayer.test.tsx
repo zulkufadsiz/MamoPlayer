@@ -21,6 +21,7 @@ describe('ProMamoPlayer', () => {
   beforeEach(() => {
     latestOnPlaybackEvent = undefined;
     jest.clearAllMocks();
+    jest.useRealTimers();
   });
 
   const emitPlayback = (event: Partial<PlaybackEvent> & Pick<PlaybackEvent, 'type'>) => {
@@ -99,5 +100,57 @@ describe('ProMamoPlayer', () => {
       .filter((event) => event.type === 'quartile');
 
     expect(quartileEvents.map((event) => event.quartile)).toEqual([25, 50, 75, 100, 25]);
+  });
+
+  it('renders watermark with default position', () => {
+    const { getByText } = render(
+      <ProMamoPlayer
+        source={{ uri: 'https://example.com/video.mp4' }}
+        watermark={{ text: 'demo-watermark', opacity: 0.3 }}
+      />,
+    );
+
+    const watermark = getByText('demo-watermark');
+
+    expect(watermark.props.style).toEqual(
+      expect.objectContaining({
+        position: 'absolute',
+        top: 10,
+        left: 10,
+        fontSize: 12,
+        opacity: 0.3,
+      }),
+    );
+    expect(watermark.props.pointerEvents).toBe('none');
+  });
+
+  it('randomizes watermark position at configured interval', () => {
+    jest.useFakeTimers();
+    const randomSpy = jest
+      .spyOn(Math, 'random')
+      .mockReturnValueOnce(0.5)
+      .mockReturnValueOnce(0.25);
+
+    const { getByText } = render(
+      <ProMamoPlayer
+        source={{ uri: 'https://example.com/video.mp4' }}
+        watermark={{ text: 'moving-watermark', randomizePosition: true, intervalMs: 1000 }}
+      />,
+    );
+
+    act(() => {
+      jest.advanceTimersByTime(1000);
+    });
+
+    const watermark = getByText('moving-watermark');
+
+    expect(watermark.props.style).toEqual(
+      expect.objectContaining({
+        top: 25,
+        left: 17,
+      }),
+    );
+
+    randomSpy.mockRestore();
   });
 });

@@ -1,9 +1,12 @@
 import { MamoPlayer, type MamoPlayerProps, type PlaybackEvent } from '@mamoplayer/core';
 import React from 'react';
+import { Text, View } from 'react-native';
 import type { AnalyticsConfig, AnalyticsEvent } from './types/analytics';
+import type { WatermarkConfig } from './types/watermark';
 
 export interface ProMamoPlayerProps extends MamoPlayerProps {
   analytics?: AnalyticsConfig;
+  watermark?: WatermarkConfig;
 }
 
 type Quartile = 25 | 50 | 75 | 100;
@@ -33,10 +36,31 @@ const emitAnalytics = (
 
 export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
   analytics,
+  watermark,
   onPlaybackEvent,
   ...rest
 }) => {
   const quartileStateRef = React.useRef<Record<Quartile, boolean>>(createQuartileState());
+  const [watermarkPosition, setWatermarkPosition] = React.useState({ top: 10, left: 10 });
+
+  React.useEffect(() => {
+    if (!watermark?.randomizePosition) {
+      setWatermarkPosition({ top: 10, left: 10 });
+      return;
+    }
+
+    const range = 30;
+    const interval = setInterval(() => {
+      setWatermarkPosition({
+        top: 10 + Math.floor(Math.random() * (range + 1)),
+        left: 10 + Math.floor(Math.random() * (range + 1)),
+      });
+    }, watermark.intervalMs ?? 5000);
+
+    return () => {
+      clearInterval(interval);
+    };
+  }, [watermark]);
 
   const trackQuartiles = React.useCallback(
     (playbackEvent: PlaybackEvent) => {
@@ -145,7 +169,25 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
     [analytics, onPlaybackEvent, trackQuartiles],
   );
 
-  return <MamoPlayer {...rest} onPlaybackEvent={handlePlaybackEvent} />;
+  return (
+    <View style={{ position: 'relative' }}>
+      <MamoPlayer {...rest} onPlaybackEvent={handlePlaybackEvent} />
+      {watermark ? (
+        <Text
+          pointerEvents="none"
+          style={{
+            position: 'absolute',
+            top: watermarkPosition.top,
+            left: watermarkPosition.left,
+            fontSize: 12,
+            opacity: watermark.opacity ?? 0.5,
+          }}
+        >
+          {watermark.text}
+        </Text>
+      ) : null}
+    </View>
+  );
 };
 
 export default ProMamoPlayer;
