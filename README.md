@@ -169,15 +169,114 @@ All ad analytics events include the standard analytics shape (`type`, `timestamp
 - After the countdown reaches `0`, the button switches to `Skip ad`.
 - Pressing `Skip ad` ends the active ad break and resumes the main content immediately.
 
-### Limitations (current)
+## Native IMA Integration (Phase 3)
 
-- This implementation is currently client-configured ad switching (`source` swap + ad state machine).
-- Native Google IMA SDK integration is not included yet.
-- Server-side VAST/VMAP orchestration and native ad decisioning are out of scope in the current phase.
+Native IMA support is available in `@mamoplayer/pro` through the `ima` prop on `ProMamoPlayer`.
 
-### Upcoming
+### Requirements
 
-- **Phase 3:** native IMA support is planned for Android/iOS integration.
+- Use a **custom dev client** or **bare React Native workflow**. **Expo Go is not supported** for native IMA.
+- Install and link the **Google IMA SDK** on both Android and iOS.
+
+### Android Gradle setup
+
+In your Android app module (`android/app/build.gradle`), add the ExoPlayer IMA extension dependencies:
+
+```gradle
+dependencies {
+  implementation "com.google.android.exoplayer:exoplayer-core:2.19.1"
+  implementation "com.google.android.exoplayer:extension-ima:2.19.1"
+}
+```
+
+Then rebuild the app:
+
+```bash
+npx react-native run-android
+```
+
+### iOS Podfile setup
+
+In your iOS Podfile target, add the Google IMA pod:
+
+```ruby
+target 'YourApp' do
+  pod 'GoogleAds-IMA-iOS-SDK'
+end
+```
+
+Install pods and rebuild:
+
+```bash
+cd ios && pod install && cd ..
+npx react-native run-ios
+```
+
+### ProMamoPlayer example (`ima` config)
+
+```tsx
+import React from 'react';
+import { View } from 'react-native';
+import { ProMamoPlayer } from '@mamoplayer/pro';
+
+export default function ProNativeIMAScreen() {
+  return (
+    <View style={{ flex: 1, backgroundColor: '#000' }}>
+      <ProMamoPlayer
+        source={{ uri: 'https://cdn.example.com/content/main.mp4' }}
+        ima={{
+          enabled: true,
+          adTagUrl:
+            'https://pubads.g.doubleclick.net/gampad/ads?iu=/21775744923/external/single_ad_samples&sz=640x480&gdfp_req=1&output=vast&env=vp&impl=s&correlator=',
+        }}
+        ads={{
+          adBreaks: [
+            { type: 'preroll', source: { uri: 'https://cdn.example.com/ads/fallback-pre.mp4' } },
+          ],
+        }}
+        analytics={{
+          sessionId: 'session-ima-001',
+          onEvent: (event) => console.log('analytics', event.type, event.position),
+        }}
+      />
+    </View>
+  );
+}
+```
+
+### Runtime behavior
+
+#### When native IMA is used
+
+Native IMA is used when both are true:
+
+- `ima.enabled === true`
+- `ima.adTagUrl` is provided
+
+In this mode, ad lifecycle is driven by native IMA events.
+
+#### When simulated ads are used (fallback)
+
+Simulated ad playback (`ads.adBreaks`) is used when:
+
+- `ima` is not configured or not enabled, or
+- native IMA fails to load/play ads (for example `loadAds` error or native ad error event)
+
+When native IMA fails at runtime, the player falls back to simulated ads so content playback can continue.
+
+### Known limitations
+
+- Not all ad formats and edge cases may be supported in the initial native IMA rollout.
+- Server-side orchestration details (for example advanced VMAP decisioning) depend on your ad backend setup.
+
+### Debugging notes
+
+- Always test on a native runtime (custom dev client or release/debug app), not Expo Go.
+- Verify ad tag URL accessibility and validity (VAST response, HTTPS, no geo/network blocking).
+- Check native logs for IMA load/playback errors:
+  - Android: `adb logcat`
+  - iOS: Xcode device logs
+- Use `analytics.onEvent` and watch for `ad_start`, `ad_complete`, and `ad_error` events to trace flow.
 
 ## Why OTT developers should use it
 
