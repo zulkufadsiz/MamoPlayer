@@ -203,43 +203,21 @@ const ProMamoPlayerOverlays: React.FC<ProMamoPlayerOverlaysProps> = ({
   watermarkPosition,
 }) => {
   const playerTheme = usePlayerTheme();
-  const { colors, typography, shape } = getThemePrimitives(playerTheme);
-
-  const overlayBackgroundColor =
-    colors.backgroundOverlay ?? colors.controlBackground ?? colors.background;
-  const primaryTextColor = colors.primaryText ?? colors.textPrimary ?? colors.secondaryText;
-  const skipButtonBackgroundColor = colors.background ?? colors.surface ?? colors.border;
-  const skipButtonTextColor = colors.primaryText ?? colors.textPrimary ?? colors.secondaryText;
-  const smallFontSize =
-    (typeof typography.fontSizeSmall === 'number'
-      ? typography.fontSizeSmall
-      : typeof typography.captionSize === 'number'
-        ? typography.captionSize
-        : 12);
-  const smallRadius =
-    (typeof shape.borderRadiusSmall === 'number'
-      ? shape.borderRadiusSmall
-      : typeof shape.radiusSm === 'number'
-        ? shape.radiusSm
-        : 6);
+  const styles = React.useMemo(() => stylesFactory(playerTheme), [playerTheme]);
 
   return (
     <>
       {showAdOverlay ? (
-        <View style={[styles.adOverlay, { backgroundColor: overlayBackgroundColor }]}> 
-          <Text style={[styles.adText, { color: primaryTextColor, fontSize: smallFontSize }]}>Ad playing...</Text>
+        <View style={styles.adOverlay}>
+          <Text style={styles.adText}>Ad playing...</Text>
           {skipButtonEnabled ? (
             <Pressable
               accessibilityRole="button"
               onPress={handleSkipAd}
               disabled={isSkipDisabled}
-              style={[
-                styles.skipButton,
-                { backgroundColor: skipButtonBackgroundColor, borderRadius: smallRadius },
-                isSkipDisabled ? styles.skipButtonDisabled : null,
-              ]}
+              style={[styles.skipButton, isSkipDisabled ? styles.skipButtonDisabled : null]}
             >
-              <Text style={[styles.skipButtonText, { color: skipButtonTextColor, fontSize: smallFontSize }]}>
+              <Text style={styles.skipButtonText}>
                 {isSkipDisabled ? `Skip in ${skipSecondsRemaining}s` : 'Skip ad'}
               </Text>
             </Pressable>
@@ -249,14 +227,14 @@ const ProMamoPlayerOverlays: React.FC<ProMamoPlayerOverlaysProps> = ({
       {watermark ? (
         <Text
           pointerEvents="none"
-          style={{
-            position: 'absolute',
-            top: watermarkPosition.top,
-            left: watermarkPosition.left,
-            fontSize: smallFontSize,
-            color: primaryTextColor,
-            opacity: watermark.opacity ?? 0.5,
-          }}
+          style={[
+            styles.watermarkText,
+            {
+              top: watermarkPosition.top,
+              left: watermarkPosition.left,
+              opacity: watermark.opacity ?? 0.5,
+            },
+          ]}
         >
           {watermark.text}
         </Text>
@@ -968,27 +946,66 @@ const styles = StyleSheet.create({
   playerContainer: {
     position: 'relative',
   },
-  adOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    zIndex: 2,
-  },
-  adText: {
-    fontSize: 12,
-  },
-  skipButton: {
-    borderRadius: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
-  skipButtonDisabled: {
-    opacity: 0.6,
-  },
-  skipButtonText: {
-    fontSize: 12,
-  },
 });
+
+const stylesFactory = (theme: PlayerThemeConfig) => {
+  const { colors, typography, shape } = getThemePrimitives(theme);
+
+  const overlayBackgroundColor =
+    colors.backgroundOverlay ?? colors.controlBackground ?? colors.background;
+  const primaryTextColor = colors.primaryText ?? colors.textPrimary ?? colors.secondaryText;
+  const buttonBackgroundColor = colors.primary ?? colors.accent ?? colors.background;
+  const textSmallSize =
+    (typeof typography.fontSizeSmall === 'number'
+      ? typography.fontSizeSmall
+      : typeof typography.captionSize === 'number'
+        ? typography.captionSize
+        : 12);
+  const textMediumSize =
+    (typeof typography.fontSizeMedium === 'number'
+      ? typography.fontSizeMedium
+      : typeof typography.bodySize === 'number'
+        ? typography.bodySize
+        : 14);
+  const mediumRadius =
+    (typeof shape.borderRadiusMedium === 'number'
+      ? shape.borderRadiusMedium
+      : typeof shape.radiusMd === 'number'
+        ? shape.radiusMd
+        : 12);
+
+  return StyleSheet.create({
+    adOverlay: {
+      ...StyleSheet.absoluteFillObject,
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+      zIndex: 2,
+      backgroundColor: overlayBackgroundColor,
+    },
+    adText: {
+      color: primaryTextColor,
+      fontSize: textMediumSize,
+    },
+    skipButton: {
+      backgroundColor: buttonBackgroundColor,
+      borderRadius: mediumRadius,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+    },
+    skipButtonDisabled: {
+      opacity: 0.6,
+    },
+    skipButtonText: {
+      color: primaryTextColor,
+      fontSize: textSmallSize,
+    },
+    watermarkText: {
+      position: 'absolute',
+      color: primaryTextColor,
+      fontSize: textSmallSize,
+    },
+  });
+};
 
 export default ProMamoPlayer;

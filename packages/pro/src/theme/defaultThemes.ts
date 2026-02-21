@@ -1,92 +1,86 @@
 import type { PlayerThemeConfig, ThemeName } from '../types/theme';
 
 export const lightTheme: PlayerThemeConfig = {
-  colors: {
-    background: "#FFFFFF",
-    surface: "#F7F8FA",
-    textPrimary: "#111827",
-    textSecondary: "#4B5563",
-    accent: "#2563EB",
-    accentContrast: "#FFFFFF",
-    border: "#E5E7EB",
-    controlBackground: "#FFFFFFCC",
-    controlActive: "#2563EB",
-    controlInactive: "#6B7280",
-  },
-  typography: {
-    fontFamily: "System",
-    titleSize: 20,
-    bodySize: 14,
-    captionSize: 12,
-    weightRegular: "400",
-    weightMedium: "500",
-    weightBold: "700",
-  },
-  shape: {
-    radiusSm: 8,
-    radiusMd: 12,
-    radiusLg: 18,
-    controlPill: 999,
+  tokens: {
+    colors: {
+      background: '#FFFFFF',
+      backgroundOverlay: '#FFFFFFCC',
+      primary: '#2563EB',
+      primaryText: '#111827',
+      secondaryText: '#4B5563',
+      accent: '#2563EB',
+      danger: '#DC2626',
+      border: '#E5E7EB',
+      sliderTrack: '#6B7280',
+      sliderThumb: '#2563EB',
+    },
+    typography: {
+      fontFamily: 'System',
+      fontSizeSmall: 12,
+      fontSizeMedium: 14,
+      fontSizeLarge: 20,
+    },
+    shape: {
+      borderRadiusSmall: 8,
+      borderRadiusMedium: 12,
+      borderRadiusLarge: 18,
+    },
   },
 };
 
 export const darkTheme: PlayerThemeConfig = {
-  colors: {
-    background: "#0B0D10",
-    surface: "#141821",
-    textPrimary: "#F9FAFB",
-    textSecondary: "#9CA3AF",
-    accent: "#60A5FA",
-    accentContrast: "#0B0D10",
-    border: "#1F2937",
-    controlBackground: "#111827CC",
-    controlActive: "#93C5FD",
-    controlInactive: "#6B7280",
-  },
-  typography: {
-    fontFamily: "System",
-    titleSize: 20,
-    bodySize: 14,
-    captionSize: 12,
-    weightRegular: "400",
-    weightMedium: "500",
-    weightBold: "700",
-  },
-  shape: {
-    radiusSm: 8,
-    radiusMd: 12,
-    radiusLg: 18,
-    controlPill: 999,
+  tokens: {
+    colors: {
+      background: '#0B0D10',
+      backgroundOverlay: '#111827CC',
+      primary: '#60A5FA',
+      primaryText: '#F9FAFB',
+      secondaryText: '#9CA3AF',
+      accent: '#60A5FA',
+      danger: '#EF4444',
+      border: '#1F2937',
+      sliderTrack: '#6B7280',
+      sliderThumb: '#93C5FD',
+    },
+    typography: {
+      fontFamily: 'System',
+      fontSizeSmall: 12,
+      fontSizeMedium: 14,
+      fontSizeLarge: 20,
+    },
+    shape: {
+      borderRadiusSmall: 8,
+      borderRadiusMedium: 12,
+      borderRadiusLarge: 18,
+    },
   },
 };
 
 export const ottTheme: PlayerThemeConfig = {
-  colors: {
-    background: "#0F1014",
-    surface: "#171923",
-    textPrimary: "#F8FAFC",
-    textSecondary: "#A1A1AA",
-    accent: "#E50914",
-    accentContrast: "#FFFFFF",
-    border: "#27272A",
-    controlBackground: "#18181BCC",
-    controlActive: "#E50914",
-    controlInactive: "#71717A",
-  },
-  typography: {
-    fontFamily: "System",
-    titleSize: 20,
-    bodySize: 14,
-    captionSize: 12,
-    weightRegular: "400",
-    weightMedium: "500",
-    weightBold: "700",
-  },
-  shape: {
-    radiusSm: 8,
-    radiusMd: 12,
-    radiusLg: 18,
-    controlPill: 999,
+  tokens: {
+    colors: {
+      background: '#0F1014',
+      backgroundOverlay: '#18181BCC',
+      primary: '#E50914',
+      primaryText: '#F8FAFC',
+      secondaryText: '#A1A1AA',
+      accent: '#E50914',
+      danger: '#F43F5E',
+      border: '#27272A',
+      sliderTrack: '#71717A',
+      sliderThumb: '#E50914',
+    },
+    typography: {
+      fontFamily: 'System',
+      fontSizeSmall: 12,
+      fontSizeMedium: 14,
+      fontSizeLarge: 20,
+    },
+    shape: {
+      borderRadiusSmall: 8,
+      borderRadiusMedium: 12,
+      borderRadiusLarge: 18,
+    },
   },
 };
 
