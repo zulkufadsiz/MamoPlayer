@@ -1,4 +1,5 @@
 import type { PlayerIconSet } from '@/types/icons';
+import type { PlayerLayoutVariant } from '@/types/layout';
 import { type VideoSource } from 'expo-video';
 import React from 'react';
 import LandscapePlayer from './LandscapePlayer';
@@ -45,6 +46,7 @@ export interface MamoPlayerProps {
   skipSeconds?: number;
   showSkipButtons?: boolean;
   isPremiumUser?: boolean;
+  layoutVariant?: PlayerLayoutVariant;
   playerType?: 'simple' | 'vertical' | 'landscape';
   // VerticalPlayer specific props
   title?: string;

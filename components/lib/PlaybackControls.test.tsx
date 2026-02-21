@@ -15,6 +15,18 @@ jest.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({ top: 10, right: 20, bottom: 30, left: 0 }),
 }), { virtual: true });
 
+jest.mock('@expo/vector-icons', () => {
+  const React = require('react');
+  const { Text } = require('react-native');
+
+  const IconMock = ({ name }: { name: string }) => <Text>{name}</Text>;
+
+  return {
+    Ionicons: IconMock,
+    MaterialIcons: IconMock,
+  };
+}, { virtual: true });
+
 describe('PlaybackControls', () => {
   const baseProps = {
     isPlaying: false,
@@ -101,5 +113,50 @@ describe('PlaybackControls', () => {
     expect(queryByLabelText('Enter fullscreen')).toBeTruthy();
 
     jest.useRealTimers();
+  });
+
+  it('hides secondary controls in compact layout', () => {
+    const { queryByLabelText } = render(
+      <PlaybackControls
+        {...baseProps}
+        layoutVariant="compact"
+        onSkipBackward={jest.fn()}
+        onSkipForward={jest.fn()}
+        onSettingsPress={jest.fn()}
+        allowsPictureInPicture
+        onPictureInPictureToggle={jest.fn()}
+      />,
+    );
+
+    expect(queryByLabelText('Skip backward 10 seconds')).toBeNull();
+    expect(queryByLabelText('Skip forward 10 seconds')).toBeNull();
+    expect(queryByLabelText('Open settings')).toBeNull();
+    expect(queryByLabelText('Enter picture in picture')).toBeNull();
+    expect(queryByLabelText('Enter fullscreen')).toBeTruthy();
+  });
+
+  it('shows detailed controls in ott layout', () => {
+    const { getByLabelText, getByText } = render(
+      <PlaybackControls
+        {...baseProps}
+        layoutVariant="ott"
+        onSkipBackward={jest.fn()}
+        onSkipForward={jest.fn()}
+        onSettingsPress={jest.fn()}
+        onSubtitlesToggle={jest.fn()}
+        hasSubtitles
+        allowsPictureInPicture
+        onPictureInPictureToggle={jest.fn()}
+      />,
+    );
+
+    expect(getByLabelText('Skip backward 10 seconds')).toBeTruthy();
+    expect(getByLabelText('Skip forward 10 seconds')).toBeTruthy();
+    expect(getByLabelText('Open settings')).toBeTruthy();
+    expect(getByLabelText('Enter picture in picture')).toBeTruthy();
+    expect(getByText('Settings')).toBeTruthy();
+    expect(getByText('Subtitles')).toBeTruthy();
+    expect(getByText('PiP')).toBeTruthy();
+    expect(getByText('Fullscreen')).toBeTruthy();
   });
 });
