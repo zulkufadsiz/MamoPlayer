@@ -4,11 +4,13 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { AdStateMachine } from './ads/AdState';
 import type { AdBreak, AdsConfig } from './types/ads';
 import type { AnalyticsConfig, AnalyticsEvent } from './types/analytics';
+import type { IMAConfig } from './types/ima';
 import type { PlaybackRestrictions } from './types/restrictions';
 import type { WatermarkConfig } from './types/watermark';
 
 export interface ProMamoPlayerProps extends MamoPlayerProps {
   ads?: AdsConfig;
+  ima?: IMAConfig;
   analytics?: AnalyticsConfig;
   restrictions?: PlaybackRestrictions;
   watermark?: WatermarkConfig;
