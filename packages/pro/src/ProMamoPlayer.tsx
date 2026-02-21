@@ -53,6 +53,7 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
   const quartileStateRef = React.useRef<Record<Quartile, boolean>>(createQuartileState());
   const positionRef = React.useRef(0);
   const mainSourceRef = React.useRef(rest.source);
+  const pendingSessionEndEventRef = React.useRef<PlaybackEvent | null>(null);
   const adSourceMapRef = React.useRef<Map<string, AdBreak>>(new Map());
   const [isAdMode, setIsAdMode] = React.useState(false);
   const [resumeMainAfterAd, setResumeMainAfterAd] = React.useState(false);
@@ -167,6 +168,18 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
       if (adRef.current.isAdPlaying || isAdMode) {
         if (playbackEvent.type === 'ended') {
           handleAdEnd();
+
+          const pendingSessionEndEvent = pendingSessionEndEventRef.current;
+
+          if (pendingSessionEndEvent) {
+            emitAnalytics(analytics, {
+              type: 'session_end',
+              position: pendingSessionEndEvent.position,
+              duration: pendingSessionEndEvent.duration,
+              playbackEvent: pendingSessionEndEvent,
+            });
+            pendingSessionEndEventRef.current = null;
+          }
         }
 
         return;
@@ -230,6 +243,16 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
         );
 
         if (adBreak?.source) {
+          if (shouldPlayAd.type === 'postroll' && !adRef.current.hasPlayedPostroll) {
+            emitAnalytics(analytics, {
+              type: 'ended',
+              position: playbackEvent.position,
+              duration: playbackEvent.duration,
+              playbackEvent,
+            });
+            pendingSessionEndEventRef.current = playbackEvent;
+          }
+
           adRef.current.markAdStarted(shouldPlayAd);
           mainSourceRef.current = rest.source;
           setActiveSource(adBreak.source as MamoPlayerProps['source']);
