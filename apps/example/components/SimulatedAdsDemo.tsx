@@ -1,15 +1,19 @@
 import { ProMamoPlayer } from '@mamoplayer/pro';
 import { StyleSheet, View } from 'react-native';
 
-export default function AdsDemo() {
+export default function SimulatedAdsDemo() {
   return (
     <View style={styles.container}>
       <ProMamoPlayer
         source={{ uri: 'https://main-content-video.mp4' }}
-        ima={{
-          enabled: true,
-          adTagUrl:
-            'https://pubads.g.doubleclick.net/gampad/ads?iu=/21775744923/external/single_ad_samples&sz=640x480&cust_params=sample_ct%3Dlinear&ciu_szs=300x250&gdfp_req=1&output=vast&unviewed_position_start=1&env=vp&impl=s&correlator=',
+        ads={{
+          adBreaks: [
+            { type: 'preroll', source: { uri: 'https://ad1.mp4' } },
+            { type: 'midroll', time: 30, source: { uri: 'https://ad2.mp4' } },
+            { type: 'postroll', source: { uri: 'https://ad3.mp4' } },
+          ],
+          skipButtonEnabled: true,
+          skipAfterSeconds: 5,
         }}
         analytics={{ onEvent: (event: unknown) => console.log('analytics', event) }}
       />
