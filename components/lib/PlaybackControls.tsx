@@ -1,4 +1,6 @@
 import type { PlayerIconSet } from '@/types/icons';
+import type { PlayerLayoutVariant } from '@/types/layout';
+import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { useEffect, useState } from 'react';
 import {
     Pressable,
@@ -76,6 +78,7 @@ interface PlaybackControlsProps {
   isPictureInPictureActive?: boolean;
   onPictureInPictureToggle?: () => void;
   hasSubtitles?: boolean;
+  layoutVariant?: PlayerLayoutVariant;
   autoHideControls?: boolean;
   autoHideDelayMs?: number;
 }
@@ -90,6 +93,102 @@ const renderIcon = (
   }
 
   return <Text style={[styles.defaultIconText, { fontSize: size }]}>{fallbackLabel}</Text>;
+};
+
+type LayoutTheme = {
+  buttonBackground: string;
+  skipButtonBackground: string;
+  overlayBackground: string;
+};
+
+const defaultLayoutTheme: LayoutTheme = {
+  buttonBackground: 'rgba(0, 0, 0, 0.6)',
+  skipButtonBackground: 'rgba(0, 0, 0, 0.5)',
+  overlayBackground: 'rgba(0, 0, 0, 0.2)',
+};
+
+const getLayoutStyles = (layoutVariant: PlayerLayoutVariant, theme: LayoutTheme) => {
+  if (layoutVariant === 'compact') {
+    return {
+      centerGap: 14,
+      playButtonSize: 68,
+      playIconSize: 34,
+      skipButtonSize: 46,
+      skipIconSize: 20,
+      skipTextSize: 10,
+      actionButtonSize: 42,
+      actionIconSize: 18,
+      actionTopOffset: 8,
+      actionRightOffset: 8,
+      actionGap: 8,
+      subtitleBottom: 72,
+      subtitlePaddingHorizontal: 12,
+      subtitlePaddingVertical: 8,
+      subtitleMaxWidth: '88%' as const,
+      subtitleSizeMultiplier: 0.9,
+      showSkipButtons: false,
+      showSettingsButton: false,
+      showPipButton: false,
+      showOttActionLabels: false,
+      overlayBackground: theme.overlayBackground,
+      buttonBackground: theme.buttonBackground,
+      skipButtonBackground: theme.skipButtonBackground,
+    };
+  }
+
+  if (layoutVariant === 'ott') {
+    return {
+      centerGap: 30,
+      playButtonSize: 96,
+      playIconSize: 48,
+      skipButtonSize: 66,
+      skipIconSize: 28,
+      skipTextSize: 13,
+      actionButtonSize: 56,
+      actionIconSize: 26,
+      actionTopOffset: 16,
+      actionRightOffset: 16,
+      actionGap: 12,
+      subtitleBottom: 100,
+      subtitlePaddingHorizontal: 22,
+      subtitlePaddingVertical: 14,
+      subtitleMaxWidth: '94%' as const,
+      subtitleSizeMultiplier: 1.2,
+      showSkipButtons: true,
+      showSettingsButton: true,
+      showPipButton: true,
+      showOttActionLabels: true,
+      overlayBackground: 'rgba(0, 0, 0, 0.28)',
+      buttonBackground: theme.buttonBackground,
+      skipButtonBackground: theme.skipButtonBackground,
+    };
+  }
+
+  return {
+    centerGap: 24,
+    playButtonSize: 80,
+    playIconSize: 42,
+    skipButtonSize: 56,
+    skipIconSize: 24,
+    skipTextSize: 11,
+    actionButtonSize: 50,
+    actionIconSize: 24,
+    actionTopOffset: 12,
+    actionRightOffset: 12,
+    actionGap: 10,
+    subtitleBottom: 80,
+    subtitlePaddingHorizontal: 16,
+    subtitlePaddingVertical: 10,
+    subtitleMaxWidth: '90%' as const,
+    subtitleSizeMultiplier: 1,
+    showSkipButtons: true,
+    showSettingsButton: true,
+    showPipButton: true,
+    showOttActionLabels: false,
+    overlayBackground: theme.overlayBackground,
+    buttonBackground: theme.buttonBackground,
+    skipButtonBackground: theme.skipButtonBackground,
+  };
 };
 
 export default function PlaybackControls({
@@ -115,6 +214,7 @@ export default function PlaybackControls({
   isPictureInPictureActive = false,
   onPictureInPictureToggle,
   hasSubtitles,
+  layoutVariant = 'standard',
   autoHideControls = false,
   autoHideDelayMs = 3000,
 }: PlaybackControlsProps) {
@@ -122,6 +222,13 @@ export default function PlaybackControls({
   const insets = useSafeAreaInsets();
   const [currentSubtitle, setCurrentSubtitle] = useState<string>('');
   const [controlsVisible, setControlsVisible] = useState(true);
+  const layoutStyles = getLayoutStyles(layoutVariant, defaultLayoutTheme);
+
+  const showSkipControls = layoutStyles.showSkipButtons;
+  const showSettingsButton = layoutStyles.showSettingsButton;
+  const showPipButton = layoutStyles.showPipButton;
+  const showOttActionLabels = layoutStyles.showOttActionLabels;
+  const subtitleEffectiveSize = Math.round(subtitleFontSize * layoutStyles.subtitleSizeMultiplier);
 
   // Track current subtitle
   useEffect(() => {
@@ -201,14 +308,22 @@ export default function PlaybackControls({
 
       {controlsVisible && (
         <View
-          style={styles.controlsOverlay}
+          style={[styles.controlsOverlay, { backgroundColor: layoutStyles.overlayBackground }]}
           importantForAccessibility={controlsVisible ? 'yes' : 'no-hide-descendants'}
         >
           {/* Center Play/Pause Button */}
-          <View style={styles.centerControls}>
-            {onSkipBackward && (
+          <View style={[styles.centerControls, { gap: layoutStyles.centerGap }]}>
+            {showSkipControls && onSkipBackward && (
               <TouchableOpacity
-                style={styles.skipButton}
+                style={[
+                  styles.skipButton,
+                  {
+                    width: layoutStyles.skipButtonSize,
+                    height: layoutStyles.skipButtonSize,
+                    borderRadius: layoutStyles.skipButtonSize / 2,
+                    backgroundColor: layoutStyles.skipButtonBackground,
+                  },
+                ]}
                 onPress={onSkipBackward}
                 activeOpacity={0.7}
                 accessibilityRole="button"
@@ -216,12 +331,22 @@ export default function PlaybackControls({
                 accessibilityHint="Moves playback position backward"
                 hitSlop={10}
               >
-                <Text style={styles.skipIconText}>↺</Text>
-                <Text style={styles.skipText}>{skipSeconds}</Text>
+                <Text style={[styles.skipIconText, { fontSize: layoutStyles.skipIconSize }]}>↺</Text>
+                <Text style={[styles.skipText, { fontSize: layoutStyles.skipTextSize }]}>
+                  {skipSeconds}
+                </Text>
               </TouchableOpacity>
             )}
             <TouchableOpacity
-              style={styles.playButton}
+              style={[
+                styles.playButton,
+                {
+                  width: layoutStyles.playButtonSize,
+                  height: layoutStyles.playButtonSize,
+                  borderRadius: layoutStyles.playButtonSize / 2,
+                  backgroundColor: layoutStyles.buttonBackground,
+                },
+              ]}
               onPress={handlePlayPause}
               activeOpacity={0.7}
               accessibilityRole="button"
@@ -230,12 +355,20 @@ export default function PlaybackControls({
               hitSlop={10}
             >
               {isPlaying
-                ? renderIcon(icons?.Pause, '❚❚', 42)
-                : renderIcon(icons?.Play, '▶', 42)}
+                ? renderIcon(icons?.Pause, '❚❚', layoutStyles.playIconSize)
+                : renderIcon(icons?.Play, '▶', layoutStyles.playIconSize)}
             </TouchableOpacity>
-            {onSkipForward && (
+            {showSkipControls && onSkipForward && (
               <TouchableOpacity
-                style={styles.skipButton}
+                style={[
+                  styles.skipButton,
+                  {
+                    width: layoutStyles.skipButtonSize,
+                    height: layoutStyles.skipButtonSize,
+                    borderRadius: layoutStyles.skipButtonSize / 2,
+                    backgroundColor: layoutStyles.skipButtonBackground,
+                  },
+                ]}
                 onPress={onSkipForward}
                 activeOpacity={0.7}
                 accessibilityRole="button"
@@ -243,8 +376,10 @@ export default function PlaybackControls({
                 accessibilityHint="Moves playback position forward"
                 hitSlop={10}
               >
-                <Text style={styles.skipIconText}>↻</Text>
-                <Text style={styles.skipText}>{skipSeconds}</Text>
+                <Text style={[styles.skipIconText, { fontSize: layoutStyles.skipIconSize }]}>↻</Text>
+                <Text style={[styles.skipText, { fontSize: layoutStyles.skipTextSize }]}>
+                  {skipSeconds}
+                </Text>
               </TouchableOpacity>
             )}
           </View>
@@ -253,15 +388,28 @@ export default function PlaybackControls({
           <View
             style={[
               styles.bottomControls,
+              {
+                top: layoutStyles.actionTopOffset,
+                right: layoutStyles.actionRightOffset,
+                gap: layoutStyles.actionGap,
+              },
               isFullscreen && {
                 top: 8,
                 right: Math.max(12, insets.right + 8),
               },
             ]}
           >
-            {onSettingsPress && (
+            {showSettingsButton && onSettingsPress && (
               <TouchableOpacity
-                style={styles.fullscreenButton}
+                style={[
+                  styles.fullscreenButton,
+                  {
+                    width: layoutStyles.actionButtonSize,
+                    height: layoutStyles.actionButtonSize,
+                    borderRadius: layoutStyles.actionButtonSize / 2,
+                  },
+                  showOttActionLabels ? styles.ottActionButton : null,
+                ]}
                 onPress={handleSettingsPress}
                 activeOpacity={0.7}
                 accessibilityRole="button"
@@ -269,12 +417,21 @@ export default function PlaybackControls({
                 accessibilityHint="Opens playback and subtitle settings"
                 hitSlop={10}
               >
-                  {renderIcon(icons?.Settings, '⚙', 20)}
+                {renderIcon(icons?.Settings, '⚙', layoutStyles.actionIconSize)}
+                {showOttActionLabels ? <Text style={styles.ottActionLabel}>Settings</Text> : null}
               </TouchableOpacity>
             )}
             {onSubtitlesToggle && (hasSubtitles ?? subtitles.length > 0) && (
               <TouchableOpacity
-                style={styles.fullscreenButton}
+                style={[
+                  styles.fullscreenButton,
+                  {
+                    width: layoutStyles.actionButtonSize,
+                    height: layoutStyles.actionButtonSize,
+                    borderRadius: layoutStyles.actionButtonSize / 2,
+                  },
+                  showOttActionLabels ? styles.ottActionButton : null,
+                ]}
                 onPress={onSubtitlesToggle}
                 activeOpacity={0.7}
                 accessibilityRole="button"
@@ -284,14 +441,23 @@ export default function PlaybackControls({
               >
                 <Ionicons
                   name={showSubtitles ? 'chatbox' : 'chatbox-outline'}
-                  size={24}
+                  size={layoutStyles.actionIconSize}
                   color="#FFFFFF"
                 />
+                {showOttActionLabels ? <Text style={styles.ottActionLabel}>Subtitles</Text> : null}
               </TouchableOpacity>
             )}
-            {allowsPictureInPicture && onPictureInPictureToggle && (
+            {showPipButton && allowsPictureInPicture && onPictureInPictureToggle && (
               <TouchableOpacity
-                style={styles.fullscreenButton}
+                style={[
+                  styles.fullscreenButton,
+                  {
+                    width: layoutStyles.actionButtonSize,
+                    height: layoutStyles.actionButtonSize,
+                    borderRadius: layoutStyles.actionButtonSize / 2,
+                  },
+                  showOttActionLabels ? styles.ottActionButton : null,
+                ]}
                 onPress={onPictureInPictureToggle}
                 activeOpacity={0.7}
                 accessibilityRole="button"
@@ -303,13 +469,22 @@ export default function PlaybackControls({
               >
                 <MaterialIcons
                   name={isPictureInPictureActive ? 'picture-in-picture' : 'picture-in-picture-alt'}
-                  size={24}
+                  size={layoutStyles.actionIconSize}
                   color="#FFFFFF"
                 />
+                {showOttActionLabels ? <Text style={styles.ottActionLabel}>PiP</Text> : null}
               </TouchableOpacity>
             )}
             <TouchableOpacity
-              style={styles.fullscreenButton}
+              style={[
+                styles.fullscreenButton,
+                {
+                  width: layoutStyles.actionButtonSize,
+                  height: layoutStyles.actionButtonSize,
+                  borderRadius: layoutStyles.actionButtonSize / 2,
+                },
+                showOttActionLabels ? styles.ottActionButton : null,
+              ]}
               onPress={handleFullscreen}
               activeOpacity={0.7}
               accessibilityRole="button"
@@ -320,8 +495,11 @@ export default function PlaybackControls({
               hitSlop={10}
             >
               {isFullscreen
-                ? renderIcon(icons?.ExitFullscreen, '🗗', 18)
-                : renderIcon(icons?.Fullscreen, '⛶', 18)}
+                ? renderIcon(icons?.ExitFullscreen, '🗗', layoutStyles.actionIconSize - 6)
+                : renderIcon(icons?.Fullscreen, '⛶', layoutStyles.actionIconSize - 6)}
+              {showOttActionLabels ? (
+                <Text style={styles.ottActionLabel}>{isFullscreen ? 'Exit' : 'Fullscreen'}</Text>
+              ) : null}
             </TouchableOpacity>
           </View>
         </View>
@@ -332,6 +510,10 @@ export default function PlaybackControls({
         <View
           style={[
             styles.subtitleContainer,
+            {
+              bottom: layoutStyles.subtitleBottom,
+              paddingHorizontal: layoutStyles.subtitlePaddingHorizontal,
+            },
             isFullscreen && {
               bottom: Math.max(100, insets.bottom + 80),
               paddingLeft: Math.max(20, insets.left + 16),
@@ -344,7 +526,7 @@ export default function PlaybackControls({
             style={[
               styles.subtitleText,
               {
-                fontSize: subtitleFontSize,
+                fontSize: subtitleEffectiveSize,
                 color: '#FFFFFF',
                 fontWeight:
                   subtitleFontStyle === 'bold'
@@ -353,6 +535,9 @@ export default function PlaybackControls({
                       ? '300'
                       : '400',
                 fontStyle: subtitleFontStyle === 'italic' ? 'italic' : 'normal',
+                paddingHorizontal: layoutStyles.subtitlePaddingHorizontal,
+                paddingVertical: layoutStyles.subtitlePaddingVertical,
+                maxWidth: layoutStyles.subtitleMaxWidth,
               },
             ]}
           >
@@ -453,6 +638,18 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.6)',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  ottActionButton: {
+    width: 'auto',
+    minWidth: 84,
+    paddingHorizontal: 12,
+    flexDirection: 'row',
+    gap: 6,
+  },
+  ottActionLabel: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '600',
   },
   subtitleContainer: {
     position: 'absolute',

@@ -1,0 +1,1 @@
+export type PlayerLayoutVariant = 'compact' | 'standard' | 'ott';

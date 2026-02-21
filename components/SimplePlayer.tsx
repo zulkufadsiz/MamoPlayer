@@ -1,4 +1,5 @@
 import type { PlayerIconSet } from '@/types/icons';
+import type { PlayerLayoutVariant } from '@/types/layout';
 import { useEventListener } from 'expo';
 import * as ScreenOrientation from 'expo-screen-orientation';
 import {
@@ -69,6 +70,7 @@ export interface SimplePlayerProps {
   author?: string;
   artwork?: string;
   isPremiumUser?: boolean;
+  layoutVariant?: PlayerLayoutVariant;
 }
 
 const resolveMediaUrl = (source: VideoSource): string | null => {
@@ -104,6 +106,7 @@ export const SimplePlayer: React.FC<SimplePlayerProps> = ({
   author,
   artwork,
   isPremiumUser = false,
+  layoutVariant = 'standard',
   style,
 }) => {
   const [selectedSubtitleTrackId, setSelectedSubtitleTrackId] = useState<string | null>(
@@ -702,6 +705,7 @@ export const SimplePlayer: React.FC<SimplePlayerProps> = ({
           isPictureInPictureActive={isPictureInPictureActive}
           onPictureInPictureToggle={handlePictureInPictureToggle}
           hasSubtitles={resolvedSubtitleTracks.length > 0}
+          layoutVariant={layoutVariant}
           autoHideControls
           autoHideDelayMs={3000}
         />

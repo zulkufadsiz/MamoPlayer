@@ -8,6 +8,7 @@ import type { AdBreak, AdsConfig } from './types/ads';
 import type { AnalyticsConfig, AnalyticsEvent } from './types/analytics';
 import type { PlayerIconSet } from './types/icons';
 import type { IMAConfig } from './types/ima';
+import type { PlayerLayoutVariant } from './types/layout';
 import type { PlaybackRestrictions } from './types/restrictions';
 import type { PlayerThemeConfig, ThemeName } from './types/theme';
 import type { WatermarkConfig } from './types/watermark';
@@ -21,6 +22,7 @@ export interface ProMamoPlayerProps extends MamoPlayerProps {
   themeName?: ThemeName;
   theme?: PlayerThemeConfig;
   icons?: PlayerIconSet;
+  layoutVariant?: PlayerLayoutVariant;
 }
 
 type Quartile = 25 | 50 | 75 | 100;
