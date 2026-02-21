@@ -1,0 +1,5 @@
+# ninja log v5
+0	22	0	/Users/zulkufadsiz/Projects/MamoPlayer/android/app/.cxx/Debug/5v22tw67/x86/CMakeFiles/cmake.verify_globs	a5821d197ae9a312
+0	3909	1771705685829176733	CMakeFiles/appmodules.dir/Users/zulkufadsiz/Projects/MamoPlayer/android/app/build/generated/autolinking/src/main/jni/autolinking.cpp.o	159d4a965191ad4b
+0	4661	1771705686575582357	CMakeFiles/appmodules.dir/OnLoad.cpp.o	aecf2204a9cce462
+4661	4747	1771705686673287684	/Users/zulkufadsiz/Projects/MamoPlayer/android/app/build/intermediates/cxx/Debug/5v22tw67/obj/x86/libappmodules.so	14235d9bcf1056b2

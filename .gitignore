@@ -39,5 +39,15 @@ yarn-error.*
 app-example
 
 # generated native folders
-/ios
-/android
+ 
+# iOS native build artifacts (keep ios/ tracked, ignore build outputs)
+ios/build/
+ios/Pods/
+ios/*/xcuserdata/
+
+# Android native build artifacts (keep android/ tracked, ignore build outputs)
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+android/*/build/
