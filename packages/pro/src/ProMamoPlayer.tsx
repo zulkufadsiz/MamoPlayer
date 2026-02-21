@@ -1,6 +1,6 @@
 import { MamoPlayer, type MamoPlayerProps, type PlaybackEvent } from '@mamoplayer/core';
 import React, { useRef } from 'react';
-import { Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { AdStateMachine } from './ads/AdState';
 import type { AdBreak, AdsConfig } from './types/ads';
 import type { AnalyticsConfig, AnalyticsEvent } from './types/analytics';
@@ -73,10 +73,14 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
   const [resumeMainAfterAd, setResumeMainAfterAd] = React.useState(false);
   const [activeSource, setActiveSource] = React.useState<MamoPlayerProps['source']>(rest.source);
   const [watermarkPosition, setWatermarkPosition] = React.useState({ top: 10, left: 10 });
+  const [adStartedAt, setAdStartedAt] = React.useState<number | null>(null);
+  const [overlayTimestamp, setOverlayTimestamp] = React.useState(() => Date.now());
   const hasConfiguredPreroll = React.useMemo(
     () => Boolean(ads?.adBreaks.some((adBreak) => adBreak.type === 'preroll')),
     [ads?.adBreaks],
   );
+  const skipButtonEnabled = ads?.skipButtonEnabled === true;
+  const skipAfterSeconds = Math.max(0, ads?.skipAfterSeconds ?? 0);
 
   React.useEffect(() => {
     const adBreaks = ads?.adBreaks;
@@ -118,6 +122,7 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
       setIsAdMode(false);
       setActiveSource(mainSourceRef.current);
       setResumeMainAfterAd(true);
+      setAdStartedAt(null);
 
       emitAdAnalytics(analytics, 'ad_complete', playbackEvent, positionRef.current);
     },
@@ -135,6 +140,7 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
       setIsAdMode(false);
       setActiveSource(mainSourceRef.current);
       setResumeMainAfterAd(true);
+      setAdStartedAt(null);
 
       emitAdAnalytics(analytics, 'ad_error', playbackEvent, positionRef.current);
     },
@@ -147,11 +153,27 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
       mainSourceRef.current = rest.source;
       setActiveSource(adSource as MamoPlayerProps['source']);
       setIsAdMode(true);
+      setAdStartedAt(Date.now());
+      setOverlayTimestamp(Date.now());
 
       emitAdAnalytics(analytics, 'ad_start', playbackEvent, positionRef.current);
     },
     [analytics, rest.source],
   );
+
+  React.useEffect(() => {
+    if (!skipButtonEnabled || skipAfterSeconds <= 0 || !isAdMode || adStartedAt === null) {
+      return;
+    }
+
+    const interval = setInterval(() => {
+      setOverlayTimestamp(Date.now());
+    }, 250);
+
+    return () => {
+      clearInterval(interval);
+    };
+  }, [adStartedAt, isAdMode, skipAfterSeconds, skipButtonEnabled]);
 
   const rate = React.useMemo(() => {
     if (typeof rest.rate !== 'number') {
@@ -432,8 +454,31 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
     return rest.autoPlay;
   }, [hasConfiguredPreroll, isAdMode, resumeMainAfterAd, rest.autoPlay]);
 
+  const skipSecondsRemaining = React.useMemo(() => {
+    if (!skipButtonEnabled || skipAfterSeconds <= 0) {
+      return 0;
+    }
+
+    if (adStartedAt === null) {
+      return skipAfterSeconds;
+    }
+
+    const elapsedSeconds = Math.floor((overlayTimestamp - adStartedAt) / 1000);
+    return Math.max(0, skipAfterSeconds - elapsedSeconds);
+  }, [adStartedAt, overlayTimestamp, skipAfterSeconds, skipButtonEnabled]);
+
+  const isSkipDisabled = skipButtonEnabled && skipSecondsRemaining > 0;
+
+  const handleSkipAd = React.useCallback(() => {
+    if (isSkipDisabled) {
+      return;
+    }
+
+    completeAdPlayback();
+  }, [completeAdPlayback, isSkipDisabled]);
+
   return (
-    <View style={{ position: 'relative' }}>
+    <View style={styles.playerContainer}>
       <MamoPlayer
         {...rest}
         source={activeSource}
@@ -441,6 +486,23 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
         rate={rate}
         onPlaybackEvent={handlePlaybackEvent}
       />
+      {adRef.current.isAdPlaying === true ? (
+        <View style={styles.adOverlay}>
+          <Text style={styles.adText}>Ad playing...</Text>
+          {skipButtonEnabled ? (
+            <Pressable
+              accessibilityRole="button"
+              onPress={handleSkipAd}
+              disabled={isSkipDisabled}
+              style={[styles.skipButton, isSkipDisabled ? styles.skipButtonDisabled : null]}
+            >
+              <Text style={styles.skipButtonText}>
+                {isSkipDisabled ? `Skip in ${skipSecondsRemaining}s` : 'Skip ad'}
+              </Text>
+            </Pressable>
+          ) : null}
+        </View>
+      ) : null}
       {watermark ? (
         <Text
           pointerEvents="none"
@@ -458,5 +520,36 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
     </View>
   );
 };
+
+const styles = StyleSheet.create({
+  playerContainer: {
+    position: 'relative',
+  },
+  adOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    zIndex: 2,
+  },
+  adText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+  },
+  skipButton: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  skipButtonDisabled: {
+    opacity: 0.6,
+  },
+  skipButtonText: {
+    color: '#111111',
+    fontSize: 12,
+  },
+});
 
 export default ProMamoPlayer;
