@@ -2,7 +2,7 @@ import { MamoPlayer, type MamoPlayerProps, type PlaybackEvent } from '@mamoplaye
 import React, { useRef } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { AdStateMachine } from './ads/AdState';
-import { loadAds, startAds } from './ima/nativeBridge';
+import { loadAds, releaseAds, subscribeToAdsEvents } from './ima/nativeBridge';
 import type { AdBreak, AdsConfig } from './types/ads';
 import type { AnalyticsConfig, AnalyticsEvent } from './types/analytics';
 import type { IMAConfig } from './types/ima';
@@ -80,7 +80,10 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
   const [adStartedAt, setAdStartedAt] = React.useState<number | null>(null);
   const [overlayTimestamp, setOverlayTimestamp] = React.useState(() => Date.now());
   const shouldUseNativeIMA = Boolean(ima?.enabled && ima.adTagUrl);
-  const hasRequestedNativeIMARef = React.useRef(false);
+  const [hasNativeIMAFailed, setHasNativeIMAFailed] = React.useState(false);
+  const [isNativeAdPlaying, setIsNativeAdPlaying] = React.useState(false);
+  const [isMainContentPausedByNativeAd, setIsMainContentPausedByNativeAd] = React.useState(false);
+  const useNativeIMA = shouldUseNativeIMA && !hasNativeIMAFailed;
   const hasConfiguredPreroll = React.useMemo(
     () => Boolean(ads?.adBreaks.some((adBreak) => adBreak.type === 'preroll')),
     [ads?.adBreaks],
@@ -88,50 +91,109 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
   const skipButtonEnabled = ads?.skipButtonEnabled === true;
   const skipAfterSeconds = Math.max(0, ads?.skipAfterSeconds ?? 0);
 
-  const logIMAPlaceholderWarning = React.useCallback(() => {
-    console.warn('IMA integration not implemented yet.');
-  }, []);
-
-  const loadIMASdk = React.useCallback(async (): Promise<boolean> => {
-    return true;
-  }, [logIMAPlaceholderWarning]);
-
-  const initializeIMAAds = React.useCallback(async (): Promise<boolean> => {
-    return true;
-  }, [logIMAPlaceholderWarning]);
-
-  const requestAds = React.useCallback(async (): Promise<boolean> => {
-    if (!ima?.adTagUrl) {
-      return false;
-    }
-
-    await loadAds(ima.adTagUrl);
-    return true;
-  }, [ima?.adTagUrl]);
-
-  const startIMAAdPlayback = React.useCallback(async (): Promise<boolean> => {
-    await startAds();
-    return true;
-  }, []);
-
-  const _imaPlaceholderMethods = React.useMemo(
-    () => ({
-      loadIMASdk,
-      initializeIMAAds,
-      requestAds,
-      startIMAAdPlayback,
-    }),
-    [initializeIMAAds, loadIMASdk, requestAds, startIMAAdPlayback],
-  );
-
   React.useEffect(() => {
     if (!shouldUseNativeIMA) {
-      hasRequestedNativeIMARef.current = false;
+      setHasNativeIMAFailed(false);
+      setIsNativeAdPlaying(false);
+      setIsMainContentPausedByNativeAd(false);
+      return;
     }
-  }, [shouldUseNativeIMA]);
+
+    let isMounted = true;
+    let unsubscribe: (() => void) | null = null;
+
+    const onNativeAdsError = (payload?: unknown) => {
+      let message = 'Native IMA ad playback failed.';
+
+      if (payload instanceof Error) {
+        message = payload.message;
+      } else if (typeof payload === 'string') {
+        message = payload;
+      } else if (payload && typeof payload === 'object') {
+        const payloadRecord = payload as { message?: unknown };
+        if (typeof payloadRecord.message === 'string' && payloadRecord.message.length > 0) {
+          message = payloadRecord.message;
+        }
+      }
+
+      console.error(`[MamoPlayer] ${message}`);
+      emitAdAnalytics(analytics, 'ad_error', undefined, positionRef.current);
+
+      setIsNativeAdPlaying(false);
+      setIsMainContentPausedByNativeAd(false);
+      setResumeMainAfterAd(true);
+      setHasNativeIMAFailed(true);
+
+      if (unsubscribe) {
+        unsubscribe();
+        unsubscribe = null;
+      }
+
+      void releaseAds().catch(() => undefined);
+    };
+
+    const initializeNativeIMA = async () => {
+      if (!ima?.adTagUrl) {
+        return;
+      }
+
+      try {
+        unsubscribe = subscribeToAdsEvents((eventName, payload) => {
+          if (!isMounted) {
+            return;
+          }
+
+          if (eventName === 'mamo_ads_started') {
+            setIsNativeAdPlaying(true);
+            setIsMainContentPausedByNativeAd(true);
+            setResumeMainAfterAd(false);
+            emitAdAnalytics(analytics, 'ad_start', undefined, positionRef.current);
+            return;
+          }
+
+          if (eventName === 'mamo_ads_completed') {
+            setIsNativeAdPlaying(false);
+            setIsMainContentPausedByNativeAd(false);
+            setResumeMainAfterAd(true);
+            emitAdAnalytics(analytics, 'ad_complete', undefined, positionRef.current);
+            return;
+          }
+
+          if (eventName === 'mamo_ads_error') {
+            onNativeAdsError(payload);
+          }
+        });
+
+        await loadAds(ima.adTagUrl);
+      } catch (error) {
+        if (!isMounted) {
+          return;
+        }
+
+        onNativeAdsError(error);
+      }
+    };
+
+    void initializeNativeIMA();
+
+    return () => {
+      isMounted = false;
+
+      if (unsubscribe) {
+        unsubscribe();
+      }
+
+      void releaseAds().catch((error: unknown) => {
+        const message = error instanceof Error ? error.message : 'Unable to release native IMA ads.';
+        console.error(`[MamoPlayer] ${message}`);
+      });
+    };
+  }, [analytics, ima?.adTagUrl, shouldUseNativeIMA]);
 
   React.useEffect(() => {
-    hasRequestedNativeIMARef.current = false;
+    setHasNativeIMAFailed(false);
+    setIsNativeAdPlaying(false);
+    setIsMainContentPausedByNativeAd(false);
   }, [rest.source]);
 
   React.useEffect(() => {
@@ -288,37 +350,7 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
   const handlePlaybackEvent = React.useCallback(
     (playbackEvent: PlaybackEvent) => {
       // Native IMA path
-      if (shouldUseNativeIMA) {
-        if (playbackEvent.type === 'ready' && !hasRequestedNativeIMARef.current) {
-          hasRequestedNativeIMARef.current = true;
-
-          void (async () => {
-            try {
-              const hasSdk = await loadIMASdk();
-
-              if (!hasSdk) {
-                return;
-              }
-
-              const isInitialized = await initializeIMAAds();
-
-              if (!isInitialized) {
-                return;
-              }
-
-              const hasRequestedAds = await requestAds();
-
-              if (!hasRequestedAds) {
-                return;
-              }
-
-              await startIMAAdPlayback();
-            } catch {
-              hasRequestedNativeIMARef.current = false;
-              logIMAPlaceholderWarning();
-            }
-          })();
-        }
+      if (useNativeIMA) {
 
         positionRef.current = playbackEvent.position;
         onPlaybackEvent?.(playbackEvent);
@@ -594,21 +626,28 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
       beginAdPlayback,
       completeAdPlayback,
       failAdPlayback,
-      initializeIMAAds,
       isAdMode,
-      loadIMASdk,
-      logIMAPlaceholderWarning,
       onPlaybackEvent,
-      requestAds,
       restrictions,
       resumeMainAfterAd,
-      shouldUseNativeIMA,
-      startIMAAdPlayback,
       trackQuartiles,
+      useNativeIMA,
     ],
   );
 
   const effectiveAutoPlay = React.useMemo(() => {
+    if (isMainContentPausedByNativeAd) {
+      return false;
+    }
+
+    if (useNativeIMA) {
+      if (resumeMainAfterAd) {
+        return true;
+      }
+
+      return rest.autoPlay;
+    }
+
     if (isAdMode) {
       return true;
     }
@@ -622,7 +661,14 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
     }
 
     return rest.autoPlay;
-  }, [hasConfiguredPreroll, isAdMode, resumeMainAfterAd, rest.autoPlay]);
+  }, [
+    hasConfiguredPreroll,
+    isAdMode,
+    isMainContentPausedByNativeAd,
+    resumeMainAfterAd,
+    rest.autoPlay,
+    useNativeIMA,
+  ]);
 
   const skipSecondsRemaining = React.useMemo(() => {
     if (!skipButtonEnabled || skipAfterSeconds <= 0) {
@@ -656,7 +702,7 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
         rate={rate}
         onPlaybackEvent={handlePlaybackEvent}
       />
-      {adRef.current.isAdPlaying === true ? (
+      {adRef.current.isAdPlaying === true || isNativeAdPlaying ? (
         <View style={styles.adOverlay}>
           <Text style={styles.adText}>Ad playing...</Text>
           {skipButtonEnabled ? (
