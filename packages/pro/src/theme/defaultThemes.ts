@@ -1,4 +1,4 @@
-import type { PlayerThemeConfig, ThemeName } from "./types/theme";
+import type { PlayerThemeConfig, ThemeName } from '../types/theme';
 
 export const lightTheme: PlayerThemeConfig = {
   colors: {
