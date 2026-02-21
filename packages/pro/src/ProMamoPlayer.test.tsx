@@ -192,11 +192,11 @@ describe('ProMamoPlayer', () => {
     render(
       <ProMamoPlayer
         source={{ uri: 'https://example.com/video.mp4' }}
-        restrictions={{ maxPlaybackRate: 1.5 }}
+        restrictions={{ maxPlaybackRate: 1.0 }}
         rate={2}
       />,
     );
 
-    expect(latestVideoProps?.rate).toBe(1.5);
+    expect(latestVideoProps?.rate).toBe(1.0);
   });
 });
