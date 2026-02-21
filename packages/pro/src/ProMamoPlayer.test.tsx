@@ -135,10 +135,7 @@ describe('ProMamoPlayer', () => {
 
   it('randomizes watermark position at configured interval', () => {
     jest.useFakeTimers();
-    const randomSpy = jest
-      .spyOn(Math, 'random')
-      .mockReturnValueOnce(0.5)
-      .mockReturnValueOnce(0.25);
+    const randomSpy = jest.spyOn(Math, 'random').mockReturnValueOnce(0.5).mockReturnValueOnce(0.25);
 
     const { getByText } = render(
       <ProMamoPlayer
