@@ -1,6 +1,8 @@
 import type { PlaybackEvent } from '@mamoplayer/core';
 import { act, render } from '@testing-library/react-native';
+import { StyleSheet } from 'react-native';
 import { ProMamoPlayer } from './ProMamoPlayer';
+import type { PlayerThemeConfig } from './types/theme';
 
 let latestOnPlaybackEvent: ((event: PlaybackEvent) => void) | undefined;
 let latestVideoProps: { rate?: number; source?: unknown; autoPlay?: boolean } | undefined;
@@ -193,6 +195,97 @@ describe('ProMamoPlayer', () => {
     );
 
     randomSpy.mockRestore();
+  });
+
+  it('applies themeName styles to ad overlay and watermark text', async () => {
+    const { getByText } = render(
+      <ProMamoPlayer
+        source={{ uri: 'https://example.com/theme-name.mp4' }}
+        themeName="light"
+        watermark={{ text: 'theme-watermark' }}
+        ads={{ adBreaks: [], skipButtonEnabled: true }}
+        ima={{ enabled: true, adTagUrl: 'https://example.com/theme-name-adtag' }}
+      />,
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    if (!latestNativeAdsHandler) {
+      throw new Error('Native ads handler not captured');
+    }
+
+    act(() => {
+      latestNativeAdsHandler?.('mamo_ads_started', { adPosition: 'preroll' });
+    });
+
+    const adTextStyle = StyleSheet.flatten(getByText('Ad playing...').props.style);
+    const skipTextStyle = StyleSheet.flatten(getByText('Skip ad').props.style);
+    const watermarkStyle = StyleSheet.flatten(getByText('theme-watermark').props.style);
+
+    expect(adTextStyle.color).toBe('#111827');
+    expect(skipTextStyle.color).toBe('#111827');
+    expect(watermarkStyle.color).toBe('#111827');
+  });
+
+  it('prefers custom theme over themeName for overlay text styling', async () => {
+    const customTheme: PlayerThemeConfig = {
+      name: 'dark',
+      tokens: {
+        colors: {
+          background: '#0A0A0A',
+          backgroundOverlay: '#101010AA',
+          primary: '#22C55E',
+          primaryText: '#22C55E',
+          secondaryText: '#86EFAC',
+          accent: '#22C55E',
+          danger: '#DC2626',
+          border: '#1F2937',
+          sliderTrack: '#4B5563',
+          sliderThumb: '#22C55E',
+        },
+        typography: {
+          fontFamily: 'System',
+          fontSizeSmall: 12,
+          fontSizeMedium: 14,
+          fontSizeLarge: 20,
+        },
+        shape: {
+          borderRadiusSmall: 8,
+          borderRadiusMedium: 12,
+          borderRadiusLarge: 16,
+        },
+      },
+    };
+
+    const { getByText } = render(
+      <ProMamoPlayer
+        source={{ uri: 'https://example.com/custom-theme.mp4' }}
+        themeName="light"
+        theme={customTheme}
+        ads={{ adBreaks: [], skipButtonEnabled: true }}
+        ima={{ enabled: true, adTagUrl: 'https://example.com/custom-theme-adtag' }}
+      />,
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    if (!latestNativeAdsHandler) {
+      throw new Error('Native ads handler not captured');
+    }
+
+    act(() => {
+      latestNativeAdsHandler?.('mamo_ads_started', { adPosition: 'preroll' });
+    });
+
+    const adTextStyle = StyleSheet.flatten(getByText('Ad playing...').props.style);
+    const skipTextStyle = StyleSheet.flatten(getByText('Skip ad').props.style);
+
+    expect(adTextStyle.color).toBe('#22C55E');
+    expect(skipTextStyle.color).toBe('#22C55E');
   });
 
   it('blocks restricted seek directions from pro playback callback', () => {

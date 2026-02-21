@@ -3,10 +3,12 @@ import React, { useRef } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { AdStateMachine } from './ads/AdState';
 import { loadAds, releaseAds, subscribeToAdsEvents } from './ima/nativeBridge';
+import { ThemeProvider, usePlayerTheme } from './theme/ThemeContext';
 import type { AdBreak, AdsConfig } from './types/ads';
 import type { AnalyticsConfig, AnalyticsEvent } from './types/analytics';
 import type { IMAConfig } from './types/ima';
 import type { PlaybackRestrictions } from './types/restrictions';
+import type { PlayerThemeConfig, ThemeName } from './types/theme';
 import type { WatermarkConfig } from './types/watermark';
 
 export interface ProMamoPlayerProps extends MamoPlayerProps {
@@ -15,6 +17,8 @@ export interface ProMamoPlayerProps extends MamoPlayerProps {
   analytics?: AnalyticsConfig;
   restrictions?: PlaybackRestrictions;
   watermark?: WatermarkConfig;
+  themeName?: ThemeName;
+  theme?: PlayerThemeConfig;
 }
 
 type Quartile = 25 | 50 | 75 | 100;
@@ -154,12 +158,121 @@ const emitAdAnalytics = (
   });
 };
 
+type OverlayThemePrimitives = {
+  colors: Record<string, string | undefined>;
+  typography: Record<string, number | string | undefined>;
+  shape: Record<string, number | undefined>;
+};
+
+const getThemePrimitives = (theme: PlayerThemeConfig): OverlayThemePrimitives => {
+  const themeRecord = theme as unknown as {
+    tokens?: {
+      colors?: Record<string, string | undefined>;
+      typography?: Record<string, number | string | undefined>;
+      shape?: Record<string, number | undefined>;
+    };
+    colors?: Record<string, string | undefined>;
+    typography?: Record<string, number | string | undefined>;
+    shape?: Record<string, number | undefined>;
+  };
+
+  return {
+    colors: themeRecord.tokens?.colors ?? themeRecord.colors ?? {},
+    typography: themeRecord.tokens?.typography ?? themeRecord.typography ?? {},
+    shape: themeRecord.tokens?.shape ?? themeRecord.shape ?? {},
+  };
+};
+
+interface ProMamoPlayerOverlaysProps {
+  showAdOverlay: boolean;
+  skipButtonEnabled: boolean;
+  isSkipDisabled: boolean;
+  skipSecondsRemaining: number;
+  handleSkipAd: () => void;
+  watermark?: WatermarkConfig;
+  watermarkPosition: { top: number; left: number };
+}
+
+const ProMamoPlayerOverlays: React.FC<ProMamoPlayerOverlaysProps> = ({
+  showAdOverlay,
+  skipButtonEnabled,
+  isSkipDisabled,
+  skipSecondsRemaining,
+  handleSkipAd,
+  watermark,
+  watermarkPosition,
+}) => {
+  const playerTheme = usePlayerTheme();
+  const { colors, typography, shape } = getThemePrimitives(playerTheme);
+
+  const overlayBackgroundColor =
+    colors.backgroundOverlay ?? colors.controlBackground ?? colors.background;
+  const primaryTextColor = colors.primaryText ?? colors.textPrimary ?? colors.secondaryText;
+  const skipButtonBackgroundColor = colors.background ?? colors.surface ?? colors.border;
+  const skipButtonTextColor = colors.primaryText ?? colors.textPrimary ?? colors.secondaryText;
+  const smallFontSize =
+    (typeof typography.fontSizeSmall === 'number'
+      ? typography.fontSizeSmall
+      : typeof typography.captionSize === 'number'
+        ? typography.captionSize
+        : 12);
+  const smallRadius =
+    (typeof shape.borderRadiusSmall === 'number'
+      ? shape.borderRadiusSmall
+      : typeof shape.radiusSm === 'number'
+        ? shape.radiusSm
+        : 6);
+
+  return (
+    <>
+      {showAdOverlay ? (
+        <View style={[styles.adOverlay, { backgroundColor: overlayBackgroundColor }]}> 
+          <Text style={[styles.adText, { color: primaryTextColor, fontSize: smallFontSize }]}>Ad playing...</Text>
+          {skipButtonEnabled ? (
+            <Pressable
+              accessibilityRole="button"
+              onPress={handleSkipAd}
+              disabled={isSkipDisabled}
+              style={[
+                styles.skipButton,
+                { backgroundColor: skipButtonBackgroundColor, borderRadius: smallRadius },
+                isSkipDisabled ? styles.skipButtonDisabled : null,
+              ]}
+            >
+              <Text style={[styles.skipButtonText, { color: skipButtonTextColor, fontSize: smallFontSize }]}>
+                {isSkipDisabled ? `Skip in ${skipSecondsRemaining}s` : 'Skip ad'}
+              </Text>
+            </Pressable>
+          ) : null}
+        </View>
+      ) : null}
+      {watermark ? (
+        <Text
+          pointerEvents="none"
+          style={{
+            position: 'absolute',
+            top: watermarkPosition.top,
+            left: watermarkPosition.left,
+            fontSize: smallFontSize,
+            color: primaryTextColor,
+            opacity: watermark.opacity ?? 0.5,
+          }}
+        >
+          {watermark.text}
+        </Text>
+      ) : null}
+    </>
+  );
+};
+
 export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
   ads,
   ima,
   analytics,
   restrictions,
   watermark,
+  theme,
+  themeName,
   onPlaybackEvent,
   ...rest
 }) => {
@@ -828,46 +941,26 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
   }, [completeAdPlayback, isSkipDisabled]);
 
   return (
-    <View style={styles.playerContainer}>
-      <MamoPlayer
-        {...rest}
-        source={activeSource}
-        autoPlay={effectiveAutoPlay}
-        rate={rate}
-        onPlaybackEvent={handlePlaybackEvent}
-      />
-      {adRef.current.isAdPlaying === true || isNativeAdPlaying ? (
-        <View style={styles.adOverlay}>
-          <Text style={styles.adText}>Ad playing...</Text>
-          {skipButtonEnabled ? (
-            <Pressable
-              accessibilityRole="button"
-              onPress={handleSkipAd}
-              disabled={isSkipDisabled}
-              style={[styles.skipButton, isSkipDisabled ? styles.skipButtonDisabled : null]}
-            >
-              <Text style={styles.skipButtonText}>
-                {isSkipDisabled ? `Skip in ${skipSecondsRemaining}s` : 'Skip ad'}
-              </Text>
-            </Pressable>
-          ) : null}
-        </View>
-      ) : null}
-      {watermark ? (
-        <Text
-          pointerEvents="none"
-          style={{
-            position: 'absolute',
-            top: watermarkPosition.top,
-            left: watermarkPosition.left,
-            fontSize: 12,
-            opacity: watermark.opacity ?? 0.5,
-          }}
-        >
-          {watermark.text}
-        </Text>
-      ) : null}
-    </View>
+    <ThemeProvider theme={theme} themeName={themeName}>
+      <View style={styles.playerContainer}>
+        <MamoPlayer
+          {...rest}
+          source={activeSource}
+          autoPlay={effectiveAutoPlay}
+          rate={rate}
+          onPlaybackEvent={handlePlaybackEvent}
+        />
+        <ProMamoPlayerOverlays
+          showAdOverlay={adRef.current.isAdPlaying === true || isNativeAdPlaying}
+          skipButtonEnabled={skipButtonEnabled}
+          isSkipDisabled={isSkipDisabled}
+          skipSecondsRemaining={skipSecondsRemaining}
+          handleSkipAd={handleSkipAd}
+          watermark={watermark}
+          watermarkPosition={watermarkPosition}
+        />
+      </View>
+    </ThemeProvider>
   );
 };
 
@@ -877,18 +970,15 @@ const styles = StyleSheet.create({
   },
   adOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.45)',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
     zIndex: 2,
   },
   adText: {
-    color: '#FFFFFF',
     fontSize: 12,
   },
   skipButton: {
-    backgroundColor: '#FFFFFF',
     borderRadius: 6,
     paddingHorizontal: 10,
     paddingVertical: 6,
@@ -897,7 +987,6 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   skipButtonText: {
-    color: '#111111',
     fontSize: 12,
   },
 });
