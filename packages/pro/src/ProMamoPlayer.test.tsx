@@ -4,6 +4,23 @@ import { ProMamoPlayer } from './ProMamoPlayer';
 
 let latestOnPlaybackEvent: ((event: PlaybackEvent) => void) | undefined;
 let latestVideoProps: { rate?: number; source?: unknown; autoPlay?: boolean } | undefined;
+let latestNativeAdsHandler:
+  | ((eventName: 'mamo_ads_loaded' | 'mamo_ads_started' | 'mamo_ads_completed' | 'mamo_ads_error', payload?: unknown) => void)
+  | undefined;
+const mockLoadAds = jest.fn(async (_adTagUrl: string) => {});
+const mockReleaseAds = jest.fn(async () => {});
+const mockUnsubscribeAdsEvents = jest.fn();
+const mockSubscribeToAdsEvents = jest.fn(
+  (
+    handler: (
+      eventName: 'mamo_ads_loaded' | 'mamo_ads_started' | 'mamo_ads_completed' | 'mamo_ads_error',
+      payload?: unknown,
+    ) => void,
+  ) => {
+    latestNativeAdsHandler = handler;
+    return mockUnsubscribeAdsEvents;
+  },
+);
 
 jest.mock('@mamoplayer/core', () => {
   const React = require('react');
@@ -29,12 +46,26 @@ jest.mock('@mamoplayer/core', () => {
   };
 });
 
+jest.mock('./ima/nativeBridge', () => ({
+  loadAds: (adTagUrl: string) => mockLoadAds(adTagUrl),
+  releaseAds: () => mockReleaseAds(),
+  subscribeToAdsEvents: (
+    handler: (
+      eventName: 'mamo_ads_loaded' | 'mamo_ads_started' | 'mamo_ads_completed' | 'mamo_ads_error',
+      payload?: unknown,
+    ) => void,
+  ) => mockSubscribeToAdsEvents(handler),
+}));
+
 describe('ProMamoPlayer', () => {
   beforeEach(() => {
     latestOnPlaybackEvent = undefined;
     latestVideoProps = undefined;
+    latestNativeAdsHandler = undefined;
     jest.clearAllMocks();
     jest.useRealTimers();
+    mockLoadAds.mockResolvedValue(undefined);
+    mockReleaseAds.mockResolvedValue(undefined);
   });
 
   const emitPlayback = (event: Partial<PlaybackEvent> & Pick<PlaybackEvent, 'type'>) => {
@@ -529,5 +560,112 @@ describe('ProMamoPlayer', () => {
     const analyticsTypesAfterAdEnd = onEvent.mock.calls.map(([event]) => event.type);
 
     expect(analyticsTypesAfterAdEnd.filter((type) => type === 'session_end')).toHaveLength(1);
+  });
+
+  it('loads and subscribes to native IMA on mount and releases on unmount', async () => {
+    const view = render(
+      <ProMamoPlayer
+        source={{ uri: 'https://example.com/main-native-ima.mp4' }}
+        ima={{ enabled: true, adTagUrl: 'https://example.com/native-adtag' }}
+      />,
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(mockLoadAds).toHaveBeenCalledWith('https://example.com/native-adtag');
+    expect(mockSubscribeToAdsEvents).toHaveBeenCalledTimes(1);
+
+    view.unmount();
+
+    expect(mockUnsubscribeAdsEvents).toHaveBeenCalledTimes(1);
+    expect(mockReleaseAds).toHaveBeenCalledTimes(1);
+  });
+
+  it('handles native IMA events and falls back to simulated ads after native error', async () => {
+    const onEvent = jest.fn();
+    const adSource = { uri: 'https://example.com/simulated-fallback-preroll.mp4', type: 'video/mp4' as const };
+
+    render(
+      <ProMamoPlayer
+        source={{ uri: 'https://example.com/main-native-events.mp4' }}
+        analytics={{ onEvent }}
+        ima={{ enabled: true, adTagUrl: 'https://example.com/native-adtag-events' }}
+        ads={{
+          adBreaks: [
+            {
+              type: 'preroll',
+              source: adSource,
+            },
+          ],
+        }}
+      />,
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    if (!latestNativeAdsHandler) {
+      throw new Error('Native ads handler not captured');
+    }
+
+    act(() => {
+      latestNativeAdsHandler?.('mamo_ads_started');
+    });
+
+    expect(onEvent).toHaveBeenCalledWith(expect.objectContaining({ type: 'ad_start' }));
+    expect(latestVideoProps?.autoPlay).toBe(false);
+
+    act(() => {
+      latestNativeAdsHandler?.('mamo_ads_completed');
+    });
+
+    expect(onEvent).toHaveBeenCalledWith(expect.objectContaining({ type: 'ad_complete' }));
+    expect(latestVideoProps?.autoPlay).toBe(true);
+
+    act(() => {
+      latestNativeAdsHandler?.('mamo_ads_error', { message: 'native failure' });
+    });
+
+    expect(onEvent).toHaveBeenCalledWith(expect.objectContaining({ type: 'ad_error' }));
+
+    act(() => {
+      emitPlayback({ type: 'ready', duration: 100, position: 0 });
+    });
+
+    expect(latestVideoProps?.source).toEqual(adSource);
+  });
+
+  it('falls back to simulated ads when native loadAds fails', async () => {
+    mockLoadAds.mockRejectedValueOnce(new Error('native module missing'));
+
+    const adSource = { uri: 'https://example.com/fallback-after-load-failure.mp4', type: 'video/mp4' as const };
+
+    render(
+      <ProMamoPlayer
+        source={{ uri: 'https://example.com/main-load-failure.mp4' }}
+        ima={{ enabled: true, adTagUrl: 'https://example.com/failing-adtag' }}
+        ads={{
+          adBreaks: [
+            {
+              type: 'preroll',
+              source: adSource,
+            },
+          ],
+        }}
+      />,
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    act(() => {
+      emitPlayback({ type: 'ready', duration: 100, position: 0 });
+    });
+
+    expect(latestVideoProps?.source).toEqual(adSource);
   });
 });
