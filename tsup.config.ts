@@ -11,9 +11,9 @@ export default defineConfig({
   clean: true,
   treeshake: true,
   target: 'es2019',
-  outExtension() {
+  outExtension({ format }) {
     return {
-      js: '.js',
+      js: format === 'cjs' ? '.cjs' : '.js',
     };
   },
 });
