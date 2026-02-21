@@ -3,7 +3,7 @@ import { act, render } from '@testing-library/react-native';
 import { ProMamoPlayer } from './ProMamoPlayer';
 
 let latestOnPlaybackEvent: ((event: PlaybackEvent) => void) | undefined;
-let latestVideoProps: { rate?: number } | undefined;
+let latestVideoProps: { rate?: number; source?: unknown } | undefined;
 
 jest.mock('@mamoplayer/core', () => {
   const React = require('react');
@@ -14,12 +14,14 @@ jest.mock('@mamoplayer/core', () => {
     MamoPlayer: ({
       onPlaybackEvent,
       rate,
+      source,
     }: {
       onPlaybackEvent?: (event: PlaybackEvent) => void;
       rate?: number;
+      source?: unknown;
     }) => {
       latestOnPlaybackEvent = onPlaybackEvent;
-      latestVideoProps = { rate };
+      latestVideoProps = { rate, source };
       return <View testID="mamoplayer-mock" />;
     },
   };
@@ -195,5 +197,132 @@ describe('ProMamoPlayer', () => {
     );
 
     expect(latestVideoProps?.rate).toBe(1.0);
+  });
+
+  it('switches to ad source and restores main source after ad ends', () => {
+    const mainSource = { uri: 'https://example.com/main.mp4' };
+    const adSource = { uri: 'https://example.com/ad.mp4', type: 'video/mp4' as const };
+
+    render(
+      <ProMamoPlayer
+        source={mainSource}
+        ads={{
+          adBreaks: [
+            {
+              type: 'preroll',
+              source: adSource,
+            },
+          ],
+        }}
+      />,
+    );
+
+    expect(latestVideoProps?.source).toEqual(mainSource);
+
+    act(() => {
+      emitPlayback({ type: 'time_update', duration: 100, position: 0 });
+    });
+
+    expect(latestVideoProps?.source).toEqual(adSource);
+
+    act(() => {
+      emitPlayback({ type: 'ended', duration: 5, position: 5 });
+    });
+
+    expect(latestVideoProps?.source).toEqual(mainSource);
+  });
+
+  it('does not switch source when ads config is missing', () => {
+    const mainSource = { uri: 'https://example.com/main-only.mp4' };
+
+    render(<ProMamoPlayer source={mainSource} />);
+
+    expect(latestVideoProps?.source).toEqual(mainSource);
+
+    act(() => {
+      emitPlayback({ type: 'time_update', duration: 100, position: 0 });
+      emitPlayback({ type: 'ended', duration: 100, position: 100 });
+    });
+
+    expect(latestVideoProps?.source).toEqual(mainSource);
+  });
+
+  it('switches to midroll ad only when configured time is reached', () => {
+    const mainSource = { uri: 'https://example.com/main-midroll.mp4' };
+    const adSource = { uri: 'https://example.com/midroll-ad.mp4', type: 'video/mp4' as const };
+
+    render(
+      <ProMamoPlayer
+        source={mainSource}
+        ads={{
+          adBreaks: [
+            {
+              type: 'midroll',
+              time: 30,
+              source: adSource,
+            },
+          ],
+        }}
+      />,
+    );
+
+    expect(latestVideoProps?.source).toEqual(mainSource);
+
+    act(() => {
+      emitPlayback({ type: 'time_update', duration: 100, position: 29 });
+    });
+
+    expect(latestVideoProps?.source).toEqual(mainSource);
+
+    act(() => {
+      emitPlayback({ type: 'time_update', duration: 100, position: 30 });
+    });
+
+    expect(latestVideoProps?.source).toEqual(adSource);
+
+    act(() => {
+      emitPlayback({ type: 'ended', duration: 5, position: 5 });
+    });
+
+    expect(latestVideoProps?.source).toEqual(mainSource);
+  });
+
+  it('switches to postroll ad only on ended event and then restores main source', () => {
+    const mainSource = { uri: 'https://example.com/main-postroll.mp4' };
+    const adSource = { uri: 'https://example.com/postroll-ad.mp4', type: 'video/mp4' as const };
+
+    render(
+      <ProMamoPlayer
+        source={mainSource}
+        ads={{
+          adBreaks: [
+            {
+              type: 'postroll',
+              source: adSource,
+            },
+          ],
+        }}
+      />,
+    );
+
+    expect(latestVideoProps?.source).toEqual(mainSource);
+
+    act(() => {
+      emitPlayback({ type: 'time_update', duration: 100, position: 99 });
+    });
+
+    expect(latestVideoProps?.source).toEqual(mainSource);
+
+    act(() => {
+      emitPlayback({ type: 'ended', duration: 100, position: 100 });
+    });
+
+    expect(latestVideoProps?.source).toEqual(adSource);
+
+    act(() => {
+      emitPlayback({ type: 'ended', duration: 5, position: 5 });
+    });
+
+    expect(latestVideoProps?.source).toEqual(mainSource);
   });
 });
