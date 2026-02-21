@@ -3,6 +3,7 @@ import { act, render } from '@testing-library/react-native';
 import { ProMamoPlayer } from './ProMamoPlayer';
 
 let latestOnPlaybackEvent: ((event: PlaybackEvent) => void) | undefined;
+let latestVideoProps: { rate?: number } | undefined;
 
 jest.mock('@mamoplayer/core', () => {
   const React = require('react');
@@ -10,8 +11,15 @@ jest.mock('@mamoplayer/core', () => {
 
   return {
     __esModule: true,
-    MamoPlayer: ({ onPlaybackEvent }: { onPlaybackEvent?: (event: PlaybackEvent) => void }) => {
+    MamoPlayer: ({
+      onPlaybackEvent,
+      rate,
+    }: {
+      onPlaybackEvent?: (event: PlaybackEvent) => void;
+      rate?: number;
+    }) => {
       latestOnPlaybackEvent = onPlaybackEvent;
+      latestVideoProps = { rate };
       return <View testID="mamoplayer-mock" />;
     },
   };
@@ -20,6 +28,7 @@ jest.mock('@mamoplayer/core', () => {
 describe('ProMamoPlayer', () => {
   beforeEach(() => {
     latestOnPlaybackEvent = undefined;
+    latestVideoProps = undefined;
     jest.clearAllMocks();
     jest.useRealTimers();
   });
@@ -152,5 +161,42 @@ describe('ProMamoPlayer', () => {
     );
 
     randomSpy.mockRestore();
+  });
+
+  it('blocks restricted seek directions from pro playback callback', () => {
+    const onPlaybackEvent = jest.fn();
+
+    render(
+      <ProMamoPlayer
+        source={{ uri: 'https://example.com/video.mp4' }}
+        restrictions={{ disableSeekingForward: true, disableSeekingBackward: true }}
+        onPlaybackEvent={onPlaybackEvent}
+      />,
+    );
+
+    act(() => {
+      emitPlayback({ type: 'ready', duration: 100, position: 10 });
+      emitPlayback({ type: 'seek', duration: 100, position: 20 });
+      emitPlayback({ type: 'seek', duration: 100, position: 5 });
+      emitPlayback({ type: 'seek', duration: 100, position: 10 });
+    });
+
+    expect(onPlaybackEvent).toHaveBeenCalledTimes(2);
+    expect(onPlaybackEvent.mock.calls[0][0].type).toBe('ready');
+    expect(onPlaybackEvent.mock.calls[1][0]).toEqual(
+      expect.objectContaining({ type: 'seek', position: 10 }),
+    );
+  });
+
+  it('clamps playback rate to maxPlaybackRate', () => {
+    render(
+      <ProMamoPlayer
+        source={{ uri: 'https://example.com/video.mp4' }}
+        restrictions={{ maxPlaybackRate: 1.5 }}
+        rate={2}
+      />,
+    );
+
+    expect(latestVideoProps?.rate).toBe(1.5);
   });
 });
