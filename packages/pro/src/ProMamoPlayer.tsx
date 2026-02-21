@@ -41,6 +41,20 @@ const emitAnalytics = (
   });
 };
 
+const emitAdAnalytics = (
+  analytics: AnalyticsConfig | undefined,
+  type: 'ad_start' | 'ad_complete' | 'ad_error',
+  playbackEvent?: PlaybackEvent,
+  fallbackPosition?: number,
+) => {
+  emitAnalytics(analytics, {
+    type,
+    position: playbackEvent?.position ?? fallbackPosition ?? 0,
+    duration: playbackEvent?.duration,
+    playbackEvent,
+  });
+};
+
 export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
   ads,
   analytics,
@@ -93,17 +107,51 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
     setActiveSource(rest.source);
   }, [isAdMode, rest.source]);
 
-  const handleAdEnd = React.useCallback(() => {
-    const currentAdBreak = adRef.current.currentAdBreak;
+  const completeAdPlayback = React.useCallback(
+    (playbackEvent?: PlaybackEvent) => {
+      const currentAdBreak = adRef.current.currentAdBreak;
 
-    if (currentAdBreak) {
-      adRef.current.markAdCompleted(currentAdBreak);
-    }
+      if (currentAdBreak) {
+        adRef.current.markAdCompleted(currentAdBreak);
+      }
 
-    setIsAdMode(false);
-    setActiveSource(mainSourceRef.current);
-    setResumeMainAfterAd(true);
-  }, []);
+      setIsAdMode(false);
+      setActiveSource(mainSourceRef.current);
+      setResumeMainAfterAd(true);
+
+      emitAdAnalytics(analytics, 'ad_complete', playbackEvent, positionRef.current);
+    },
+    [analytics],
+  );
+
+  const failAdPlayback = React.useCallback(
+    (playbackEvent: PlaybackEvent) => {
+      const currentAdBreak = adRef.current.currentAdBreak;
+
+      if (currentAdBreak) {
+        adRef.current.markAdCompleted(currentAdBreak);
+      }
+
+      setIsAdMode(false);
+      setActiveSource(mainSourceRef.current);
+      setResumeMainAfterAd(true);
+
+      emitAdAnalytics(analytics, 'ad_error', playbackEvent, positionRef.current);
+    },
+    [analytics],
+  );
+
+  const beginAdPlayback = React.useCallback(
+    (adBreak: { type: 'preroll' | 'midroll' | 'postroll'; offset?: number }, adSource: unknown, playbackEvent?: PlaybackEvent) => {
+      adRef.current.markAdStarted(adBreak);
+      mainSourceRef.current = rest.source;
+      setActiveSource(adSource as MamoPlayerProps['source']);
+      setIsAdMode(true);
+
+      emitAdAnalytics(analytics, 'ad_start', playbackEvent, positionRef.current);
+    },
+    [analytics, rest.source],
+  );
 
   const rate = React.useMemo(() => {
     if (typeof rest.rate !== 'number') {
@@ -167,7 +215,23 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
     (playbackEvent: PlaybackEvent) => {
       if (adRef.current.isAdPlaying || isAdMode) {
         if (playbackEvent.type === 'ended') {
-          handleAdEnd();
+          completeAdPlayback(playbackEvent);
+
+          const pendingSessionEndEvent = pendingSessionEndEventRef.current;
+
+          if (pendingSessionEndEvent) {
+            emitAnalytics(analytics, {
+              type: 'session_end',
+              position: pendingSessionEndEvent.position,
+              duration: pendingSessionEndEvent.duration,
+              playbackEvent: pendingSessionEndEvent,
+            });
+            pendingSessionEndEventRef.current = null;
+          }
+        }
+
+        if (playbackEvent.type === 'error') {
+          failAdPlayback(playbackEvent);
 
           const pendingSessionEndEvent = pendingSessionEndEventRef.current;
 
@@ -191,16 +255,7 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
         if (preroll?.source && !adRef.current.hasPlayedPreroll) {
           const prerollBreak = { type: 'preroll' as const };
 
-          adRef.current.markAdStarted(prerollBreak);
-          mainSourceRef.current = rest.source;
-          setActiveSource(preroll.source as MamoPlayerProps['source']);
-          setIsAdMode(true);
-          emitAnalytics(analytics, {
-            type: 'ad_start',
-            position: playbackEvent.position,
-            duration: playbackEvent.duration,
-            playbackEvent,
-          });
+          beginAdPlayback(prerollBreak, preroll.source, playbackEvent);
           return;
         }
       }
@@ -218,15 +273,11 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
           const adBreak = adSourceMapRef.current.get(createAdBreakKey(ad.type, ad.offset));
 
           if (adBreak?.source) {
-            adRef.current.markAdStarted(ad);
-
             if (typeof offset === 'number') {
               adRef.current.playedMidrolls.add(offset);
             }
 
-            mainSourceRef.current = rest.source;
-            setActiveSource(adBreak.source as MamoPlayerProps['source']);
-            setIsAdMode(true);
+            beginAdPlayback(ad, adBreak.source, playbackEvent);
             return;
           }
         }
@@ -253,10 +304,7 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
             pendingSessionEndEventRef.current = playbackEvent;
           }
 
-          adRef.current.markAdStarted(shouldPlayAd);
-          mainSourceRef.current = rest.source;
-          setActiveSource(adBreak.source as MamoPlayerProps['source']);
-          setIsAdMode(true);
+          beginAdPlayback(shouldPlayAd, adBreak.source, playbackEvent);
           return;
         }
       }
@@ -357,11 +405,12 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
     [
       ads?.adBreaks,
       analytics,
-      handleAdEnd,
+      beginAdPlayback,
+      completeAdPlayback,
+      failAdPlayback,
       isAdMode,
       onPlaybackEvent,
       restrictions,
-      rest.source,
       resumeMainAfterAd,
       trackQuartiles,
     ],

@@ -266,6 +266,101 @@ describe('ProMamoPlayer', () => {
     );
   });
 
+  it('emits ad_start analytics when midroll switches into ad mode', () => {
+    const onEvent = jest.fn();
+
+    render(
+      <ProMamoPlayer
+        source={{ uri: 'https://example.com/main-midroll-analytics.mp4' }}
+        analytics={{ onEvent }}
+        ads={{
+          adBreaks: [
+            {
+              type: 'midroll',
+              time: 30,
+              source: { uri: 'https://example.com/midroll-analytics.mp4', type: 'video/mp4' },
+            },
+          ],
+        }}
+      />,
+    );
+
+    act(() => {
+      emitPlayback({ type: 'time_update', duration: 100, position: 30 });
+    });
+
+    expect(onEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'ad_start',
+      }),
+    );
+  });
+
+  it('emits ad_complete analytics when ad playback ends successfully', () => {
+    const onEvent = jest.fn();
+
+    render(
+      <ProMamoPlayer
+        source={{ uri: 'https://example.com/main-for-ad-complete.mp4' }}
+        analytics={{ onEvent }}
+        ads={{
+          adBreaks: [
+            {
+              type: 'preroll',
+              source: { uri: 'https://example.com/preroll-for-ad-complete.mp4', type: 'video/mp4' },
+            },
+          ],
+        }}
+      />,
+    );
+
+    act(() => {
+      emitPlayback({ type: 'ready', duration: 100, position: 0 });
+      emitPlayback({ type: 'ended', duration: 5, position: 5 });
+    });
+
+    expect(onEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'ad_complete',
+      }),
+    );
+  });
+
+  it('emits ad_error analytics when ad video fails to load', () => {
+    const onEvent = jest.fn();
+
+    render(
+      <ProMamoPlayer
+        source={{ uri: 'https://example.com/main-for-ad-error.mp4' }}
+        analytics={{ onEvent }}
+        ads={{
+          adBreaks: [
+            {
+              type: 'preroll',
+              source: { uri: 'https://example.com/preroll-for-ad-error.mp4', type: 'video/mp4' },
+            },
+          ],
+        }}
+      />,
+    );
+
+    act(() => {
+      emitPlayback({ type: 'ready', duration: 100, position: 0 });
+      emitPlayback({
+        type: 'error',
+        duration: 5,
+        position: 0,
+        error: { message: 'Ad load failed' },
+      });
+    });
+
+    expect(onEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'ad_error',
+      }),
+    );
+  });
+
   it('does not switch source when ads config is missing', () => {
     const mainSource = { uri: 'https://example.com/main-only.mp4' };
 
