@@ -55,8 +55,13 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
   const mainSourceRef = React.useRef(rest.source);
   const adSourceMapRef = React.useRef<Map<string, AdBreak>>(new Map());
   const [isAdMode, setIsAdMode] = React.useState(false);
+  const [resumeMainAfterAd, setResumeMainAfterAd] = React.useState(false);
   const [activeSource, setActiveSource] = React.useState<MamoPlayerProps['source']>(rest.source);
   const [watermarkPosition, setWatermarkPosition] = React.useState({ top: 10, left: 10 });
+  const hasConfiguredPreroll = React.useMemo(
+    () => Boolean(ads?.adBreaks.some((adBreak) => adBreak.type === 'preroll')),
+    [ads?.adBreaks],
+  );
 
   React.useEffect(() => {
     const adBreaks = ads?.adBreaks;
@@ -86,6 +91,18 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
     mainSourceRef.current = rest.source;
     setActiveSource(rest.source);
   }, [isAdMode, rest.source]);
+
+  const handleAdEnd = React.useCallback(() => {
+    const currentAdBreak = adRef.current.currentAdBreak;
+
+    if (currentAdBreak) {
+      adRef.current.markAdCompleted(currentAdBreak);
+    }
+
+    setIsAdMode(false);
+    setActiveSource(mainSourceRef.current);
+    setResumeMainAfterAd(true);
+  }, []);
 
   const rate = React.useMemo(() => {
     if (typeof rest.rate !== 'number') {
@@ -147,19 +164,32 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
 
   const handlePlaybackEvent = React.useCallback(
     (playbackEvent: PlaybackEvent) => {
-      if (isAdMode) {
+      if (adRef.current.isAdPlaying || isAdMode) {
         if (playbackEvent.type === 'ended') {
-          const currentAdBreak = adRef.current.currentAdBreak;
-
-          if (currentAdBreak) {
-            adRef.current.markAdCompleted(currentAdBreak);
-          }
-
-          setIsAdMode(false);
-          setActiveSource(mainSourceRef.current);
+          handleAdEnd();
         }
 
         return;
+      }
+
+      if (playbackEvent.type === 'ready') {
+        const preroll = ads?.adBreaks.find((adBreak) => adBreak.type === 'preroll');
+
+        if (preroll?.source && !adRef.current.hasPlayedPreroll) {
+          const prerollBreak = { type: 'preroll' as const };
+
+          adRef.current.markAdStarted(prerollBreak);
+          mainSourceRef.current = rest.source;
+          setActiveSource(preroll.source as MamoPlayerProps['source']);
+          setIsAdMode(true);
+          emitAnalytics(analytics, {
+            type: 'ad_start',
+            position: playbackEvent.position,
+            duration: playbackEvent.duration,
+            playbackEvent,
+          });
+          return;
+        }
       }
 
       const shouldPlayAd = adRef.current.getNextAd(
@@ -195,6 +225,10 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
 
       positionRef.current = playbackEvent.position;
       onPlaybackEvent?.(playbackEvent);
+
+      if (resumeMainAfterAd && playbackEvent.type === 'play') {
+        setResumeMainAfterAd(false);
+      }
 
       if (playbackEvent.type === 'ready') {
         quartileStateRef.current = createQuartileState();
@@ -270,14 +304,41 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
 
       trackQuartiles(playbackEvent);
     },
-    [analytics, isAdMode, onPlaybackEvent, restrictions, rest.source, trackQuartiles],
+    [
+      ads?.adBreaks,
+      analytics,
+      handleAdEnd,
+      isAdMode,
+      onPlaybackEvent,
+      restrictions,
+      rest.source,
+      resumeMainAfterAd,
+      trackQuartiles,
+    ],
   );
+
+  const effectiveAutoPlay = React.useMemo(() => {
+    if (isAdMode) {
+      return true;
+    }
+
+    if (hasConfiguredPreroll && !adRef.current.hasPlayedPreroll) {
+      return false;
+    }
+
+    if (resumeMainAfterAd) {
+      return true;
+    }
+
+    return rest.autoPlay;
+  }, [hasConfiguredPreroll, isAdMode, resumeMainAfterAd, rest.autoPlay]);
 
   return (
     <View style={{ position: 'relative' }}>
       <MamoPlayer
         {...rest}
         source={activeSource}
+        autoPlay={effectiveAutoPlay}
         rate={rate}
         onPlaybackEvent={handlePlaybackEvent}
       />
