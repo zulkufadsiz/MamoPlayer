@@ -30,6 +30,84 @@ const createQuartileState = (): Record<Quartile, boolean> => ({
 
 const createAdBreakKey = (type: AdBreak['type'], time?: number) => `${type}:${time ?? 'none'}`;
 
+const isAdPosition = (value: unknown): value is NonNullable<AnalyticsEvent['adPosition']> =>
+  value === 'preroll' || value === 'midroll' || value === 'postroll';
+
+const getErrorMessageFromUnknown = (payload?: unknown): string | undefined => {
+  if (payload instanceof Error) {
+    return payload.message;
+  }
+
+  if (typeof payload === 'string') {
+    return payload;
+  }
+
+  if (!payload || typeof payload !== 'object') {
+    return undefined;
+  }
+
+  const payloadRecord = payload as {
+    message?: unknown;
+    errorMessage?: unknown;
+    error?: { message?: unknown } | unknown;
+  };
+
+  if (typeof payloadRecord.errorMessage === 'string' && payloadRecord.errorMessage.length > 0) {
+    return payloadRecord.errorMessage;
+  }
+
+  if (typeof payloadRecord.message === 'string' && payloadRecord.message.length > 0) {
+    return payloadRecord.message;
+  }
+
+  if (
+    payloadRecord.error &&
+    typeof payloadRecord.error === 'object' &&
+    typeof (payloadRecord.error as { message?: unknown }).message === 'string' &&
+    ((payloadRecord.error as { message?: string }).message?.length ?? 0) > 0
+  ) {
+    return (payloadRecord.error as { message: string }).message;
+  }
+
+  return undefined;
+};
+
+const getErrorMessageFromPlaybackEvent = (playbackEvent?: PlaybackEvent): string | undefined => {
+  if (!playbackEvent || playbackEvent.type !== 'error') {
+    return undefined;
+  }
+
+  return getErrorMessageFromUnknown(playbackEvent.error);
+};
+
+const getAdPositionFromPayload = (payload?: unknown): AnalyticsEvent['adPosition'] | undefined => {
+  if (!payload || typeof payload !== 'object') {
+    return undefined;
+  }
+
+  const payloadRecord = payload as {
+    adPosition?: unknown;
+    position?: unknown;
+    adBreakType?: unknown;
+    breakType?: unknown;
+  };
+
+  const candidates = [
+    payloadRecord.adPosition,
+    payloadRecord.position,
+    payloadRecord.adBreakType,
+    payloadRecord.breakType,
+  ];
+
+  for (const candidate of candidates) {
+    if (isAdPosition(candidate)) {
+      return candidate;
+    }
+  }
+
+  return undefined;
+};
+
 const emitAnalytics = (
   analytics: AnalyticsConfig | undefined,
   event: Omit<AnalyticsEvent, 'timestamp'>,
@@ -47,14 +125,32 @@ const emitAnalytics = (
 const emitAdAnalytics = (
   analytics: AnalyticsConfig | undefined,
   type: 'ad_start' | 'ad_complete' | 'ad_error',
-  playbackEvent?: PlaybackEvent,
-  fallbackPosition?: number,
+  {
+    playbackEvent,
+    fallbackPosition,
+    adTagUrl,
+    adPosition,
+    errorMessage,
+    mainContentPositionAtAdStart,
+  }: {
+    playbackEvent?: PlaybackEvent;
+    fallbackPosition?: number;
+    adTagUrl?: string;
+    adPosition?: AnalyticsEvent['adPosition'];
+    errorMessage?: string;
+    mainContentPositionAtAdStart?: number;
+  } = {},
 ) => {
   emitAnalytics(analytics, {
     type,
     position: playbackEvent?.position ?? fallbackPosition ?? 0,
     duration: playbackEvent?.duration,
     playbackEvent,
+    adTagUrl,
+    adPosition,
+    errorMessage,
+    mainContentPositionAtAdStart,
+    sessionId: analytics?.sessionId,
   });
 };
 
@@ -73,6 +169,7 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
   const mainSourceRef = React.useRef(rest.source);
   const pendingSessionEndEventRef = React.useRef<PlaybackEvent | null>(null);
   const adSourceMapRef = React.useRef<Map<string, AdBreak>>(new Map());
+  const adMainContentStartPositionRef = React.useRef<number | null>(null);
   const [isAdMode, setIsAdMode] = React.useState(false);
   const [resumeMainAfterAd, setResumeMainAfterAd] = React.useState(false);
   const [activeSource, setActiveSource] = React.useState<MamoPlayerProps['source']>(rest.source);
@@ -103,21 +200,18 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
     let unsubscribe: (() => void) | null = null;
 
     const onNativeAdsError = (payload?: unknown) => {
-      let message = 'Native IMA ad playback failed.';
-
-      if (payload instanceof Error) {
-        message = payload.message;
-      } else if (typeof payload === 'string') {
-        message = payload;
-      } else if (payload && typeof payload === 'object') {
-        const payloadRecord = payload as { message?: unknown };
-        if (typeof payloadRecord.message === 'string' && payloadRecord.message.length > 0) {
-          message = payloadRecord.message;
-        }
-      }
+      const message = getErrorMessageFromUnknown(payload) ?? 'Native IMA ad playback failed.';
 
       console.error(`[MamoPlayer] ${message}`);
-      emitAdAnalytics(analytics, 'ad_error', undefined, positionRef.current);
+      emitAdAnalytics(analytics, 'ad_error', {
+        fallbackPosition: positionRef.current,
+        adTagUrl: ima?.adTagUrl,
+        adPosition: getAdPositionFromPayload(payload),
+        errorMessage: message,
+        mainContentPositionAtAdStart:
+          adMainContentStartPositionRef.current ?? positionRef.current,
+      });
+      adMainContentStartPositionRef.current = null;
 
       setIsNativeAdPlaying(false);
       setIsMainContentPausedByNativeAd(false);
@@ -147,7 +241,16 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
             setIsNativeAdPlaying(true);
             setIsMainContentPausedByNativeAd(true);
             setResumeMainAfterAd(false);
-            emitAdAnalytics(analytics, 'ad_start', undefined, positionRef.current);
+
+            const mainContentPositionAtAdStart = positionRef.current;
+            adMainContentStartPositionRef.current = mainContentPositionAtAdStart;
+
+            emitAdAnalytics(analytics, 'ad_start', {
+              fallbackPosition: positionRef.current,
+              adTagUrl: ima?.adTagUrl,
+              adPosition: getAdPositionFromPayload(payload),
+              mainContentPositionAtAdStart,
+            });
             return;
           }
 
@@ -155,7 +258,15 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
             setIsNativeAdPlaying(false);
             setIsMainContentPausedByNativeAd(false);
             setResumeMainAfterAd(true);
-            emitAdAnalytics(analytics, 'ad_complete', undefined, positionRef.current);
+
+            emitAdAnalytics(analytics, 'ad_complete', {
+              fallbackPosition: positionRef.current,
+              adTagUrl: ima?.adTagUrl,
+              adPosition: getAdPositionFromPayload(payload),
+              mainContentPositionAtAdStart:
+                adMainContentStartPositionRef.current ?? positionRef.current,
+            });
+            adMainContentStartPositionRef.current = null;
             return;
           }
 
@@ -238,7 +349,14 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
       setResumeMainAfterAd(true);
       setAdStartedAt(null);
 
-      emitAdAnalytics(analytics, 'ad_complete', playbackEvent, positionRef.current);
+      emitAdAnalytics(analytics, 'ad_complete', {
+        playbackEvent,
+        fallbackPosition: positionRef.current,
+        adPosition: currentAdBreak?.type,
+        mainContentPositionAtAdStart:
+          adMainContentStartPositionRef.current ?? positionRef.current,
+      });
+      adMainContentStartPositionRef.current = null;
     },
     [analytics],
   );
@@ -256,7 +374,15 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
       setResumeMainAfterAd(true);
       setAdStartedAt(null);
 
-      emitAdAnalytics(analytics, 'ad_error', playbackEvent, positionRef.current);
+      emitAdAnalytics(analytics, 'ad_error', {
+        playbackEvent,
+        fallbackPosition: positionRef.current,
+        adPosition: currentAdBreak?.type,
+        errorMessage: getErrorMessageFromPlaybackEvent(playbackEvent),
+        mainContentPositionAtAdStart:
+          adMainContentStartPositionRef.current ?? positionRef.current,
+      });
+      adMainContentStartPositionRef.current = null;
     },
     [analytics],
   );
@@ -270,7 +396,15 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
       setAdStartedAt(Date.now());
       setOverlayTimestamp(Date.now());
 
-      emitAdAnalytics(analytics, 'ad_start', playbackEvent, positionRef.current);
+      const mainContentPositionAtAdStart = playbackEvent?.position ?? positionRef.current;
+      adMainContentStartPositionRef.current = mainContentPositionAtAdStart;
+
+      emitAdAnalytics(analytics, 'ad_start', {
+        playbackEvent,
+        fallbackPosition: positionRef.current,
+        adPosition: adBreak.type,
+        mainContentPositionAtAdStart,
+      });
     },
     [analytics, rest.source],
   );
