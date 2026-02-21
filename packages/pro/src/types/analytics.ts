@@ -1,6 +1,7 @@
 import type { PlaybackEvent } from '@mamoplayer/core';
 
 export type AnalyticsEventType =
+  | 'ad_start'
   | 'session_start'
   | 'session_end'
   | 'play'

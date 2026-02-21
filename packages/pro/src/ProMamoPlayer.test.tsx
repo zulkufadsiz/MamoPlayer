@@ -3,7 +3,7 @@ import { act, render } from '@testing-library/react-native';
 import { ProMamoPlayer } from './ProMamoPlayer';
 
 let latestOnPlaybackEvent: ((event: PlaybackEvent) => void) | undefined;
-let latestVideoProps: { rate?: number; source?: unknown } | undefined;
+let latestVideoProps: { rate?: number; source?: unknown; autoPlay?: boolean } | undefined;
 
 jest.mock('@mamoplayer/core', () => {
   const React = require('react');
@@ -15,13 +15,15 @@ jest.mock('@mamoplayer/core', () => {
       onPlaybackEvent,
       rate,
       source,
+      autoPlay,
     }: {
       onPlaybackEvent?: (event: PlaybackEvent) => void;
       rate?: number;
       source?: unknown;
+      autoPlay?: boolean;
     }) => {
       latestOnPlaybackEvent = onPlaybackEvent;
-      latestVideoProps = { rate, source };
+      latestVideoProps = { rate, source, autoPlay };
       return <View testID="mamoplayer-mock" />;
     },
   };
@@ -218,18 +220,50 @@ describe('ProMamoPlayer', () => {
     );
 
     expect(latestVideoProps?.source).toEqual(mainSource);
+    expect(latestVideoProps?.autoPlay).toBe(false);
 
     act(() => {
-      emitPlayback({ type: 'time_update', duration: 100, position: 0 });
+      emitPlayback({ type: 'ready', duration: 100, position: 0 });
     });
 
     expect(latestVideoProps?.source).toEqual(adSource);
+    expect(latestVideoProps?.autoPlay).toBe(true);
 
     act(() => {
       emitPlayback({ type: 'ended', duration: 5, position: 5 });
     });
 
     expect(latestVideoProps?.source).toEqual(mainSource);
+    expect(latestVideoProps?.autoPlay).toBe(true);
+  });
+
+  it('emits ad_start analytics when preroll begins on ready', () => {
+    const onEvent = jest.fn();
+
+    render(
+      <ProMamoPlayer
+        source={{ uri: 'https://example.com/main.mp4' }}
+        analytics={{ onEvent }}
+        ads={{
+          adBreaks: [
+            {
+              type: 'preroll',
+              source: { uri: 'https://example.com/preroll.mp4', type: 'video/mp4' },
+            },
+          ],
+        }}
+      />,
+    );
+
+    act(() => {
+      emitPlayback({ type: 'ready', duration: 100, position: 0 });
+    });
+
+    expect(onEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'ad_start',
+      }),
+    );
   });
 
   it('does not switch source when ads config is missing', () => {
