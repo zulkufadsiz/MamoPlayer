@@ -82,6 +82,44 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
   const skipButtonEnabled = ads?.skipButtonEnabled === true;
   const skipAfterSeconds = Math.max(0, ads?.skipAfterSeconds ?? 0);
 
+  const logIMAPlaceholderWarning = React.useCallback(() => {
+    console.warn('IMA integration not implemented yet.');
+  }, []);
+
+  const loadIMASdk = React.useCallback(async (): Promise<boolean> => {
+    // TODO: Phase 3 – Native IMA Integration
+    logIMAPlaceholderWarning();
+    return false;
+  }, [logIMAPlaceholderWarning]);
+
+  const initializeIMAAds = React.useCallback(async (): Promise<boolean> => {
+    // TODO: Phase 3 – Native IMA Integration
+    logIMAPlaceholderWarning();
+    return false;
+  }, [logIMAPlaceholderWarning]);
+
+  const requestAds = React.useCallback(async (): Promise<null> => {
+    // TODO: Phase 3 – Native IMA Integration
+    logIMAPlaceholderWarning();
+    return null;
+  }, [logIMAPlaceholderWarning]);
+
+  const startIMAAdPlayback = React.useCallback(async (): Promise<boolean> => {
+    // TODO: Phase 3 – Native IMA Integration
+    logIMAPlaceholderWarning();
+    return false;
+  }, [logIMAPlaceholderWarning]);
+
+  const _imaPlaceholderMethods = React.useMemo(
+    () => ({
+      loadIMASdk,
+      initializeIMAAds,
+      requestAds,
+      startIMAAdPlayback,
+    }),
+    [initializeIMAAds, loadIMASdk, requestAds, startIMAAdPlayback],
+  );
+
   React.useEffect(() => {
     const adBreaks = ads?.adBreaks;
 
