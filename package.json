@@ -9,9 +9,9 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test:packages": "yarn workspace @mamoplayer/core test && yarn workspace @mamoplayer/pro test",
-    "build:core": "yarn workspace @mamoplayer/core build",
-    "build:pro": "yarn workspace @mamoplayer/pro build",
+    "test:packages": "yarn workspace packages/core test && yarn workspace packages/pro test",
+    "build:core": "yarn workspace packages/core build",
+    "build:pro": "yarn workspace packages/pro build",
     "build": "yarn build:core && yarn build:pro"
   },
   "devDependencies": {
