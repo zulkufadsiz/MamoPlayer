@@ -1,20 +1,21 @@
+import type { PlayerIconSet } from '@/types/icons';
 import { useEventListener } from 'expo';
 import * as ScreenOrientation from 'expo-screen-orientation';
 import {
-  VideoView,
-  isPictureInPictureSupported,
-  useVideoPlayer,
-  type VideoSource,
+    VideoView,
+    isPictureInPictureSupported,
+    useVideoPlayer,
+    type VideoSource,
 } from 'expo-video';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Modal,
-  StatusBar,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-  useWindowDimensions,
+    Modal,
+    StatusBar,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+    useWindowDimensions,
 } from 'react-native';
 import LoadingIndicator from './lib/LoadingIndicator';
 import { trackPlaybackEvent } from './lib/playbackAnalytics';
@@ -61,6 +62,7 @@ export interface SimplePlayerProps {
   subtitleTracks?: SubtitleTrack[];
   defaultSubtitleTrackId?: string | null;
   onSettingsPress?: () => void;
+  icons?: PlayerIconSet;
   skipSeconds?: number;
   showSkipButtons?: boolean;
   title?: string;
@@ -95,6 +97,7 @@ export const SimplePlayer: React.FC<SimplePlayerProps> = ({
   subtitleTracks = [],
   defaultSubtitleTrackId = null,
   onSettingsPress,
+  icons,
   skipSeconds = 10,
   showSkipButtons = true,
   title,
@@ -682,6 +685,7 @@ export const SimplePlayer: React.FC<SimplePlayerProps> = ({
           mediaUrl={mediaUrl}
           onPlayPause={handlePlayPause}
           onSeek={handleSeek}
+          icons={icons}
           onSkipBackward={showSkipButtons ? () => handleSkip(-skipSeconds) : undefined}
           onSkipForward={showSkipButtons ? () => handleSkip(skipSeconds) : undefined}
           skipSeconds={skipSeconds}

@@ -1,12 +1,12 @@
-import { Ionicons, MaterialIcons } from '@expo/vector-icons';
+import type { PlayerIconSet } from '@/types/icons';
 import { useEffect, useState } from 'react';
 import {
-  Pressable,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  useWindowDimensions,
-  View,
+    Pressable,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    useWindowDimensions,
+    View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Timeline from './Timeline';
@@ -59,6 +59,7 @@ interface PlaybackControlsProps {
   mediaUrl?: string | null;
   onPlayPause: () => void;
   onSeek: (time: number) => void;
+  icons?: PlayerIconSet;
   onSkipBackward?: () => void;
   onSkipForward?: () => void;
   skipSeconds?: number;
@@ -79,12 +80,25 @@ interface PlaybackControlsProps {
   autoHideDelayMs?: number;
 }
 
+const renderIcon = (
+  IconComponent: PlayerIconSet[keyof PlayerIconSet] | undefined,
+  fallbackLabel: string,
+  size: number,
+) => {
+  if (IconComponent) {
+    return <IconComponent size={size} color="#FFFFFF" />;
+  }
+
+  return <Text style={[styles.defaultIconText, { fontSize: size }]}>{fallbackLabel}</Text>;
+};
+
 export default function PlaybackControls({
   isPlaying,
   player,
   mediaUrl,
   onPlayPause,
   onSeek,
+  icons,
   onSkipBackward,
   onSkipForward,
   skipSeconds = 10,
@@ -202,7 +216,7 @@ export default function PlaybackControls({
                 accessibilityHint="Moves playback position backward"
                 hitSlop={10}
               >
-                <Ionicons name="play-back" size={28} color="#FFFFFF" />
+                <Text style={styles.skipIconText}>↺</Text>
                 <Text style={styles.skipText}>{skipSeconds}</Text>
               </TouchableOpacity>
             )}
@@ -215,7 +229,9 @@ export default function PlaybackControls({
               accessibilityHint={isPlaying ? 'Pauses playback' : 'Starts playback'}
               hitSlop={10}
             >
-              <Ionicons name={isPlaying ? 'pause' : 'play'} size={48} color="#FFFFFF" />
+              {isPlaying
+                ? renderIcon(icons?.Pause, '❚❚', 42)
+                : renderIcon(icons?.Play, '▶', 42)}
             </TouchableOpacity>
             {onSkipForward && (
               <TouchableOpacity
@@ -227,7 +243,7 @@ export default function PlaybackControls({
                 accessibilityHint="Moves playback position forward"
                 hitSlop={10}
               >
-                <Ionicons name="play-forward" size={28} color="#FFFFFF" />
+                <Text style={styles.skipIconText}>↻</Text>
                 <Text style={styles.skipText}>{skipSeconds}</Text>
               </TouchableOpacity>
             )}
@@ -253,7 +269,7 @@ export default function PlaybackControls({
                 accessibilityHint="Opens playback and subtitle settings"
                 hitSlop={10}
               >
-                <Ionicons name="settings-outline" size={24} color="#FFFFFF" />
+                  {renderIcon(icons?.Settings, '⚙', 20)}
               </TouchableOpacity>
             )}
             {onSubtitlesToggle && (hasSubtitles ?? subtitles.length > 0) && (
@@ -303,7 +319,9 @@ export default function PlaybackControls({
               }
               hitSlop={10}
             >
-              <Ionicons name={isFullscreen ? 'contract' : 'expand'} size={24} color="#FFFFFF" />
+              {isFullscreen
+                ? renderIcon(icons?.ExitFullscreen, '🗗', 18)
+                : renderIcon(icons?.Fullscreen, '⛶', 18)}
             </TouchableOpacity>
           </View>
         </View>
@@ -410,6 +428,16 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
     color: '#FFFFFF',
+  },
+  skipIconText: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  defaultIconText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    textAlign: 'center',
   },
   bottomControls: {
     position: 'absolute',

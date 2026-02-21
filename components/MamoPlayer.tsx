@@ -1,3 +1,4 @@
+import type { PlayerIconSet } from '@/types/icons';
 import { type VideoSource } from 'expo-video';
 import React from 'react';
 import LandscapePlayer from './LandscapePlayer';
@@ -40,6 +41,7 @@ export interface MamoPlayerProps {
   subtitleTracks?: SubtitleTrack[];
   defaultSubtitleTrackId?: string | null;
   onSettingsPress?: () => void;
+  icons?: PlayerIconSet;
   skipSeconds?: number;
   showSkipButtons?: boolean;
   isPremiumUser?: boolean;

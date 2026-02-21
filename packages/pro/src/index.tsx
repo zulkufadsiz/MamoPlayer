@@ -11,6 +11,7 @@ export {
     type ProMamoPlayerProps
 } from './ProMamoPlayer';
 export type * from './types/analytics';
+export type * from './types/icons';
 export type * from './types/ima';
 export type * from './types/restrictions';
 export type * from './types/watermark';
