@@ -1,15 +1,6 @@
 import PlaybackControls from '@/components/lib/PlaybackControls';
 import { act, fireEvent, render } from '@testing-library/react-native';
 
-jest.mock('@expo/vector-icons', () => {
-  const React = require('react');
-  const { Text } = require('react-native');
-  return {
-    Ionicons: ({ name }: { name: string }) => <Text>{name}</Text>,
-    MaterialIcons: ({ name }: { name: string }) => <Text>{name}</Text>,
-  };
-});
-
 jest.mock('@/components/lib/Timeline', () => {
   const React = require('react');
   const { View } = require('react-native');
@@ -22,7 +13,7 @@ jest.mock('@/components/lib/Timeline', () => {
 
 jest.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({ top: 10, right: 20, bottom: 30, left: 0 }),
-}));
+}), { virtual: true });
 
 describe('PlaybackControls', () => {
   const baseProps = {
