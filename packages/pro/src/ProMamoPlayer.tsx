@@ -3,6 +3,7 @@ import React, { useRef } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { AdStateMachine } from './ads/AdState';
 import { loadAds, releaseAds, subscribeToAdsEvents } from './ima/nativeBridge';
+import { validateLicenseKey } from './licensing/license';
 import { ThemeProvider, usePlayerTheme } from './theme/ThemeContext';
 import type { AdBreak, AdsConfig } from './types/ads';
 import type { AnalyticsConfig, AnalyticsEvent } from './types/analytics';
@@ -14,6 +15,7 @@ import type { PlayerThemeConfig, ThemeName } from './types/theme';
 import type { WatermarkConfig } from './types/watermark';
 
 export interface ProMamoPlayerProps extends MamoPlayerProps {
+  licenseKey?: string;
   ads?: AdsConfig;
   ima?: IMAConfig;
   analytics?: AnalyticsConfig;
@@ -248,6 +250,7 @@ const ProMamoPlayerOverlays: React.FC<ProMamoPlayerOverlaysProps> = ({
 };
 
 export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
+  licenseKey,
   ads,
   ima,
   analytics,
@@ -282,6 +285,19 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
   );
   const skipButtonEnabled = ads?.skipButtonEnabled === true;
   const skipAfterSeconds = Math.max(0, ads?.skipAfterSeconds ?? 0);
+  const licenseCheckRef = React.useRef(validateLicenseKey(licenseKey));
+
+  React.useEffect(() => {
+    const licenseCheck = licenseCheckRef.current;
+
+    if (licenseCheck.valid) {
+      return;
+    }
+
+    console.warn(
+      `[MamoPlayer Pro] Invalid or missing license key (${licenseCheck.reason ?? 'UNKNOWN'}). Access is enforced via private npm package access.`,
+    );
+  }, []);
 
   React.useEffect(() => {
     if (!shouldUseNativeIMA) {
