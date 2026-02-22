@@ -10,6 +10,7 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "licenses:list": "ts-node --skipProject --compiler-options '{\"module\":\"commonjs\",\"moduleResolution\":\"node\"}' tools/list-licenses.ts || npx --yes tsx tools/list-licenses.ts",
     "test:packages": "yarn workspace @mamoplayer/core test && yarn workspace @mamoplayer/pro test",
     "build:core": "yarn workspace @mamoplayer/core build",
     "build:pro": "yarn workspace @mamoplayer/pro build",
