@@ -51,8 +51,8 @@ const sidebars = {
     },
     {
       type: 'category',
-      label: 'Changelog',
-      items: ['changelog'],
+      label: 'Project Info',
+      items: ['versioning-changelog'],
     },
   ],
 };
