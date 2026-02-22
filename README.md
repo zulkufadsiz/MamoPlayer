@@ -24,6 +24,14 @@ You can start with Core and upgrade to Pro without rewriting your player integra
 | Dynamic watermark overlay                  | ➖                        | ✅                      |
 | Playback restrictions (seek/rate controls) | ➖                        | ✅                      |
 
+## MamoPlayer Pro Pricing Tiers (Placeholder)
+
+| Tier | Usage | Price | Notes |
+| --- | --- | --- | --- |
+| Indie | For solo developers | `$[INDIE_PRICE]_one-time` (e.g. `$79`) | Placeholder pricing; adjust before publishing. |
+| Team | For small teams (up to `[X]` developers) | `$[TEAM_PRICE]_one-time` (e.g. `$199`) | Placeholder pricing; adjust team size and amount before publishing. |
+| Enterprise | For organizations needing custom plans | `Custom` | Includes priority support and potential custom features. |
+
 ## Features (OTT-focused)
 
 - **Adaptive OTT playback baseline** with typed React Native integration.
