@@ -37,6 +37,8 @@ If your usage exceeds your tier (for example, more developers or broader deploym
 
 ## 4. Access to Pro
 
+For a step-by-step purchase flow, see [How to Buy Pro](/docs/how-to-buy-pro).
+
 After purchase, customers receive:
 
 - Access to the private package registry (npm org / GitHub Packages).
