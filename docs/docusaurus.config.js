@@ -78,7 +78,7 @@ const config = {
           },
           {
             type: 'doc',
-            docId: 'core-player/index',
+            docId: 'core-player',
             position: 'left',
             label: 'Core',
           },
