@@ -10,6 +10,7 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "onboarding:generate": "ts-node tools/generate-onboarding.ts",
     "licenses:list": "ts-node --skipProject --compiler-options '{\"module\":\"commonjs\",\"moduleResolution\":\"node\"}' tools/list-licenses.ts || npx --yes tsx tools/list-licenses.ts",
     "test:packages": "yarn workspace @mamoplayer/core test && yarn workspace @mamoplayer/pro test",
     "build:core": "yarn workspace @mamoplayer/core build",
@@ -36,5 +37,12 @@
   "dependencies": {
     "react": "19.1.1",
     "react-native": "0.81.6"
+  },
+  "ts-node": {
+    "skipProject": true,
+    "compilerOptions": {
+      "module": "commonjs",
+      "moduleResolution": "node"
+    }
   }
 }
