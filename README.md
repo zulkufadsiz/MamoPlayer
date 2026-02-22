@@ -13,6 +13,14 @@ MamoPlayer is a modular SDK for mobile streaming apps:
 
 You can start with Core and upgrade to Pro without rewriting your player integration.
 
+## MamoPlayer Pro (Paid)
+
+MamoPlayer Pro is built for OTT teams that need production features like ad monetization, analytics, advanced theming, watermarking, and playback policy controls.
+
+- Buy flow: [How to Buy Pro](./docs/how-to-buy-pro.md)
+- Contact for pricing/purchase: [contact@mamoplayer.com](mailto:contact@mamoplayer.com)
+- `@mamoplayer/core` is free on npm; `@mamoplayer/pro` is private and requires a commercial license.
+
 ## Core vs Pro
 
 | Capability                                 | Core (`@mamoplayer/core`) | Pro (`@mamoplayer/pro`) |
