@@ -22,7 +22,7 @@ const sidebars = {
     {
       type: 'category',
       label: 'Core Player',
-      items: ['core-player/index', 'core-package'],
+      items: ['core-player', 'core-package'],
     },
     {
       type: 'category',

@@ -37,6 +37,12 @@ jobs:
       - name: Build package
         run: yarn build
 
+      - name: Test packages
+        run: yarn test:packages
+
+      - name: Build docs
+        run: npm run docs:build
+
       - name: Configure npm auth
         run: |
           echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
@@ -84,6 +90,12 @@ jobs:
 
       - name: Build package
         run: yarn build
+
+      - name: Test packages
+        run: yarn test:packages
+
+      - name: Build docs
+        run: npm run docs:build
 
       - name: Check NPM_TOKEN presence
         run: |
@@ -137,6 +149,12 @@ jobs:
 
       - name: Build package
         run: yarn build
+
+      - name: Test packages
+        run: yarn test:packages
+
+      - name: Build docs
+        run: npm run docs:build
 
       - name: Semantic release dry run
         run: yarn release:dry

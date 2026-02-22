@@ -103,5 +103,5 @@ const styles = StyleSheet.create({
 
 ## Next steps
 
-- Read the [Core Player docs](/core-player/)
-- Read the [Pro Player docs](/pro-player/)
+- Read the [Core Player docs](/docs/core-player)
+- Read the [Pro Player docs](/docs/pro-player)
