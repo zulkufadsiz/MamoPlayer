@@ -11,15 +11,15 @@ const config = {
   favicon: 'img/favicon.ico',
 
   // Set the production url of your site here
-  url: 'https://your-docusaurus-test-site.com',
+  url: 'https://zulkufadsiz.github.io',
   // Set the /<baseUrl>/ pathname under which your site is served
   // For GitHub pages deployment, it is often '/<projectName>/'
-  baseUrl: '/',
+  baseUrl: '/MamoPlayer/',
 
   // GitHub pages deployment config.
   // If you aren't using GitHub pages, you don't need these.
-  organizationName: 'facebook', // Usually your GitHub org/user name.
-  projectName: 'docusaurus', // Usually your repo name.
+  organizationName: 'zulkufadsiz', // Usually your GitHub org/user name.
+  projectName: 'MamoPlayer', // Usually your repo name.
 
   onBrokenLinks: 'throw',
   onBrokenMarkdownLinks: 'warn',
@@ -71,16 +71,46 @@ const config = {
         },
         items: [
           {
-            type: 'docSidebar',
-            sidebarId: 'tutorialSidebar',
+            type: 'doc',
+            docId: 'getting-started/index',
             position: 'left',
-            label: 'Tutorial',
+            label: 'Getting Started',
           },
-          {to: '/blog', label: 'Blog', position: 'left'},
           {
-            href: 'https://github.com/facebook/docusaurus',
-            label: 'GitHub',
-            position: 'right',
+            type: 'doc',
+            docId: 'core-player/index',
+            position: 'left',
+            label: 'Core',
+          },
+          {
+            type: 'doc',
+            docId: 'pro-player/index',
+            position: 'left',
+            label: 'Pro',
+          },
+          {
+            type: 'doc',
+            docId: 'analytics-events/index',
+            position: 'left',
+            label: 'Analytics',
+          },
+          {
+            type: 'doc',
+            docId: 'ads-monetization/index',
+            position: 'left',
+            label: 'Ads',
+          },
+          {
+            type: 'doc',
+            docId: 'theming-skins/index',
+            position: 'left',
+            label: 'Theming',
+          },
+          {
+            type: 'doc',
+            docId: 'faq-troubleshooting/index',
+            position: 'left',
+            label: 'FAQ',
           },
         ],
       },
@@ -91,8 +121,8 @@ const config = {
             title: 'Docs',
             items: [
               {
-                label: 'Tutorial',
-                to: '/docs/intro',
+                label: 'Getting Started',
+                to: '/docs/getting-started/index',
               },
             ],
           },
@@ -100,16 +130,8 @@ const config = {
             title: 'Community',
             items: [
               {
-                label: 'Stack Overflow',
-                href: 'https://stackoverflow.com/questions/tagged/docusaurus',
-              },
-              {
-                label: 'Discord',
-                href: 'https://discordapp.com/invite/docusaurus',
-              },
-              {
-                label: 'Twitter',
-                href: 'https://twitter.com/docusaurus',
+                label: 'GitHub',
+                href: 'https://github.com/zulkufadsiz/MamoPlayer',
               },
             ],
           },
@@ -117,17 +139,13 @@ const config = {
             title: 'More',
             items: [
               {
-                label: 'Blog',
-                to: '/blog',
-              },
-              {
-                label: 'GitHub',
-                href: 'https://github.com/facebook/docusaurus',
+                label: 'Changelog',
+                to: '/docs/changelog',
               },
             ],
           },
         ],
-        copyright: `Copyright © ${new Date().getFullYear()} My Project, Inc. Built with Docusaurus.`,
+        copyright: `Copyright © ${new Date().getFullYear()} MamoPlayer. Built with Docusaurus.`,
       },
       prism: {
         theme: lightCodeTheme,
