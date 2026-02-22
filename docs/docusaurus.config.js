@@ -140,7 +140,7 @@ const config = {
             items: [
               {
                 label: 'Changelog',
-                to: '/docs/changelog',
+                to: '/docs/versioning-changelog',
               },
             ],
           },
