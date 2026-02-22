@@ -1,0 +1,9 @@
+[
+  {
+    "customer": "Example Company",
+    "contactEmail": "dev@example.com",
+    "licenseKey": "MAMO-XXXX-XXXX-XXXX",
+    "tier": "team",
+    "notes": "Internal test license"
+  }
+]
