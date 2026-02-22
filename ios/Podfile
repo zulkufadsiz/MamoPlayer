@@ -16,6 +16,7 @@ end
 
 target 'MamoPlayer' do
   react_native_path = "../node_modules/react-native"
+  use_native_modules!
 
   pod 'GoogleAds-IMA-iOS-SDK'
 

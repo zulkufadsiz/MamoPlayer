@@ -20,7 +20,7 @@ describe('offlineLibraryStore', () => {
       Platform: { OS: 'ios' },
     }));
 
-    jest.doMock('expo-file-system/legacy', () => mockFs);
+    jest.doMock('react-native', () => mockFs);
 
     const mod = require('@/components/lib/offlineLibraryStore');
     return { mod, mockFs };

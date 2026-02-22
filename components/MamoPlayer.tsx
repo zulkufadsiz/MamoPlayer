@@ -1,6 +1,6 @@
 import type { PlayerIconSet } from '@/types/icons';
 import type { PlayerLayoutVariant } from '@/types/layout';
-import { type VideoSource } from 'expo-video';
+import type { VideoSource } from '@/types/video';
 import React from 'react';
 import LandscapePlayer from './LandscapePlayer';
 import SimplePlayer from './SimplePlayer';

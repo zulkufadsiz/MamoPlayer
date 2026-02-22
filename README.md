@@ -340,7 +340,7 @@ Native IMA support is available in `@mamoplayer/pro` through the `ima` prop on `
 
 ### Requirements
 
-- Use a **custom dev client** or **bare React Native workflow**. **Expo Go is not supported** for native IMA.
+- Use a native React Native runtime (debug or release build) for native IMA.
 - Install and link the **Google IMA SDK** on both Android and iOS.
 
 ### Android Gradle setup
@@ -436,7 +436,7 @@ When native IMA fails at runtime, the player falls back to simulated ads so cont
 
 ### Debugging notes
 
-- Always test on a native runtime (custom dev client or release/debug app), not Expo Go.
+- Always test on a native runtime (release/debug app).
 - Verify ad tag URL accessibility and validity (VAST response, HTTPS, no geo/network blocking).
 - Check native logs for IMA load/playback errors:
   - Android: `adb logcat`

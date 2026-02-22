@@ -1,6 +1,16 @@
-import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+
+const Ionicons = ({ name, size = 20, color = '#fff' }: { name: string; size?: number; color?: string }) => {
+  const fallback = name.includes('close')
+    ? '✕'
+    : name.includes('check')
+      ? '✓'
+      : name.includes('chevron')
+        ? '›'
+        : '•';
+  return <Text style={{ fontSize: size, color }}>{fallback}</Text>;
+};
 
 interface LandscapeSettingsDialogProps {
   visible: boolean;

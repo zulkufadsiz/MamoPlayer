@@ -7,7 +7,7 @@ jest.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({ top: 0, right: 30, bottom: 10, left: 6 }),
 }));
 
-jest.mock('expo-video-thumbnails', () => ({
+jest.mock('react-native', () => ({
   getThumbnailAsync: (...args: unknown[]) => mockGetThumbnailAsync(...args),
 }));
 

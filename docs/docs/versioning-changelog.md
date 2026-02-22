@@ -25,7 +25,7 @@ Changes are considered breaking when they can require consumer code/config/runti
 - Removing or renaming exported APIs (components, hooks, functions, types, props, events).
 - Changing API contracts in a non-compatible way (required props, parameter shapes, return types, event payloads).
 - Changing default behavior in a way that can alter playback, analytics, ads, licensing, or UI logic.
-- Raising baseline requirements (React Native/Expo/OS versions) or removing support for previously supported platforms.
+- Raising baseline requirements (React Native/OS versions) or removing support for previously supported platforms.
 - Altering integration steps or configuration requirements such that existing setups stop working without updates.
 
 ## Where the changelog lives

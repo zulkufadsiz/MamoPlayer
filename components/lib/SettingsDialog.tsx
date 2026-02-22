@@ -1,15 +1,25 @@
-import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import {
-  Modal,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Switch,
-  Text,
-  TouchableOpacity,
-  View,
+    Modal,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Switch,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
+
+const Ionicons = ({ name, size = 20, color = '#333' }: { name: string; size?: number; color?: string }) => {
+  const fallback = name.includes('close')
+    ? '✕'
+    : name.includes('check')
+      ? '✓'
+      : name.includes('chevron')
+        ? '›'
+        : '•';
+  return <Text style={{ fontSize: size, color }}>{fallback}</Text>;
+};
 
 interface SettingsDialogProps {
   visible: boolean;

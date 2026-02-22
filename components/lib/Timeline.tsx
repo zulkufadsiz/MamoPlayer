@@ -1,5 +1,4 @@
 import Slider from '@react-native-community/slider';
-import * as VideoThumbnails from 'expo-video-thumbnails';
 import React, { useEffect, useState } from 'react';
 import { Image, LayoutChangeEvent, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -113,34 +112,8 @@ export default function Timeline({
     ),
   );
 
-  const loadThumbnail = async (timeSeconds: number) => {
-    if (!mediaUrl) {
-      setPreviewUri(null);
-      return;
-    }
-
-    const bucket = Math.max(0, Math.floor(timeSeconds));
-    const cached = thumbnailCacheRef.current[bucket];
-    if (cached) {
-      setPreviewUri(cached);
-      return;
-    }
-
-    const requestId = ++previewRequestIdRef.current;
-    try {
-      const { uri } = await VideoThumbnails.getThumbnailAsync(mediaUrl, {
-        time: bucket * 1000,
-        quality: 0.5,
-      });
-      thumbnailCacheRef.current[bucket] = uri;
-      if (requestId === previewRequestIdRef.current) {
-        setPreviewUri(uri);
-      }
-    } catch {
-      if (requestId === previewRequestIdRef.current) {
-        setPreviewUri(null);
-      }
-    }
+  const loadThumbnail = async (_timeSeconds: number) => {
+    setPreviewUri(null);
   };
 
   const scheduleThumbnailLoad = (timeSeconds: number) => {

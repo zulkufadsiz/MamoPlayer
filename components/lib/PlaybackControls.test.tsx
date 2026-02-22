@@ -15,7 +15,7 @@ jest.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({ top: 10, right: 20, bottom: 30, left: 0 }),
 }), { virtual: true });
 
-jest.mock('@expo/vector-icons', () => {
+jest.mock('react-native', () => {
   const React = require('react');
   const { Text } = require('react-native');
 

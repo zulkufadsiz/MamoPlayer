@@ -24,9 +24,9 @@ describe('useTransportControls', () => {
     const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
 
     mockReactUseEffect(cleanupCallbacks);
-    jest.doMock('expo-constants', () => ({
+    jest.doMock('react-native', () => ({
       __esModule: true,
-      default: { appOwnership: 'expo' },
+      default: { appOwnership: 'dev' },
     }));
 
     const { useTransportControls } = require('@/components/lib/useTransportControls');
@@ -60,7 +60,7 @@ describe('useTransportControls', () => {
     };
 
     mockReactUseEffect(cleanupCallbacks);
-    jest.doMock('expo-constants', () => ({
+    jest.doMock('react-native', () => ({
       __esModule: true,
       default: { appOwnership: 'standalone' },
     }));

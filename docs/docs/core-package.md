@@ -1,6 +1,6 @@
 # MamoPlayer Core Package Guide
 
-This guide explains how to integrate the published core package in an Expo/React Native project.
+This guide explains how to integrate the published core package in a React Native project.
 
 ## What is published
 
@@ -12,7 +12,6 @@ The npm package currently exposes only the core entrypoint:
 
 Your app should satisfy these peer dependencies:
 
-- `expo` `^54.0.0`
 - `react` `^19.0.0`
 - `react-native` `>=0.81.0`
 
