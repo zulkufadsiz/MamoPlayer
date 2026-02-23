@@ -1,7 +1,7 @@
 import CommentsSheet, { type Comment } from '@/components/lib/CommentsSheet';
 import { act, fireEvent, render } from '@testing-library/react-native';
 
-jest.mock('@expo/vector-icons', () => {
+jest.mock('react-native', () => {
   const React = require('react');
   const { Text } = require('react-native');
   return {

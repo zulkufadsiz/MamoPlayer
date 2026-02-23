@@ -1,6 +1,5 @@
 import type { PlayerIconSet } from '@/types/icons';
 import type { PlayerLayoutVariant } from '@/types/layout';
-import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { useEffect, useState } from 'react';
 import {
     Pressable,
@@ -12,6 +11,16 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Timeline from './Timeline';
+
+const Ionicons = ({ name, size = 20, color = '#fff' }: { name: string; size?: number; color?: string }) => {
+  const fallback = name.includes('chat') ? '💬' : '•';
+  return <Text style={{ fontSize: size, color }}>{fallback}</Text>;
+};
+
+const MaterialIcons = ({ name, size = 20, color = '#fff' }: { name: string; size?: number; color?: string }) => {
+  const fallback = name.includes('picture') ? '▣' : '•';
+  return <Text style={{ fontSize: size, color }}>{fallback}</Text>;
+};
 
 interface Subtitle {
   start: number | string;

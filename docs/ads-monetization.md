@@ -98,7 +98,7 @@ type IMAConfig = {
 
 - **Runtime**
   - Use a custom dev client or bare React Native app.
-  - Expo Go is not supported for native IMA.
+  - Use a native runtime build for native IMA.
 - **Native setup**
   - Follow the Android and iOS setup in the repository README:
     - [Native IMA Integration (Phase 3)](../README.md#native-ima-integration-phase-3)

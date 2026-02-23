@@ -1,17 +1,29 @@
-import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 import {
-  FlatList,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    FlatList,
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
+    Pressable,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
+
+const Ionicons = ({ name, size = 20, color = '#666' }: { name: string; size?: number; color?: string }) => {
+  const fallback = name.includes('heart')
+    ? '♥'
+    : name.includes('send')
+      ? '➤'
+      : name.includes('close')
+        ? '✕'
+        : name.includes('chat')
+          ? '💬'
+          : '●';
+  return <Text style={{ fontSize: size, color }}>{fallback}</Text>;
+};
 
 export interface Comment {
   id: string;

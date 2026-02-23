@@ -16,11 +16,7 @@ const mockPlayer = {
   playbackRate: 1,
 };
 
-jest.mock('expo', () => ({
-  useEventListener: jest.fn(),
-}));
-
-jest.mock('expo-screen-orientation', () => ({
+jest.mock('react-native', () => ({
   OrientationLock: {
     LANDSCAPE: 'LANDSCAPE',
     PORTRAIT_UP: 'PORTRAIT_UP',
@@ -29,7 +25,7 @@ jest.mock('expo-screen-orientation', () => ({
   unlockAsync: jest.fn(),
 }));
 
-jest.mock('expo-video', () => {
+jest.mock('react-native-video', () => {
   const React = require('react');
   const { View } = require('react-native');
 

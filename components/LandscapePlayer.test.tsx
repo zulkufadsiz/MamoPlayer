@@ -11,7 +11,7 @@ const mockPlayer = {
   playbackRate: 1,
 };
 
-jest.mock('@expo/vector-icons', () => {
+jest.mock('react-native', () => {
   const React = require('react');
   const { Text } = require('react-native');
   return {
@@ -30,11 +30,7 @@ jest.mock('@react-native-community/slider', () => {
   return SliderMock;
 });
 
-jest.mock('expo', () => ({
-  useEventListener: jest.fn(),
-}));
-
-jest.mock('expo-screen-orientation', () => ({
+jest.mock('react-native', () => ({
   lockAsync: jest.fn(() => Promise.resolve()),
   unlockAsync: jest.fn(() => Promise.resolve()),
   OrientationLock: {
@@ -43,7 +39,7 @@ jest.mock('expo-screen-orientation', () => ({
   },
 }));
 
-jest.mock('expo-video', () => {
+jest.mock('react-native-video', () => {
   const React = require('react');
   const { View } = require('react-native');
   return {

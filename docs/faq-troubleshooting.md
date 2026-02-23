@@ -1,15 +1,15 @@
 # FAQ & Troubleshooting
 
-## Why doesn't the video play in Expo Go?
+## Why doesn't the video play in a preview app?
 
-If the player does not appear or video does not play in **Expo Go**, the most common cause is native module support.
+If the player does not appear or video does not play in a preview runtime, the most common cause is native module support.
 
-`MamoPlayer` relies on native modules, and Expo Go does not include arbitrary native dependencies from your project.
+`MamoPlayer` relies on native modules that must be present in the app binary.
 
 Use a **development build (dev client)** instead:
 
 - Build and run a dev client for iOS/Android.
-- Open your app with that dev client (not Expo Go).
+- Open your app with that dev client.
 - Re-test the player screen.
 
 If you are on the web target, behavior can differ from native. Always validate native playback in a native dev client.

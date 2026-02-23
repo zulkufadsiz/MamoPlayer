@@ -13,7 +13,7 @@ describe('playbackPositionStore', () => {
       Platform: { OS: 'ios' },
     }));
 
-    jest.doMock('expo-file-system/legacy', () => mockFs);
+    jest.doMock('react-native', () => mockFs);
 
     const mod = require('@/components/lib/playbackPositionStore');
     return { mod, mockFs };

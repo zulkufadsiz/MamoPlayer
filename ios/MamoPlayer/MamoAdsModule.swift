@@ -51,15 +51,16 @@ final class MamoAdsModule: RCTEventEmitter, IMAAdsLoaderDelegate, IMAAdsManagerD
       }
 
       let adContainer = self.ensureAdContainerView(in: rootViewController)
-      self.adDisplayContainer = IMAAdDisplayContainer(
+      let adDisplayContainer = IMAAdDisplayContainer(
         adContainer: adContainer,
         viewController: rootViewController,
         companionSlots: nil
       )
+      self.adDisplayContainer = adDisplayContainer
 
       let request = IMAAdsRequest(
         adTagUrl: adTagUrl,
-        adDisplayContainer: self.adDisplayContainer,
+        adDisplayContainer: adDisplayContainer,
         contentPlayhead: nil,
         userContext: nil
       )
