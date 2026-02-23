@@ -18,10 +18,14 @@ const CoreDemoScreen = () => {
   const [source, setSource] = useState({ uri: SAMPLE_MP4_URL });
   const [paused, setPaused] = useState(false);
   const [position, setPosition] = useState(0);
+  const [latestPlaybackEvent, setLatestPlaybackEvent] = useState<PlaybackEvent | null>(null);
   const [duration, setDuration] = useState(0);
   const videoRef = useRef<VideoRef | null>(null);
 
   const handlePlaybackEvent = (event: PlaybackEvent) => {
+    console.log('PlaybackEvent:', event);
+    setLatestPlaybackEvent(event);
+
     if (event.type === 'time_update' || event.type === 'ready') {
       setPosition(event.position);
       setDuration(event.duration ?? 0);
@@ -98,6 +102,13 @@ const CoreDemoScreen = () => {
           </View>
         </View>
       </View>
+
+      <View style={styles.latestEventContainer}>
+        <Text style={styles.latestEventTitle}>Latest playback event</Text>
+        <Text style={styles.latestEventText}>
+          {latestPlaybackEvent ? JSON.stringify(latestPlaybackEvent) : 'No events yet'}
+        </Text>
+      </View>
     </SafeAreaView>
   );
 };
@@ -139,6 +150,17 @@ const styles = StyleSheet.create({
   controlsContainer: {
     gap: 8,
     marginTop: 12,
+  },
+  latestEventContainer: {
+    gap: 6,
+    marginTop: 16,
+  },
+  latestEventTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  latestEventText: {
+    fontSize: 12,
   },
 });
 
