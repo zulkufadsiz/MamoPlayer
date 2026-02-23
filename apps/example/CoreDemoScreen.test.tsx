@@ -29,6 +29,16 @@ jest.mock('@mamoplayer/core', () => {
           })
         }
       />
+      <Button
+        title="emit-error"
+        onPress={() =>
+          onPlaybackEvent?.({
+            type: 'error',
+            error: { message: 'Invalid source URL' },
+            timestamp: Date.now(),
+          })
+        }
+      />
     </View>
   );
 
@@ -53,5 +63,12 @@ describe('CoreDemoScreen', () => {
     fireEvent.press(getByText('emit-time-update'));
     expect(getByText('Position: 42.34s')).toBeTruthy();
     expect(getByText('Duration: 120.00s')).toBeTruthy();
+  });
+
+  it('shows error message when playback emits an error event', () => {
+    const { getByText } = render(<CoreDemoScreen />);
+
+    fireEvent.press(getByText('emit-error'));
+    expect(getByText('Error: Invalid source URL')).toBeTruthy();
   });
 });
