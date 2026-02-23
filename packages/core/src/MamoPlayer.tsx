@@ -1,11 +1,12 @@
 import React from 'react';
 import Video, {
-  type OnBufferData,
-  type OnLoadData,
-  type OnProgressData,
-  type OnSeekData,
-  type OnVideoErrorData,
-  type ReactVideoProps,
+    type OnBufferData,
+    type OnLoadData,
+    type OnProgressData,
+    type OnSeekData,
+    type OnVideoErrorData,
+    type ReactVideoProps,
+    type VideoRef,
 } from 'react-native-video';
 import { type PlaybackEvent } from './types/playback';
 
@@ -17,15 +18,17 @@ export interface MamoPlayerCoreProps extends Omit<
 > {
   source: MamoPlayerSource;
   autoPlay?: boolean;
+  paused?: boolean;
   onPlaybackEvent?: (event: PlaybackEvent) => void;
 }
 
-export const MamoPlayerCore: React.FC<MamoPlayerCoreProps> = ({
+export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(({
   source,
   autoPlay = true,
+  paused,
   onPlaybackEvent,
   ...rest
-}) => {
+}, ref) => {
   const [, setDuration] = React.useState<number>(0);
   const [, setPosition] = React.useState<number>(0);
   const [isPlaying, setIsPlaying] = React.useState<boolean>(false);
@@ -135,11 +138,14 @@ export const MamoPlayerCore: React.FC<MamoPlayerCoreProps> = ({
     [emit],
   );
 
+  const resolvedPaused = paused ?? !isPlaying;
+
   return (
     <Video
+      ref={ref}
       {...rest}
       source={source as ReactVideoProps['source']}
-      paused={!isPlaying}
+      paused={resolvedPaused}
       onLoad={handleLoad}
       onProgress={handleProgress}
       onEnd={handleEnd}
@@ -148,6 +154,8 @@ export const MamoPlayerCore: React.FC<MamoPlayerCoreProps> = ({
       onBuffer={handleBuffer}
     />
   );
-};
+});
+
+MamoPlayerCore.displayName = 'MamoPlayerCore';
 
 export default MamoPlayerCore;
