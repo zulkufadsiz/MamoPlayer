@@ -1,17 +1,39 @@
 import { act, render } from '@testing-library/react-native';
-import type { ReactVideoProps } from 'react-native-video';
+import React from 'react';
+import type { ReactVideoProps, VideoRef } from 'react-native-video';
 import { MamoPlayerCore } from './MamoPlayer';
 
 let latestVideoProps: ReactVideoProps | null = null;
+let latestVideoInstance: VideoRef | null = null;
 
 jest.mock('react-native-video', () => {
   const React = require('react');
   const { View } = require('react-native');
 
-  const VideoMock = (props: ReactVideoProps) => {
+  const VideoMock = React.forwardRef((props: ReactVideoProps, ref: React.Ref<VideoRef>) => {
     latestVideoProps = props;
+
+    const instance: VideoRef = {
+      seek: jest.fn(),
+      resume: jest.fn(),
+      pause: jest.fn(),
+      presentFullscreenPlayer: jest.fn(),
+      dismissFullscreenPlayer: jest.fn(),
+      restoreUserInterfaceForPictureInPictureStopCompleted: jest.fn(),
+      save: jest.fn(),
+      setVolume: jest.fn(),
+      getCurrentPosition: jest.fn(),
+      setFullScreen: jest.fn(),
+      setSource: jest.fn(),
+      enterPictureInPicture: jest.fn(),
+      exitPictureInPicture: jest.fn(),
+    };
+
+    latestVideoInstance = instance;
+    React.useImperativeHandle(ref, () => instance);
+
     return <View testID="video-mock" />;
-  };
+  });
 
   return {
     __esModule: true,
@@ -22,6 +44,7 @@ jest.mock('react-native-video', () => {
 describe('MamoPlayerCore', () => {
   beforeEach(() => {
     latestVideoProps = null;
+    latestVideoInstance = null;
     jest.clearAllMocks();
   });
 
@@ -89,6 +112,29 @@ describe('MamoPlayerCore', () => {
       }),
     );
     expect(latestVideoProps?.paused).toBe(true);
+  });
+
+  it('respects paused override prop', () => {
+    setup({ autoPlay: false, paused: false });
+    expect(latestVideoProps?.paused).toBe(false);
+
+    setup({ autoPlay: true, paused: true });
+    expect(latestVideoProps?.paused).toBe(true);
+  });
+
+  it('forwards ref to underlying video instance', () => {
+    const ref = React.createRef<VideoRef>();
+
+    render(
+      <MamoPlayerCore
+        ref={ref}
+        source={{ uri: 'https://example.com/video.mp4' }}
+      />,
+    );
+
+    expect(ref.current).toBeTruthy();
+    expect(ref.current).toBe(latestVideoInstance);
+    expect(ref.current?.seek).toEqual(expect.any(Function));
   });
 
   it('emits time_update, seek, ended, and error events', () => {
