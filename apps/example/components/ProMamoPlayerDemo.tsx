@@ -1,6 +1,6 @@
 import { ProMamoPlayer } from '@mamoplayer/pro';
 import { useState } from 'react';
-import { Button, StyleSheet, Text, View } from 'react-native';
+import { Button, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 const THEME_OPTIONS = ['light', 'dark', 'ott'] as const;
 const LAYOUT_OPTIONS = ['compact', 'standard', 'ott'] as const;
@@ -13,72 +13,94 @@ export default function ProMamoPlayerDemo() {
   const [selectedLayoutVariant, setSelectedLayoutVariant] = useState<DemoLayoutVariant>('standard');
 
   return (
-    <View style={styles.container}>
-      <View style={styles.controlsContainer}>
-        <Text style={styles.label}>Theme</Text>
-        <View style={styles.optionsRow}>
-          {THEME_OPTIONS.map((themeName) => {
-            return (
-              <View
-                key={themeName}
-                style={styles.optionButtonContainer}
-              >
-                <Button
-                  title={`${selectedThemeName === themeName ? '✓ ' : ''}${themeName.toUpperCase()}`}
-                  onPress={() => setSelectedThemeName(themeName)}
-                />
-              </View>
-            );
-          })}
+    <SafeAreaView style={styles.container}>
+      <ScrollView contentContainerStyle={styles.contentContainer}>
+        <Text style={styles.title}>Pro MamoPlayer Demo</Text>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Player Configuration</Text>
+
+          <Text style={styles.label}>Theme</Text>
+          <View style={styles.optionsRow}>
+            {THEME_OPTIONS.map((themeName) => {
+              return (
+                <View
+                  key={themeName}
+                  style={styles.optionButtonContainer}
+                >
+                  <Button
+                    title={`${selectedThemeName === themeName ? '✓ ' : ''}${themeName.toUpperCase()}`}
+                    onPress={() => setSelectedThemeName(themeName)}
+                  />
+                </View>
+              );
+            })}
+          </View>
+
+          <Text style={styles.label}>Layout Variant</Text>
+          <View style={styles.optionsRow}>
+            {LAYOUT_OPTIONS.map((layoutVariant) => {
+              return (
+                <View
+                  key={layoutVariant}
+                  style={styles.optionButtonContainer}
+                >
+                  <Button
+                    title={`${selectedLayoutVariant === layoutVariant ? '✓ ' : ''}${layoutVariant.toUpperCase()}`}
+                    onPress={() => setSelectedLayoutVariant(layoutVariant)}
+                  />
+                </View>
+              );
+            })}
+          </View>
         </View>
 
-        <Text style={styles.label}>Layout Variant</Text>
-        <View style={styles.optionsRow}>
-          {LAYOUT_OPTIONS.map((layoutVariant) => {
-            return (
-              <View
-                key={layoutVariant}
-                style={styles.optionButtonContainer}
-              >
-                <Button
-                  title={`${selectedLayoutVariant === layoutVariant ? '✓ ' : ''}${layoutVariant.toUpperCase()}`}
-                  onPress={() => setSelectedLayoutVariant(layoutVariant)}
-                />
-              </View>
-            );
-          })}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Player</Text>
+          <View style={styles.playerArea}>
+            <ProMamoPlayer
+              source={{ uri: 'https://test-stream.m3u8' }}
+              themeName={selectedThemeName}
+              layoutVariant={selectedLayoutVariant}
+              analytics={{ onEvent: (event: unknown) => console.log('analytics event:', event) }}
+              watermark={{
+                text: 'developer@example.com',
+                opacity: 0.2,
+                randomizePosition: true,
+                intervalMs: 5000,
+              }}
+              restrictions={{
+                disableSeekingForward: true,
+                maxPlaybackRate: 1.0,
+              }}
+              style={styles.player}
+            />
+          </View>
         </View>
-      </View>
-
-      <ProMamoPlayer
-        source={{ uri: 'https://test-stream.m3u8' }}
-        themeName={selectedThemeName}
-        layoutVariant={selectedLayoutVariant}
-        analytics={{ onEvent: (event: unknown) => console.log('analytics event:', event) }}
-        watermark={{
-          text: 'developer@example.com',
-          opacity: 0.2,
-          randomizePosition: true,
-          intervalMs: 5000,
-        }}
-        restrictions={{
-          disableSeekingForward: true,
-          maxPlaybackRate: 1.0,
-        }}
-      />
-    </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    gap: 12,
   },
-  controlsContainer: {
+  contentContainer: {
+    padding: 16,
+    gap: 12,
+    paddingBottom: 24,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: '700',
+  },
+  section: {
     gap: 8,
-    paddingHorizontal: 12,
-    paddingTop: 12,
+  },
+  sectionTitle: {
+    fontSize: 14,
+    fontWeight: '600',
   },
   label: {
     fontSize: 14,
@@ -91,5 +113,15 @@ const styles = StyleSheet.create({
   },
   optionButtonContainer: {
     minWidth: 108,
+  },
+  playerArea: {
+    width: '100%',
+    aspectRatio: 16 / 9,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  player: {
+    width: '100%',
+    height: '100%',
   },
 });
