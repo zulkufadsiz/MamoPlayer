@@ -32,6 +32,7 @@ export interface MamoPlayerProps {
   defaultAudioTrackId?: string | null;
   style?: any;
   autoPlay?: boolean;
+  resizeMode?: 'contain' | 'cover' | 'stretch';
   startAt?: number;
   nativeControls?: boolean;
   contentFit?: 'contain' | 'cover' | 'fill';

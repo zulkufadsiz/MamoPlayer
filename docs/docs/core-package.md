@@ -145,6 +145,7 @@ Most-used props:
 - `source`: `VideoSource` (required)
 - `autoPlay`: autoplay on ready
 - `startAt`: start time in seconds
+- `resizeMode`: `'contain' | 'cover' | 'stretch'` (useful for visual comparison/testing)
 - `contentFit`: `'contain' | 'cover' | 'fill'`
 - `allowsFullscreen`: enable fullscreen button/flow
 - `skipSeconds`: skip interval for forward/back controls
@@ -210,4 +211,5 @@ Current limitation: native Google IMA is not integrated yet. Planned roadmap: Ph
 
 - `MamoPlayerCore` always renders the simple player mode.
 - `MamoPlayerCore` type is `Omit<MamoPlayerProps, 'playerType'>`.
+- If both are provided, `resizeMode` takes precedence over `contentFit` (`fill` maps to `stretch`).
 - If you need custom feature access control, set `isPremiumUser` based on your backend entitlement response.
