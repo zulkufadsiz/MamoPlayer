@@ -6,6 +6,7 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   View,
@@ -57,6 +58,8 @@ export const MamoPlayerDemo: React.FC = () => {
   const [isLibraryLoading, setIsLibraryLoading] = useState(true);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [preferOfflinePlayback, setPreferOfflinePlayback] = useState(true);
+  const [autoPlay, setAutoPlay] = useState(true);
+  const [resizeMode, setResizeMode] = useState<'contain' | 'cover' | 'stretch'>('contain');
   const [subtitleUrlInput, setSubtitleUrlInput] = useState('');
   const [subtitleTextInput, setSubtitleTextInput] = useState('');
   const [isImportingSubtitles, setIsImportingSubtitles] = useState(false);
@@ -493,7 +496,8 @@ export const MamoPlayerDemo: React.FC = () => {
           source={playerSource}
           videoSourcesByLanguage={videoSourcesByLanguage}
           qualitySourcesByLanguage={qualitySourcesByLanguage}
-          autoPlay={true}
+          autoPlay={autoPlay}
+          resizeMode={resizeMode}
           startAt={0}
           style={styles.player}
           subtitleTracks={effectiveSubtitleTracks}
@@ -517,6 +521,31 @@ export const MamoPlayerDemo: React.FC = () => {
             quality option.
           </Text>
         )}
+      </View>
+
+      <View style={styles.playerOptionsContainer}>
+        <View style={styles.optionRow}>
+          <Text style={styles.optionLabel}>Auto Play</Text>
+          <Switch value={autoPlay} onValueChange={setAutoPlay} />
+        </View>
+
+        <Text style={styles.optionLabel}>Resize Mode</Text>
+        <View style={styles.rowWrap}>
+          {(['contain', 'cover', 'stretch'] as const).map((mode) => {
+            const isSelected = resizeMode === mode;
+            return (
+              <Pressable
+                key={mode}
+                style={[styles.chip, isSelected && styles.chipSelected]}
+                onPress={() => setResizeMode(mode)}
+              >
+                <Text style={[styles.chipText, isSelected && styles.chipTextSelected]}>
+                  {mode === 'contain' ? 'Contain' : mode === 'cover' ? 'Cover' : 'Stretch'}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
       </View>
     </ScrollView>
   );
@@ -664,6 +693,23 @@ const styles = StyleSheet.create({
   },
   player: {
     flex: 1,
+  },
+  playerOptionsContainer: {
+    marginHorizontal: 14,
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: '#FFFFFF',
+    gap: 10,
+  },
+  optionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  optionLabel: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#111827',
   },
   textInput: {
     borderWidth: 1,

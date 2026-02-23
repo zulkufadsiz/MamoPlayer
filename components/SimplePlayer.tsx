@@ -33,6 +33,7 @@ export interface SimplePlayerProps {
   defaultAudioTrackId?: string | null;
   style?: any;
   autoPlay?: boolean;
+  resizeMode?: 'contain' | 'cover' | 'stretch';
   startAt?: number;
   nativeControls?: boolean;
   contentFit?: 'contain' | 'cover' | 'fill';
@@ -62,6 +63,7 @@ const resolveSource = (source: VideoSource) => {
 export const SimplePlayer: React.FC<SimplePlayerProps> = ({
   source,
   autoPlay = false,
+  resizeMode,
   nativeControls = true,
   contentFit = 'contain',
   style,
@@ -69,6 +71,8 @@ export const SimplePlayer: React.FC<SimplePlayerProps> = ({
 }) => {
   const [isPlaying, setIsPlaying] = useState(autoPlay);
   const resolvedSource = useMemo(() => resolveSource(source), [source]);
+  const effectiveResizeMode =
+    resizeMode ?? (contentFit === 'fill' ? 'stretch' : contentFit);
 
   const handleTogglePlay = () => {
     const next = !isPlaying;
@@ -82,7 +86,7 @@ export const SimplePlayer: React.FC<SimplePlayerProps> = ({
         source={resolvedSource as any}
         paused={!isPlaying}
         controls={nativeControls}
-        resizeMode={contentFit}
+        resizeMode={effectiveResizeMode}
         style={styles.video}
       />
       <View style={styles.overlay} pointerEvents="box-none">
