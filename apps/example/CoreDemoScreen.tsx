@@ -9,13 +9,13 @@ import {
 import { Button, SafeAreaView, StyleSheet, Text, View } from 'react-native';
 import type { VideoRef } from 'react-native-video';
 
-const SAMPLE_MP4_URL = 'https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4';
-const SAMPLE_HLS_URL = 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8';
+const MP4_URL = 'https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4';
+const HLS_URL = 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8';
 type CorePlayerWithRefProps = ComponentProps<typeof MamoPlayer> & RefAttributes<VideoRef>;
 const CorePlayerWithRef = MamoPlayer as ComponentType<CorePlayerWithRefProps>;
 
 const CoreDemoScreen = () => {
-  const [source, setSource] = useState({ uri: SAMPLE_MP4_URL });
+  const [source, setSource] = useState({ uri: MP4_URL });
   const [paused, setPaused] = useState(false);
   const [position, setPosition] = useState(0);
   const [latestPlaybackEvent, setLatestPlaybackEvent] = useState<PlaybackEvent | null>(null);
@@ -38,20 +38,6 @@ const CoreDemoScreen = () => {
     }
   };
 
-  const handlePlayMp4 = () => {
-    setSource({ uri: SAMPLE_MP4_URL });
-    setPaused(false);
-    setPosition(0);
-    setDuration(0);
-  };
-
-  const handlePlayHls = () => {
-    setSource({ uri: SAMPLE_HLS_URL });
-    setPaused(false);
-    setPosition(0);
-    setDuration(0);
-  };
-
   const handleSeekForward = () => {
     videoRef.current?.seek(position + 10);
   };
@@ -68,16 +54,15 @@ const CoreDemoScreen = () => {
         <Text style={styles.quickSwitchLabel}>QuickSwitch</Text>
         <View style={styles.buttonsRow}>
           <View style={styles.buttonContainer}>
-            <Button title="Play MP4" onPress={handlePlayMp4} />
+            <Button title="MP4 Demo" onPress={() => setSource({ uri: MP4_URL })} />
           </View>
           <View style={styles.buttonContainer}>
-            <Button title="Play HLS" onPress={handlePlayHls} />
+            <Button title="HLS Demo" onPress={() => setSource({ uri: HLS_URL })} />
+          </View>
+          <View style={styles.buttonContainer}>
+            <Button title="Invalid Demo" onPress={() => setSource({ uri: 'https://invalid' })} />
           </View>
         </View>
-        <Button
-          title="Play Invalid Source"
-          onPress={() => setSource({ uri: 'https://invalid.video' })}
-        />
       </View>
 
       <View style={styles.playerArea}>
