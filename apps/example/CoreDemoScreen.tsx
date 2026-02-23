@@ -6,22 +6,26 @@ import {
   useRef,
   useState,
 } from 'react';
-import { Button, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Button, Platform, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { VideoRef } from 'react-native-video';
 
-const MP4_URL = 'https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4';
+const VIDEO_URL = 'https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4';
 const HLS_URL = 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8';
+const SUBTITLE_URL = 'https://bitdash-a.akamaihd.net/content/sintel/subtitles/subtitles_en.vtt';
+const SUBTITLE_SUPPORTED_PLATFORMS = new Set(['ios', 'android', 'tvos', 'visionos']);
 type CorePlayerWithRefProps = ComponentProps<typeof MamoPlayer> & RefAttributes<VideoRef>;
 const CorePlayerWithRef = MamoPlayer as ComponentType<CorePlayerWithRefProps>;
 
 const CoreDemoScreen = () => {
-  const [source, setSource] = useState({ uri: MP4_URL });
+  const [source, setSource] = useState<CorePlayerWithRefProps['source']>({ uri: VIDEO_URL });
   const [paused, setPaused] = useState(false);
   const [position, setPosition] = useState(0);
   const [latestPlaybackEvent, setLatestPlaybackEvent] = useState<PlaybackEvent | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [duration, setDuration] = useState(0);
+  const [subtitlesActive, setSubtitlesActive] = useState(false);
   const videoRef = useRef<VideoRef | null>(null);
+  const supportsSubtitles = SUBTITLE_SUPPORTED_PLATFORMS.has(Platform.OS);
 
   const handlePlaybackEvent = (event: PlaybackEvent) => {
     console.log('PlaybackEvent:', event);
@@ -39,10 +43,11 @@ const CoreDemoScreen = () => {
   };
 
   const handlePlayMp4 = () => {
-    setSource({ uri: MP4_URL });
+    setSource({ uri: VIDEO_URL });
     setPaused(false);
     setPosition(0);
     setDuration(0);
+    setSubtitlesActive(false);
   };
 
   const handlePlayHls = () => {
@@ -50,6 +55,35 @@ const CoreDemoScreen = () => {
     setPaused(false);
     setPosition(0);
     setDuration(0);
+    setSubtitlesActive(false);
+  };
+
+  const handlePlayWithSubtitles = () => {
+    if (!supportsSubtitles) {
+      setSource({ uri: VIDEO_URL });
+      setPaused(false);
+      setPosition(0);
+      setDuration(0);
+      setSubtitlesActive(false);
+      return;
+    }
+
+    setSource({
+      uri: VIDEO_URL,
+      textTracks: [
+        {
+          title: 'English',
+          uri: SUBTITLE_URL,
+          language: 'en',
+          type: 'text/vtt',
+        },
+      ],
+      selectedTextTrack: { type: 'title', value: 'English' },
+    } as CorePlayerWithRefProps['source']);
+    setPaused(false);
+    setPosition(0);
+    setDuration(0);
+    setSubtitlesActive(true);
   };
 
   const handleSeekForward = () => {
@@ -75,9 +109,19 @@ const CoreDemoScreen = () => {
               <Button title="Play HLS" onPress={handlePlayHls} />
             </View>
           </View>
+          <Button title="Play with Subtitles" onPress={handlePlayWithSubtitles} />
+          {supportsSubtitles && subtitlesActive ? (
+            <Text style={styles.noteText}>Subtitles are active (English).</Text>
+          ) : null}
+          {!supportsSubtitles ? (
+            <Text style={styles.noteText}>Subtitles are not supported on this platform.</Text>
+          ) : null}
           <Button
             title="Play Invalid Source"
-            onPress={() => setSource({ uri: 'https://invalid.video' })}
+            onPress={() => {
+              setSource({ uri: 'https://invalid.video' });
+              setSubtitlesActive(false);
+            }}
           />
         </View>
 
@@ -165,6 +209,9 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   latestEventText: {
+    fontSize: 12,
+  },
+  noteText: {
     fontSize: 12,
   },
 });

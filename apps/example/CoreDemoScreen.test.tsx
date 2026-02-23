@@ -1,5 +1,6 @@
 import CoreDemoScreen from '@/apps/example/CoreDemoScreen';
 import { fireEvent, render } from '@testing-library/react-native';
+import { Platform } from 'react-native';
 
 jest.mock('@mamoplayer/core', () => {
   const React = require('react');
@@ -70,5 +71,19 @@ describe('CoreDemoScreen', () => {
 
     fireEvent.press(getByText('emit-error'));
     expect(getByText('Error: Invalid source URL')).toBeTruthy();
+  });
+
+  it('shows subtitles active note when subtitles are supported and enabled', () => {
+    const { getByText, queryByText } = render(<CoreDemoScreen />);
+
+    fireEvent.press(getByText('Play with Subtitles'));
+
+    if (['ios', 'android', 'tvos', 'visionos'].includes(Platform.OS)) {
+      expect(getByText('Subtitles are active (English).')).toBeTruthy();
+      return;
+    }
+
+    expect(queryByText('Subtitles are active (English).')).toBeNull();
+    expect(getByText('Subtitles are not supported on this platform.')).toBeTruthy();
   });
 });

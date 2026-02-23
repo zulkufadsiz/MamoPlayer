@@ -10,7 +10,7 @@ import Video, {
 } from 'react-native-video';
 import { type PlaybackEvent } from './types/playback';
 
-export type MamoPlayerSource = { uri: string } | number;
+export type MamoPlayerSource = NonNullable<ReactVideoProps['source']>;
 
 export interface MamoPlayerCoreProps extends Omit<
   ReactVideoProps,
