@@ -19,12 +19,18 @@ const CoreDemoScreen = () => {
   const [paused, setPaused] = useState(false);
   const [position, setPosition] = useState(0);
   const [latestPlaybackEvent, setLatestPlaybackEvent] = useState<PlaybackEvent | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [duration, setDuration] = useState(0);
   const videoRef = useRef<VideoRef | null>(null);
 
   const handlePlaybackEvent = (event: PlaybackEvent) => {
     console.log('PlaybackEvent:', event);
     setLatestPlaybackEvent(event);
+
+    if (event.type === 'error') {
+      setErrorMessage(event.error?.message ?? 'Unknown playback error');
+      return;
+    }
 
     if (event.type === 'time_update' || event.type === 'ready') {
       setPosition(event.position);
@@ -68,6 +74,10 @@ const CoreDemoScreen = () => {
             <Button title="Play HLS" onPress={handlePlayHls} />
           </View>
         </View>
+        <Button
+          title="Play Invalid Source"
+          onPress={() => setSource({ uri: 'https://invalid.video' })}
+        />
       </View>
 
       <View style={styles.playerArea}>
@@ -105,6 +115,7 @@ const CoreDemoScreen = () => {
 
       <View style={styles.latestEventContainer}>
         <Text style={styles.latestEventTitle}>Latest playback event</Text>
+        {errorMessage ? <Text style={{ color: 'red' }}>Error: {errorMessage}</Text> : null}
         <Text style={styles.latestEventText}>
           {latestPlaybackEvent ? JSON.stringify(latestPlaybackEvent) : 'No events yet'}
         </Text>
