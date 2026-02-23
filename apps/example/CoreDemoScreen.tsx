@@ -6,7 +6,7 @@ import {
   useRef,
   useState,
 } from 'react';
-import { Button, SafeAreaView, StyleSheet, Text, View } from 'react-native';
+import { Button, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { VideoRef } from 'react-native-video';
 
 const SAMPLE_MP4_URL = 'https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4';
@@ -62,64 +62,67 @@ const CoreDemoScreen = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <Text style={styles.title}>MamoPlayer Core Demo</Text>
+      <ScrollView contentContainerStyle={styles.contentContainer}>
+        <Text style={styles.title}>MamoPlayer Core Demo</Text>
 
-      <View style={styles.quickSwitchContainer}>
-        <Text style={styles.quickSwitchLabel}>QuickSwitch</Text>
-        <View style={styles.buttonsRow}>
-          <View style={styles.buttonContainer}>
-            <Button title="Play MP4" onPress={handlePlayMp4} />
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Source Selection</Text>
+          <View style={styles.buttonsRow}>
+            <View style={styles.buttonContainer}>
+              <Button title="Play MP4" onPress={handlePlayMp4} />
+            </View>
+            <View style={styles.buttonContainer}>
+              <Button title="Play HLS" onPress={handlePlayHls} />
+            </View>
           </View>
-          <View style={styles.buttonContainer}>
-            <Button title="Play HLS" onPress={handlePlayHls} />
+          <Button
+            title="Play Invalid Source"
+            onPress={() => setSource({ uri: 'https://invalid.video' })}
+          />
+        </View>
+
+        <View style={styles.playerArea}>
+          <CorePlayerWithRef
+            ref={videoRef}
+            source={source}
+            paused={paused}
+            autoPlay
+            controls
+            onPlaybackEvent={handlePlaybackEvent}
+            style={styles.player}
+          />
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Player Controls</Text>
+          <Text>Position: {position.toFixed(2)}s</Text>
+          <Text>Duration: {duration.toFixed(2)}s</Text>
+          <View style={styles.buttonsRow}>
+            <View style={styles.buttonContainer}>
+              <Button title="Play" onPress={() => setPaused(false)} />
+            </View>
+            <View style={styles.buttonContainer}>
+              <Button title="Pause" onPress={() => setPaused(true)} />
+            </View>
+          </View>
+          <View style={styles.buttonsRow}>
+            <View style={styles.buttonContainer}>
+              <Button title="-10s" onPress={handleSeekBackward} />
+            </View>
+            <View style={styles.buttonContainer}>
+              <Button title="+10s" onPress={handleSeekForward} />
+            </View>
           </View>
         </View>
-        <Button
-          title="Play Invalid Source"
-          onPress={() => setSource({ uri: 'https://invalid.video' })}
-        />
-      </View>
 
-      <View style={styles.playerArea}>
-        <CorePlayerWithRef
-          ref={videoRef}
-          source={source}
-          paused={paused}
-          autoPlay
-          controls
-          onPlaybackEvent={handlePlaybackEvent}
-          style={styles.player}
-        />
-      </View>
-
-      <View style={styles.controlsContainer}>
-        <Text>Position: {position.toFixed(2)}s</Text>
-        <Text>Duration: {duration.toFixed(2)}s</Text>
-        <View style={styles.buttonsRow}>
-          <View style={styles.buttonContainer}>
-            <Button title="Play" onPress={() => setPaused(false)} />
-          </View>
-          <View style={styles.buttonContainer}>
-            <Button title="Pause" onPress={() => setPaused(true)} />
-          </View>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Latest Playback Event</Text>
+          {errorMessage ? <Text style={{ color: 'red' }}>Error: {errorMessage}</Text> : null}
+          <Text style={styles.latestEventText}>
+            {latestPlaybackEvent ? JSON.stringify(latestPlaybackEvent) : 'No events yet'}
+          </Text>
         </View>
-        <View style={styles.buttonsRow}>
-          <View style={styles.buttonContainer}>
-            <Button title="-10s" onPress={handleSeekBackward} />
-          </View>
-          <View style={styles.buttonContainer}>
-            <Button title="+10s" onPress={handleSeekForward} />
-          </View>
-        </View>
-      </View>
-
-      <View style={styles.latestEventContainer}>
-        <Text style={styles.latestEventTitle}>Latest playback event</Text>
-        {errorMessage ? <Text style={{ color: 'red' }}>Error: {errorMessage}</Text> : null}
-        <Text style={styles.latestEventText}>
-          {latestPlaybackEvent ? JSON.stringify(latestPlaybackEvent) : 'No events yet'}
-        </Text>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 };
@@ -127,18 +130,20 @@ const CoreDemoScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  contentContainer: {
     padding: 16,
+    gap: 16,
+    paddingBottom: 24,
   },
   title: {
     fontSize: 24,
     fontWeight: '700',
-    marginBottom: 16,
   },
-  quickSwitchContainer: {
+  section: {
     gap: 8,
-    marginBottom: 16,
   },
-  quickSwitchLabel: {
+  sectionTitle: {
     fontSize: 14,
     fontWeight: '600',
   },
@@ -150,25 +155,14 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   playerArea: {
-    height: 220,
+    width: '100%',
+    aspectRatio: 16 / 9,
     borderRadius: 12,
     overflow: 'hidden',
   },
   player: {
     height: '100%',
     width: '100%',
-  },
-  controlsContainer: {
-    gap: 8,
-    marginTop: 12,
-  },
-  latestEventContainer: {
-    gap: 6,
-    marginTop: 16,
-  },
-  latestEventTitle: {
-    fontSize: 14,
-    fontWeight: '600',
   },
   latestEventText: {
     fontSize: 12,
