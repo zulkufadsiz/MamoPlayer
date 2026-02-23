@@ -18,11 +18,13 @@ const CoreDemoScreen = () => {
   const [source, setSource] = useState({ uri: SAMPLE_MP4_URL });
   const [paused, setPaused] = useState(false);
   const [position, setPosition] = useState(0);
+  const [duration, setDuration] = useState(0);
   const videoRef = useRef<VideoRef | null>(null);
 
   const handlePlaybackEvent = (event: PlaybackEvent) => {
-    if (event.type === 'time_update' || event.type === 'seek') {
+    if (event.type === 'time_update' || event.type === 'ready') {
       setPosition(event.position);
+      setDuration(event.duration ?? 0);
     }
   };
 
@@ -30,12 +32,14 @@ const CoreDemoScreen = () => {
     setSource({ uri: SAMPLE_MP4_URL });
     setPaused(false);
     setPosition(0);
+    setDuration(0);
   };
 
   const handlePlayHls = () => {
     setSource({ uri: SAMPLE_HLS_URL });
     setPaused(false);
     setPosition(0);
+    setDuration(0);
   };
 
   const handleSeekForward = () => {
@@ -75,6 +79,8 @@ const CoreDemoScreen = () => {
       </View>
 
       <View style={styles.controlsContainer}>
+        <Text>Position: {position.toFixed(2)}s</Text>
+        <Text>Duration: {duration.toFixed(2)}s</Text>
         <View style={styles.buttonsRow}>
           <View style={styles.buttonContainer}>
             <Button title="Play" onPress={() => setPaused(false)} />
