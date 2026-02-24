@@ -14,6 +14,7 @@ import type { IMAConfig } from './types/ima';
 import type { PlayerLayoutVariant } from './types/layout';
 import type { PipConfig, PipEvent, PipState } from './types/pip';
 import type { PlaybackRestrictions } from './types/restrictions';
+import type { SettingsOverlayConfig } from './types/settings';
 import type { PlayerThemeConfig, ThemeName } from './types/theme';
 import type { ThumbnailsConfig } from './types/thumbnails';
 import type { TracksConfig, VideoQualityId } from './types/tracks';
@@ -33,6 +34,7 @@ export interface ProMamoPlayerProps extends MamoPlayerProps {
   icons?: PlayerIconSet;
   layoutVariant?: PlayerLayoutVariant;
   pip?: PipConfig;
+  settingsOverlay?: SettingsOverlayConfig;
   onPipEvent?: (event: PipEvent) => void;
 }
 
@@ -384,11 +386,23 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
   theme,
   themeName,
   pip,
+  settingsOverlay,
   onPictureInPictureStatusChanged,
   onPlaybackEvent,
   onPipEvent,
   ...rest
 }) => {
+  const resolvedSettings = {
+    enabled: settingsOverlay?.enabled ?? true,
+    showQuality: settingsOverlay?.showQuality ?? true,
+    showSubtitles: settingsOverlay?.showSubtitles ?? true,
+    showAudioTracks: settingsOverlay?.showAudioTracks ?? true,
+  };
+
+  const shouldShowQualitySettings = resolvedSettings.enabled && resolvedSettings.showQuality;
+  const shouldShowSubtitleSettings = resolvedSettings.enabled && resolvedSettings.showSubtitles;
+  const shouldShowAudioTrackSettings = resolvedSettings.enabled && resolvedSettings.showAudioTracks;
+
   const playerRef = React.useRef<VideoRef | null>(null);
   const adRef = useRef(new AdStateMachine());
   const quartileStateRef = React.useRef<Record<Quartile, boolean>>(createQuartileState());
@@ -1317,16 +1331,16 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
           autoPlay={effectiveAutoPlay}
           textTracks={textTracks}
           selectedTextTrack={selectedTextTrack}
-          audioTracks={tracks?.audioTracks}
-          subtitleTracks={tracks?.subtitleTracks}
+          audioTracks={shouldShowAudioTrackSettings ? tracks?.audioTracks : undefined}
+          subtitleTracks={shouldShowSubtitleSettings ? tracks?.subtitleTracks : undefined}
           defaultAudioTrackId={initialAudioTrackId ?? null}
           rate={rate}
-          currentQualityId={currentQualityId}
-          currentAudioTrackId={currentAudioTrackId}
-          currentSubtitleTrackId={currentSubtitleTrackId}
-          onQualityChange={changeQuality}
-          onAudioTrackChange={changeAudioTrack}
-          onSubtitleTrackChange={changeSubtitleTrack}
+          currentQualityId={shouldShowQualitySettings ? currentQualityId : undefined}
+          currentAudioTrackId={shouldShowAudioTrackSettings ? currentAudioTrackId : undefined}
+          currentSubtitleTrackId={shouldShowSubtitleSettings ? currentSubtitleTrackId : undefined}
+          onQualityChange={shouldShowQualitySettings ? changeQuality : undefined}
+          onAudioTrackChange={shouldShowAudioTrackSettings ? changeAudioTrack : undefined}
+          onSubtitleTrackChange={shouldShowSubtitleSettings ? changeSubtitleTrack : undefined}
           onPlaybackEvent={handlePlaybackEvent}
           onPictureInPictureStatusChanged={handlePictureInPictureStatusChanged}
         />
