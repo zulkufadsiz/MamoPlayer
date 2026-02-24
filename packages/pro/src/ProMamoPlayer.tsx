@@ -222,6 +222,26 @@ const getInitialQualityId = (tracks?: TracksConfig): VideoQualityId | undefined 
   return qualities[0]?.id;
 };
 
+const getInitialAudioTrackId = (tracks?: TracksConfig): string | undefined => {
+  const audioTracks = tracks?.audioTracks;
+
+  if (!audioTracks || audioTracks.length === 0) {
+    return tracks?.defaultAudioTrackId ?? undefined;
+  }
+
+  if (tracks?.defaultAudioTrackId) {
+    const configuredDefault = audioTracks.find(
+      (audioTrack) => audioTrack.id === tracks.defaultAudioTrackId,
+    );
+
+    if (configuredDefault) {
+      return configuredDefault.id;
+    }
+  }
+
+  return audioTracks[0]?.id;
+};
+
 const resolveSourceWithQualityUri = (
   source: MamoPlayerProps['source'],
   qualityUri: string,
@@ -314,6 +334,7 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
   const quartileStateRef = React.useRef<Record<Quartile, boolean>>(createQuartileState());
   const positionRef = React.useRef(0);
   const initialQualityId = React.useMemo(() => getInitialQualityId(tracks), [tracks]);
+  const initialAudioTrackId = React.useMemo(() => getInitialAudioTrackId(tracks), [tracks]);
   const initialQualityVariant = React.useMemo(
     () => tracks?.qualities?.find((quality) => quality.id === initialQualityId),
     [initialQualityId, tracks?.qualities],
@@ -343,8 +364,8 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
   const [currentQualityId, setCurrentQualityId] = React.useState<VideoQualityId | undefined>(
     initialQualityId,
   );
-  const [currentAudioTrackId, setCurrentAudioTrackId] = React.useState(
-    tracks?.defaultAudioTrackId,
+  const [currentAudioTrackId, setCurrentAudioTrackId] = React.useState<string | undefined>(
+    initialAudioTrackId,
   );
   const [currentSubtitleTrackId, setCurrentSubtitleTrackId] = React.useState(
     tracks?.defaultSubtitleTrackId,
@@ -534,6 +555,10 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
     setActiveSource(nextSource);
   }, [currentQualityId, initialQualityId, isAdMode, rest.source, tracks?.qualities]);
 
+  React.useEffect(() => {
+    setCurrentAudioTrackId(initialAudioTrackId);
+  }, [initialAudioTrackId]);
+
   const changeQuality = React.useCallback(
     (qualityId: VideoQualityId) => {
       const qualityVariant = tracks?.qualities?.find((quality) => quality.id === qualityId);
@@ -559,6 +584,22 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
       }
     },
     [currentQualityId, isAdMode, rest.source, tracks?.qualities],
+  );
+
+  const changeAudioTrack = React.useCallback(
+    (audioTrackId: string) => {
+      const audioTrackExists = tracks?.audioTracks?.some((audioTrack) => audioTrack.id === audioTrackId);
+
+      if (!audioTrackExists || audioTrackId === currentAudioTrackId) {
+        return;
+      }
+
+      setCurrentAudioTrackId(audioTrackId);
+
+      // TODO: Integrate native player-level audio track switching (HLS audio groups / rendition selection).
+      // TODO: Emit `audio_track_change` analytics once analytics types support custom track-change events.
+    },
+    [currentAudioTrackId, tracks?.audioTracks],
   );
 
   const completeAdPlayback = React.useCallback(
@@ -1076,12 +1117,14 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
           {...rest}
           source={activeSource}
           autoPlay={effectiveAutoPlay}
+          audioTracks={tracks?.audioTracks}
+          defaultAudioTrackId={initialAudioTrackId ?? null}
           rate={rate}
           currentQualityId={currentQualityId}
           currentAudioTrackId={currentAudioTrackId}
           currentSubtitleTrackId={currentSubtitleTrackId}
           onQualityChange={changeQuality}
-          onAudioTrackChange={setCurrentAudioTrackId}
+          onAudioTrackChange={changeAudioTrack}
           onSubtitleTrackChange={setCurrentSubtitleTrackId}
           onPlaybackEvent={handlePlaybackEvent}
         />
