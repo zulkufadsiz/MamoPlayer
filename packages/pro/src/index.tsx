@@ -5,6 +5,7 @@ export {
     type MamoPlayerCoreProps as MamoPlayerProProps
 } from '@mamoplayer/core';
 export { loadAds, releaseAds, startAds, stopAds, subscribeToAdsEvents } from './ima/nativeBridge';
+export { subscribeToPipEvents } from './pip/nativeBridge';
 export {
     ProMamoPlayer,
     default as ProMamoPlayerDefault,
