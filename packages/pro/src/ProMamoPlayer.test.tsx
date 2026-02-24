@@ -5,10 +5,19 @@ import { ProMamoPlayer } from './ProMamoPlayer';
 import type { PlayerThemeConfig } from './types/theme';
 
 let latestOnPlaybackEvent: ((event: PlaybackEvent) => void) | undefined;
-let latestVideoProps: { rate?: number; source?: unknown; autoPlay?: boolean } | undefined;
+let latestVideoProps:
+  | {
+      rate?: number;
+      source?: unknown;
+      autoPlay?: boolean;
+      currentQualityId?: string;
+      onQualityChange?: (qualityId: string) => void;
+    }
+  | undefined;
 let latestNativeAdsHandler:
   | ((eventName: 'mamo_ads_loaded' | 'mamo_ads_started' | 'mamo_ads_completed' | 'mamo_ads_error', payload?: unknown) => void)
   | undefined;
+const mockSeek = jest.fn();
 const mockLoadAds = jest.fn(async (_adTagUrl: string) => {});
 const mockReleaseAds = jest.fn(async () => {});
 const mockUnsubscribeAdsEvents = jest.fn();
@@ -28,23 +37,35 @@ jest.mock('@mamoplayer/core', () => {
   const React = require('react');
   const { View } = require('react-native');
 
+  const MamoPlayerMock = React.forwardRef(({
+    onPlaybackEvent,
+    rate,
+    source,
+    autoPlay,
+    currentQualityId,
+    onQualityChange,
+  }: {
+    onPlaybackEvent?: (event: PlaybackEvent) => void;
+    rate?: number;
+    source?: unknown;
+    autoPlay?: boolean;
+    currentQualityId?: string;
+    onQualityChange?: (qualityId: string) => void;
+  }, ref: React.Ref<{ seek: (position: number) => void }>) => {
+    React.useImperativeHandle(ref, () => ({
+      seek: (position: number) => mockSeek(position),
+    }));
+
+    latestOnPlaybackEvent = onPlaybackEvent;
+    latestVideoProps = { rate, source, autoPlay, currentQualityId, onQualityChange };
+    return <View testID="mamoplayer-mock" />;
+  });
+
+  MamoPlayerMock.displayName = 'MamoPlayerMock';
+
   return {
     __esModule: true,
-    MamoPlayer: ({
-      onPlaybackEvent,
-      rate,
-      source,
-      autoPlay,
-    }: {
-      onPlaybackEvent?: (event: PlaybackEvent) => void;
-      rate?: number;
-      source?: unknown;
-      autoPlay?: boolean;
-    }) => {
-      latestOnPlaybackEvent = onPlaybackEvent;
-      latestVideoProps = { rate, source, autoPlay };
-      return <View testID="mamoplayer-mock" />;
-    },
+    MamoPlayer: MamoPlayerMock,
   };
 });
 
@@ -68,6 +89,7 @@ describe('ProMamoPlayer', () => {
     jest.useRealTimers();
     mockLoadAds.mockResolvedValue(undefined);
     mockReleaseAds.mockResolvedValue(undefined);
+    mockSeek.mockReset();
   });
 
   const emitPlayback = (event: Partial<PlaybackEvent> & Pick<PlaybackEvent, 'type'>) => {
@@ -157,8 +179,9 @@ describe('ProMamoPlayer', () => {
     );
 
     const watermark = getByText('demo-watermark');
+    const watermarkStyle = StyleSheet.flatten(watermark.props.style);
 
-    expect(watermark.props.style).toEqual(
+    expect(watermarkStyle).toEqual(
       expect.objectContaining({
         position: 'absolute',
         top: 10,
@@ -186,8 +209,9 @@ describe('ProMamoPlayer', () => {
     });
 
     const watermark = getByText('moving-watermark');
+    const watermarkStyle = StyleSheet.flatten(watermark.props.style);
 
-    expect(watermark.props.style).toEqual(
+    expect(watermarkStyle).toEqual(
       expect.objectContaining({
         top: 25,
         left: 17,
@@ -323,6 +347,78 @@ describe('ProMamoPlayer', () => {
     );
 
     expect(latestVideoProps?.rate).toBe(1.0);
+  });
+
+  it('uses defaultQualityId variant URI as initial source when qualities are provided', () => {
+    render(
+      <ProMamoPlayer
+        source={{ uri: 'https://example.com/main-default-quality.mp4' }}
+        tracks={{
+          defaultQualityId: '720p',
+          qualities: [
+            { id: 'auto', label: 'Auto', uri: 'https://example.com/main-auto.m3u8' },
+            { id: '720p', label: '720p', uri: 'https://example.com/main-720p.m3u8' },
+          ],
+        }}
+      />,
+    );
+
+    expect(latestVideoProps?.currentQualityId).toBe('720p');
+    expect(latestVideoProps?.source).toEqual(
+      expect.objectContaining({ uri: 'https://example.com/main-720p.m3u8' }),
+    );
+  });
+
+  it('falls back to auto quality when no explicit default is configured', () => {
+    render(
+      <ProMamoPlayer
+        source={{ uri: 'https://example.com/main-auto-fallback.mp4' }}
+        tracks={{
+          qualities: [
+            { id: '720p', label: '720p', uri: 'https://example.com/main-720p-fallback.m3u8' },
+            { id: 'auto', label: 'Auto', uri: 'https://example.com/main-auto-fallback.m3u8' },
+          ],
+        }}
+      />,
+    );
+
+    expect(latestVideoProps?.currentQualityId).toBe('auto');
+    expect(latestVideoProps?.source).toEqual(
+      expect.objectContaining({ uri: 'https://example.com/main-auto-fallback.m3u8' }),
+    );
+  });
+
+  it('changes quality source and restores previous position after reload ready event', () => {
+    render(
+      <ProMamoPlayer
+        source={{ uri: 'https://example.com/main-quality-switch.mp4' }}
+        tracks={{
+          qualities: [
+            { id: 'auto', label: 'Auto', uri: 'https://example.com/main-quality-auto.m3u8' },
+            { id: '480p', label: '480p', uri: 'https://example.com/main-quality-480p.m3u8' },
+          ],
+        }}
+      />,
+    );
+
+    act(() => {
+      emitPlayback({ type: 'time_update', duration: 100, position: 42 });
+    });
+
+    act(() => {
+      latestVideoProps?.onQualityChange?.('480p');
+    });
+
+    expect(latestVideoProps?.currentQualityId).toBe('480p');
+    expect(latestVideoProps?.source).toEqual(
+      expect.objectContaining({ uri: 'https://example.com/main-quality-480p.m3u8' }),
+    );
+
+    act(() => {
+      emitPlayback({ type: 'ready', duration: 100, position: 0 });
+    });
+
+    expect(mockSeek).toHaveBeenCalledWith(42);
   });
 
   it('switches to ad source and restores main source after ad ends', () => {
