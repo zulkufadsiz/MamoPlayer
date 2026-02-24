@@ -12,6 +12,7 @@ import type { IMAConfig } from './types/ima';
 import type { PlayerLayoutVariant } from './types/layout';
 import type { PlaybackRestrictions } from './types/restrictions';
 import type { PlayerThemeConfig, ThemeName } from './types/theme';
+import type { TracksConfig } from './types/tracks';
 import type { WatermarkConfig } from './types/watermark';
 
 export interface ProMamoPlayerProps extends MamoPlayerProps {
@@ -19,6 +20,7 @@ export interface ProMamoPlayerProps extends MamoPlayerProps {
   ads?: AdsConfig;
   ima?: IMAConfig;
   analytics?: AnalyticsConfig;
+  tracks?: TracksConfig;
   restrictions?: PlaybackRestrictions;
   watermark?: WatermarkConfig;
   themeName?: ThemeName;
@@ -254,6 +256,7 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
   ads,
   ima,
   analytics,
+  tracks,
   restrictions,
   watermark,
   theme,
@@ -278,6 +281,13 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
   const [hasNativeIMAFailed, setHasNativeIMAFailed] = React.useState(false);
   const [isNativeAdPlaying, setIsNativeAdPlaying] = React.useState(false);
   const [isMainContentPausedByNativeAd, setIsMainContentPausedByNativeAd] = React.useState(false);
+  const [currentQualityId, setCurrentQualityId] = React.useState(tracks?.defaultQualityId);
+  const [currentAudioTrackId, setCurrentAudioTrackId] = React.useState(
+    tracks?.defaultAudioTrackId,
+  );
+  const [currentSubtitleTrackId, setCurrentSubtitleTrackId] = React.useState(
+    tracks?.defaultSubtitleTrackId,
+  );
   const useNativeIMA = shouldUseNativeIMA && !hasNativeIMAFailed;
   const hasConfiguredPreroll = React.useMemo(
     () => Boolean(ads?.adBreaks.some((adBreak) => adBreak.type === 'preroll')),
@@ -946,6 +956,12 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
           source={activeSource}
           autoPlay={effectiveAutoPlay}
           rate={rate}
+          currentQualityId={currentQualityId}
+          currentAudioTrackId={currentAudioTrackId}
+          currentSubtitleTrackId={currentSubtitleTrackId}
+          onQualityChange={setCurrentQualityId}
+          onAudioTrackChange={setCurrentAudioTrackId}
+          onSubtitleTrackChange={setCurrentSubtitleTrackId}
           onPlaybackEvent={handlePlaybackEvent}
         />
         <ProMamoPlayerOverlays

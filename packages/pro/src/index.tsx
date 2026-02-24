@@ -15,5 +15,6 @@ export type * from './types/icons';
 export type * from './types/ima';
 export type * from './types/layout';
 export type * from './types/restrictions';
+export type * from './types/tracks';
 export type * from './types/watermark';
 
