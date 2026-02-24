@@ -13,9 +13,14 @@ let latestVideoProps:
       currentQualityId?: string;
       onQualityChange?: (qualityId: string) => void;
       audioTracks?: { id: string; label: string; language?: string }[];
+      subtitleTracks?: { id: string; label: string; language: string; uri: string; isDefault?: boolean }[];
+      textTracks?: { title: string; language?: string; type: 'text/vtt'; uri: string }[];
+      selectedTextTrack?: { type: 'disabled' } | { type: 'index'; value: number };
       defaultAudioTrackId?: string | null;
       currentAudioTrackId?: string;
       onAudioTrackChange?: (audioTrackId: string) => void;
+      currentSubtitleTrackId?: string | 'off';
+      onSubtitleTrackChange?: (subtitleTrackId: string | 'off') => void;
     }
   | undefined;
 let latestNativeAdsHandler:
@@ -49,9 +54,14 @@ jest.mock('@mamoplayer/core', () => {
     currentQualityId,
     onQualityChange,
     audioTracks,
+    subtitleTracks,
+    textTracks,
+    selectedTextTrack,
     defaultAudioTrackId,
     currentAudioTrackId,
     onAudioTrackChange,
+    currentSubtitleTrackId,
+    onSubtitleTrackChange,
   }: {
     onPlaybackEvent?: (event: PlaybackEvent) => void;
     rate?: number;
@@ -60,9 +70,14 @@ jest.mock('@mamoplayer/core', () => {
     currentQualityId?: string;
     onQualityChange?: (qualityId: string) => void;
     audioTracks?: { id: string; label: string; language?: string }[];
+    subtitleTracks?: { id: string; label: string; language: string; uri: string; isDefault?: boolean }[];
+    textTracks?: { title: string; language?: string; type: 'text/vtt'; uri: string }[];
+    selectedTextTrack?: { type: 'disabled' } | { type: 'index'; value: number };
     defaultAudioTrackId?: string | null;
     currentAudioTrackId?: string;
     onAudioTrackChange?: (audioTrackId: string) => void;
+    currentSubtitleTrackId?: string | 'off';
+    onSubtitleTrackChange?: (subtitleTrackId: string | 'off') => void;
   }, ref: React.Ref<{ seek: (position: number) => void }>) => {
     React.useImperativeHandle(ref, () => ({
       seek: (position: number) => mockSeek(position),
@@ -76,9 +91,14 @@ jest.mock('@mamoplayer/core', () => {
       currentQualityId,
       onQualityChange,
       audioTracks,
+      subtitleTracks,
+      textTracks,
+      selectedTextTrack,
       defaultAudioTrackId,
       currentAudioTrackId,
       onAudioTrackChange,
+      currentSubtitleTrackId,
+      onSubtitleTrackChange,
     };
     return <View testID="mamoplayer-mock" />;
   });
@@ -980,5 +1000,136 @@ describe('ProMamoPlayer', () => {
     });
 
     expect(latestVideoProps?.source).toEqual(adSource);
+  });
+
+  it('resolves initial subtitle track from explicit default id', () => {
+    render(
+      <ProMamoPlayer
+        source={{ uri: 'https://example.com/subtitles-default-id.mp4' }}
+        tracks={{
+          subtitleTracks: [
+            {
+              id: 'en',
+              language: 'en',
+              label: 'English',
+              uri: 'https://example.com/subtitles-en.vtt',
+            },
+            {
+              id: 'tr',
+              language: 'tr',
+              label: 'Turkish',
+              uri: 'https://example.com/subtitles-tr.vtt',
+            },
+          ],
+          defaultSubtitleTrackId: 'tr',
+        }}
+      />,
+    );
+
+    expect(latestVideoProps?.currentSubtitleTrackId).toBe('tr');
+    expect(latestVideoProps?.selectedTextTrack).toEqual({ type: 'index', value: 1 });
+    expect(latestVideoProps?.subtitleTracks).toHaveLength(2);
+    expect(latestVideoProps?.textTracks).toEqual([
+      {
+        title: 'English',
+        language: 'en',
+        type: 'text/vtt',
+        uri: 'https://example.com/subtitles-en.vtt',
+      },
+      {
+        title: 'Turkish',
+        language: 'tr',
+        type: 'text/vtt',
+        uri: 'https://example.com/subtitles-tr.vtt',
+      },
+    ]);
+  });
+
+  it('resolves initial subtitle track from isDefault when no explicit default id', () => {
+    render(
+      <ProMamoPlayer
+        source={{ uri: 'https://example.com/subtitles-flag-default.mp4' }}
+        tracks={{
+          subtitleTracks: [
+            {
+              id: 'en',
+              language: 'en',
+              label: 'English',
+              uri: 'https://example.com/subtitles-en.vtt',
+            },
+            {
+              id: 'es',
+              language: 'es',
+              label: 'Spanish',
+              uri: 'https://example.com/subtitles-es.vtt',
+              isDefault: true,
+            },
+          ],
+        }}
+      />,
+    );
+
+    expect(latestVideoProps?.currentSubtitleTrackId).toBe('es');
+    expect(latestVideoProps?.selectedTextTrack).toEqual({ type: 'index', value: 1 });
+  });
+
+  it('defaults subtitles to off when subtitle tracks exist without default', () => {
+    render(
+      <ProMamoPlayer
+        source={{ uri: 'https://example.com/subtitles-off-default.mp4' }}
+        tracks={{
+          subtitleTracks: [
+            {
+              id: 'en',
+              language: 'en',
+              label: 'English',
+              uri: 'https://example.com/subtitles-en.vtt',
+            },
+          ],
+        }}
+      />,
+    );
+
+    expect(latestVideoProps?.currentSubtitleTrackId).toBe('off');
+    expect(latestVideoProps?.selectedTextTrack).toEqual({ type: 'disabled' });
+  });
+
+  it('changes subtitle track and allows switching off', () => {
+    render(
+      <ProMamoPlayer
+        source={{ uri: 'https://example.com/subtitles-change.mp4' }}
+        tracks={{
+          subtitleTracks: [
+            {
+              id: 'en',
+              language: 'en',
+              label: 'English',
+              uri: 'https://example.com/subtitles-en.vtt',
+            },
+            {
+              id: 'fr',
+              language: 'fr',
+              label: 'French',
+              uri: 'https://example.com/subtitles-fr.vtt',
+            },
+          ],
+          defaultSubtitleTrackId: 'en',
+        }}
+      />,
+    );
+
+    act(() => {
+      latestVideoProps?.onSubtitleTrackChange?.('fr');
+    });
+
+    expect(latestVideoProps?.currentSubtitleTrackId).toBe('fr');
+    expect(latestVideoProps?.selectedTextTrack).toEqual({ type: 'index', value: 1 });
+
+    act(() => {
+      latestVideoProps?.onSubtitleTrackChange?.('off');
+    });
+
+    expect(latestVideoProps?.currentSubtitleTrackId).toBe('off');
+    expect(latestVideoProps?.selectedTextTrack).toEqual({ type: 'disabled' });
   });
 });
