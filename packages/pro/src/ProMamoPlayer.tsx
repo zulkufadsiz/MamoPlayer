@@ -14,8 +14,8 @@ import type { IMAConfig } from './types/ima';
 import type { PlayerLayoutVariant } from './types/layout';
 import type { PipConfig, PipEvent, PipState } from './types/pip';
 import type { PlaybackRestrictions } from './types/restrictions';
-import type { ThumbnailsConfig } from './types/thumbnails';
 import type { PlayerThemeConfig, ThemeName } from './types/theme';
+import type { ThumbnailsConfig } from './types/thumbnails';
 import type { TracksConfig, VideoQualityId } from './types/tracks';
 import type { WatermarkConfig } from './types/watermark';
 
