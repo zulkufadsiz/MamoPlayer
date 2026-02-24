@@ -1,6 +1,6 @@
 import { AppRegistry } from 'react-native';
 
 import { name as appName } from './app.json';
-import ProMamoPlayer from './apps/example/components/ProMamoPlayerDemo';
+import CoreDemoScreen from './apps/example/CoreDemoScreen';
 
-AppRegistry.registerComponent(appName, () => ProMamoPlayer);
+AppRegistry.registerComponent(appName, () => CoreDemoScreen);
