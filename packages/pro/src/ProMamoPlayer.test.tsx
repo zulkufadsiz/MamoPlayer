@@ -1264,4 +1264,186 @@ describe('ProMamoPlayer', () => {
     expect(latestVideoProps?.currentSubtitleTrackId).toBe('off');
     expect(latestVideoProps?.selectedTextTrack).toEqual({ type: 'disabled' });
   });
+
+  it('hides quality, audio and subtitle settings when settingsOverlay.enabled is false', () => {
+    render(
+      <ProMamoPlayer
+        source={{ uri: 'https://example.com/settings-hidden-all.mp4' }}
+        tracks={{
+          qualities: [
+            {
+              id: 'auto',
+              label: 'Auto',
+              uri: 'https://example.com/auto.m3u8',
+              isDefault: true,
+            },
+            {
+              id: '720p',
+              label: '720p',
+              uri: 'https://example.com/720.m3u8',
+            },
+          ],
+          audioTracks: [
+            { id: 'en', label: 'English', language: 'en' },
+            { id: 'tr', label: 'Turkish', language: 'tr' },
+          ],
+          subtitleTracks: [
+            {
+              id: 'en',
+              language: 'en',
+              label: 'English',
+              uri: 'https://example.com/subtitles-en.vtt',
+            },
+            {
+              id: 'tr',
+              language: 'tr',
+              label: 'Turkish',
+              uri: 'https://example.com/subtitles-tr.vtt',
+            },
+          ],
+        }}
+        settingsOverlay={{ enabled: false }}
+      />,
+    );
+
+    expect(latestVideoProps?.currentQualityId).toBeUndefined();
+    expect(latestVideoProps?.onQualityChange).toBeUndefined();
+    expect(latestVideoProps?.audioTracks).toBeUndefined();
+    expect(latestVideoProps?.currentAudioTrackId).toBeUndefined();
+    expect(latestVideoProps?.onAudioTrackChange).toBeUndefined();
+    expect(latestVideoProps?.subtitleTracks).toBeUndefined();
+    expect(latestVideoProps?.currentSubtitleTrackId).toBeUndefined();
+    expect(latestVideoProps?.onSubtitleTrackChange).toBeUndefined();
+  });
+
+  it('hides only subtitle settings when settingsOverlay.showSubtitles is false', () => {
+    render(
+      <ProMamoPlayer
+        source={{ uri: 'https://example.com/settings-hide-subtitles.mp4' }}
+        tracks={{
+          qualities: [
+            {
+              id: 'auto',
+              label: 'Auto',
+              uri: 'https://example.com/auto.m3u8',
+              isDefault: true,
+            },
+          ],
+          audioTracks: [
+            { id: 'en', label: 'English', language: 'en' },
+            { id: 'tr', label: 'Turkish', language: 'tr' },
+          ],
+          subtitleTracks: [
+            {
+              id: 'en',
+              language: 'en',
+              label: 'English',
+              uri: 'https://example.com/subtitles-en.vtt',
+            },
+          ],
+          defaultAudioTrackId: 'tr',
+          defaultSubtitleTrackId: 'en',
+        }}
+        settingsOverlay={{ showSubtitles: false }}
+      />,
+    );
+
+    expect(latestVideoProps?.currentQualityId).toBe('auto');
+    expect(latestVideoProps?.onQualityChange).toBeDefined();
+    expect(latestVideoProps?.audioTracks).toHaveLength(2);
+    expect(latestVideoProps?.currentAudioTrackId).toBe('tr');
+    expect(latestVideoProps?.onAudioTrackChange).toBeDefined();
+    expect(latestVideoProps?.subtitleTracks).toBeUndefined();
+    expect(latestVideoProps?.currentSubtitleTrackId).toBeUndefined();
+    expect(latestVideoProps?.onSubtitleTrackChange).toBeUndefined();
+  });
+
+  it('hides only quality settings when settingsOverlay.showQuality is false', () => {
+    render(
+      <ProMamoPlayer
+        source={{ uri: 'https://example.com/settings-hide-quality.mp4' }}
+        tracks={{
+          qualities: [
+            {
+              id: 'auto',
+              label: 'Auto',
+              uri: 'https://example.com/auto.m3u8',
+              isDefault: true,
+            },
+            {
+              id: '720p',
+              label: '720p',
+              uri: 'https://example.com/720.m3u8',
+            },
+          ],
+          audioTracks: [
+            { id: 'en', label: 'English', language: 'en' },
+            { id: 'tr', label: 'Turkish', language: 'tr' },
+          ],
+          subtitleTracks: [
+            {
+              id: 'en',
+              language: 'en',
+              label: 'English',
+              uri: 'https://example.com/subtitles-en.vtt',
+            },
+          ],
+          defaultAudioTrackId: 'tr',
+          defaultSubtitleTrackId: 'en',
+        }}
+        settingsOverlay={{ showQuality: false }}
+      />,
+    );
+
+    expect(latestVideoProps?.currentQualityId).toBeUndefined();
+    expect(latestVideoProps?.onQualityChange).toBeUndefined();
+    expect(latestVideoProps?.audioTracks).toHaveLength(2);
+    expect(latestVideoProps?.currentAudioTrackId).toBe('tr');
+    expect(latestVideoProps?.onAudioTrackChange).toBeDefined();
+    expect(latestVideoProps?.subtitleTracks).toHaveLength(1);
+    expect(latestVideoProps?.currentSubtitleTrackId).toBe('en');
+    expect(latestVideoProps?.onSubtitleTrackChange).toBeDefined();
+  });
+
+  it('hides only audio settings when settingsOverlay.showAudioTracks is false', () => {
+    render(
+      <ProMamoPlayer
+        source={{ uri: 'https://example.com/settings-hide-audio.mp4' }}
+        tracks={{
+          qualities: [
+            {
+              id: 'auto',
+              label: 'Auto',
+              uri: 'https://example.com/auto.m3u8',
+              isDefault: true,
+            },
+          ],
+          audioTracks: [
+            { id: 'en', label: 'English', language: 'en' },
+            { id: 'tr', label: 'Turkish', language: 'tr' },
+          ],
+          subtitleTracks: [
+            {
+              id: 'en',
+              language: 'en',
+              label: 'English',
+              uri: 'https://example.com/subtitles-en.vtt',
+            },
+          ],
+          defaultAudioTrackId: 'tr',
+          defaultSubtitleTrackId: 'en',
+        }}
+        settingsOverlay={{ showAudioTracks: false }}
+      />,
+    );
+
+    expect(latestVideoProps?.currentQualityId).toBe('auto');
+    expect(latestVideoProps?.onQualityChange).toBeDefined();
+    expect(latestVideoProps?.audioTracks).toBeUndefined();
+    expect(latestVideoProps?.currentAudioTrackId).toBeUndefined();
+    expect(latestVideoProps?.onAudioTrackChange).toBeUndefined();
+    expect(latestVideoProps?.subtitleTracks).toHaveLength(1);
+    expect(latestVideoProps?.currentSubtitleTrackId).toBe('en');
+    expect(latestVideoProps?.onSubtitleTrackChange).toBeDefined();
+  });
 });

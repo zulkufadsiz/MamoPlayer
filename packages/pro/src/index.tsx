@@ -17,6 +17,7 @@ export type * from './types/ima';
 export type * from './types/layout';
 export type * from './types/pip';
 export type * from './types/restrictions';
+export type * from './types/settings';
 export type * from './types/thumbnails';
 export type * from './types/tracks';
 export type * from './types/watermark';
