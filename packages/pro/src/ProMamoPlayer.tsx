@@ -54,6 +54,10 @@ type Quartile = 25 | 50 | 75 | 100;
 
 const QUARTILES: Quartile[] = [25, 50, 75, 100];
 
+// UX preference: keep settings overlay open after a selection so users can quickly adjust
+// multiple options (quality, subtitles, audio) in one pass.
+const CLOSE_SETTINGS_ON_SELECTION = false;
+
 const createQuartileState = (): Record<Quartile, boolean> => ({
   25: false,
   50: false,
@@ -389,19 +393,17 @@ const ProMamoPlayerOverlays: React.FC<ProMamoPlayerOverlaysProps> = ({
     (sectionKey: OverlaySection['key'], optionId: string) => {
       if (sectionKey === 'quality') {
         selectQualityOption?.(optionId);
-        return;
-      }
-
-      if (sectionKey === 'audio') {
+      } else if (sectionKey === 'audio') {
         selectAudioOption?.(optionId);
-        return;
-      }
-
-      if (sectionKey === 'subtitles') {
+      } else if (sectionKey === 'subtitles') {
         selectSubtitleOption?.(optionId);
       }
+
+      if (CLOSE_SETTINGS_ON_SELECTION) {
+        closeSettings();
+      }
     },
-    [selectAudioOption, selectQualityOption, selectSubtitleOption],
+    [closeSettings, selectAudioOption, selectQualityOption, selectSubtitleOption],
   );
 
   return (
@@ -521,7 +523,7 @@ const ProMamoPlayerOverlays: React.FC<ProMamoPlayerOverlaysProps> = ({
                       accessibilityRole="button"
                       accessibilityLabel={`${section.title} ${settingsLabelForOff}`}
                       accessibilityHint="Turns subtitles off"
-                      onPress={() => selectSubtitleOption?.('off')}
+                      onPress={() => handleSectionOptionPress('subtitles', 'off')}
                       style={styles.settingsOptionRow}
                       testID="pro-settings-option-subtitles-off"
                     >
