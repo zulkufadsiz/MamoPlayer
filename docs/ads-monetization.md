@@ -80,7 +80,7 @@ import { ProMamoPlayer } from '@mamoplayer/pro';
     skipButtonEnabled: true,
     skipAfterSeconds: 5,
   }}
-/>
+/>;
 ```
 
 ## 3. Native IMA
@@ -121,7 +121,7 @@ import { ProMamoPlayer } from '@mamoplayer/pro';
     sessionId: 'session-ima-001',
     onEvent: (event) => console.log('[analytics]', event.type, event.position),
   }}
-/>
+/>;
 ```
 
 ## 4. Analytics with Ads

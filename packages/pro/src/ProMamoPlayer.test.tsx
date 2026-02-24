@@ -10,11 +10,17 @@ let latestVideoProps:
       rate?: number;
       source?: unknown;
       autoPlay?: boolean;
-  onPictureInPictureStatusChanged?: (isActive: boolean) => void;
+      onPictureInPictureStatusChanged?: (event: Readonly<{ isActive: boolean }>) => void;
       currentQualityId?: string;
       onQualityChange?: (qualityId: string) => void;
       audioTracks?: { id: string; label: string; language?: string }[];
-      subtitleTracks?: { id: string; label: string; language: string; uri: string; isDefault?: boolean }[];
+      subtitleTracks?: {
+        id: string;
+        label: string;
+        language: string;
+        uri: string;
+        isDefault?: boolean;
+      }[];
       textTracks?: { title: string; language?: string; type: 'text/vtt'; uri: string }[];
       selectedTextTrack?: { type: 'disabled' } | { type: 'index'; value: number };
       defaultAudioTrackId?: string | null;
@@ -25,7 +31,10 @@ let latestVideoProps:
     }
   | undefined;
 let latestNativeAdsHandler:
-  | ((eventName: 'mamo_ads_loaded' | 'mamo_ads_started' | 'mamo_ads_completed' | 'mamo_ads_error', payload?: unknown) => void)
+  | ((
+      eventName: 'mamo_ads_loaded' | 'mamo_ads_started' | 'mamo_ads_completed' | 'mamo_ads_error',
+      payload?: unknown,
+    ) => void)
   | undefined;
 let latestNativePipHandler:
   | ((eventName: 'mamo_pip_active' | 'mamo_pip_exiting', payload?: unknown) => void)
@@ -47,12 +56,7 @@ const mockSubscribeToAdsEvents = jest.fn(
   },
 );
 const mockSubscribeToPipEvents = jest.fn(
-  (
-    handler: (
-      eventName: 'mamo_pip_active' | 'mamo_pip_exiting',
-      payload?: unknown,
-    ) => void,
-  ) => {
+  (handler: (eventName: 'mamo_pip_active' | 'mamo_pip_exiting', payload?: unknown) => void) => {
     latestNativePipHandler = handler;
     return mockUnsubscribePipEvents;
   },
@@ -62,65 +66,76 @@ jest.mock('@mamoplayer/core', () => {
   const React = require('react');
   const { View } = require('react-native');
 
-  const MamoPlayerMock = React.forwardRef(({
-    onPlaybackEvent,
-    rate,
-    source,
-    autoPlay,
-    onPictureInPictureStatusChanged,
-    currentQualityId,
-    onQualityChange,
-    audioTracks,
-    subtitleTracks,
-    textTracks,
-    selectedTextTrack,
-    defaultAudioTrackId,
-    currentAudioTrackId,
-    onAudioTrackChange,
-    currentSubtitleTrackId,
-    onSubtitleTrackChange,
-  }: {
-    onPlaybackEvent?: (event: PlaybackEvent) => void;
-    rate?: number;
-    source?: unknown;
-    autoPlay?: boolean;
-    onPictureInPictureStatusChanged?: (isActive: boolean) => void;
-    currentQualityId?: string;
-    onQualityChange?: (qualityId: string) => void;
-    audioTracks?: { id: string; label: string; language?: string }[];
-    subtitleTracks?: { id: string; label: string; language: string; uri: string; isDefault?: boolean }[];
-    textTracks?: { title: string; language?: string; type: 'text/vtt'; uri: string }[];
-    selectedTextTrack?: { type: 'disabled' } | { type: 'index'; value: number };
-    defaultAudioTrackId?: string | null;
-    currentAudioTrackId?: string;
-    onAudioTrackChange?: (audioTrackId: string) => void;
-    currentSubtitleTrackId?: string | 'off';
-    onSubtitleTrackChange?: (subtitleTrackId: string | 'off') => void;
-  }, ref: React.Ref<{ seek: (position: number) => void }>) => {
-    React.useImperativeHandle(ref, () => ({
-      seek: (position: number) => mockSeek(position),
-    }));
+  const MamoPlayerMock = React.forwardRef(
+    (
+      {
+        onPlaybackEvent,
+        rate,
+        source,
+        autoPlay,
+        onPictureInPictureStatusChanged,
+        currentQualityId,
+        onQualityChange,
+        audioTracks,
+        subtitleTracks,
+        textTracks,
+        selectedTextTrack,
+        defaultAudioTrackId,
+        currentAudioTrackId,
+        onAudioTrackChange,
+        currentSubtitleTrackId,
+        onSubtitleTrackChange,
+      }: {
+        onPlaybackEvent?: (event: PlaybackEvent) => void;
+        rate?: number;
+        source?: unknown;
+        autoPlay?: boolean;
+        onPictureInPictureStatusChanged?: (event: Readonly<{ isActive: boolean }>) => void;
+        currentQualityId?: string;
+        onQualityChange?: (qualityId: string) => void;
+        audioTracks?: { id: string; label: string; language?: string }[];
+        subtitleTracks?: {
+          id: string;
+          label: string;
+          language: string;
+          uri: string;
+          isDefault?: boolean;
+        }[];
+        textTracks?: { title: string; language?: string; type: 'text/vtt'; uri: string }[];
+        selectedTextTrack?: { type: 'disabled' } | { type: 'index'; value: number };
+        defaultAudioTrackId?: string | null;
+        currentAudioTrackId?: string;
+        onAudioTrackChange?: (audioTrackId: string) => void;
+        currentSubtitleTrackId?: string | 'off';
+        onSubtitleTrackChange?: (subtitleTrackId: string | 'off') => void;
+      },
+      ref: React.Ref<{ seek: (position: number) => void }>,
+    ) => {
+      React.useImperativeHandle(ref, () => ({
+        seek: (position: number) => mockSeek(position),
+      }));
 
-    latestOnPlaybackEvent = onPlaybackEvent;
-    latestVideoProps = {
-      rate,
-      source,
-      autoPlay,
-      onPictureInPictureStatusChanged,
-      currentQualityId,
-      onQualityChange,
-      audioTracks,
-      subtitleTracks,
-      textTracks,
-      selectedTextTrack,
-      defaultAudioTrackId,
-      currentAudioTrackId,
-      onAudioTrackChange,
-      currentSubtitleTrackId,
-      onSubtitleTrackChange,
-    };
-    return <View testID="mamoplayer-mock" />;
-  });
+      latestOnPlaybackEvent = onPlaybackEvent;
+      latestVideoProps = {
+        rate,
+        source,
+        autoPlay,
+        onPictureInPictureStatusChanged,
+        currentQualityId,
+        onQualityChange,
+        audioTracks,
+        subtitleTracks,
+        textTracks,
+        selectedTextTrack,
+        defaultAudioTrackId,
+        currentAudioTrackId,
+        onAudioTrackChange,
+        currentSubtitleTrackId,
+        onSubtitleTrackChange,
+      };
+      return <View testID="mamoplayer-mock" />;
+    },
+  );
 
   MamoPlayerMock.displayName = 'MamoPlayerMock';
 
@@ -143,10 +158,7 @@ jest.mock('./ima/nativeBridge', () => ({
 
 jest.mock('./pip/nativeBridge', () => ({
   subscribeToPipEvents: (
-    handler: (
-      eventName: 'mamo_pip_active' | 'mamo_pip_exiting',
-      payload?: unknown,
-    ) => void,
+    handler: (eventName: 'mamo_pip_active' | 'mamo_pip_exiting', payload?: unknown) => void,
   ) => mockSubscribeToPipEvents(handler),
 }));
 
@@ -278,16 +290,16 @@ describe('ProMamoPlayer', () => {
     );
 
     act(() => {
-      latestVideoProps?.onPictureInPictureStatusChanged?.(true);
-      latestVideoProps?.onPictureInPictureStatusChanged?.(false);
+      latestVideoProps?.onPictureInPictureStatusChanged?.({ isActive: true });
+      latestVideoProps?.onPictureInPictureStatusChanged?.({ isActive: false });
     });
 
     expect(onPipEvent).toHaveBeenCalledTimes(2);
     expect(onPipEvent).toHaveBeenNthCalledWith(1, { state: 'active' });
     expect(onPipEvent).toHaveBeenNthCalledWith(2, { state: 'inactive' });
     expect(onPictureInPictureStatusChanged).toHaveBeenCalledTimes(2);
-    expect(onPictureInPictureStatusChanged).toHaveBeenNthCalledWith(1, true);
-    expect(onPictureInPictureStatusChanged).toHaveBeenNthCalledWith(2, false);
+    expect(onPictureInPictureStatusChanged).toHaveBeenNthCalledWith(1, { isActive: true });
+    expect(onPictureInPictureStatusChanged).toHaveBeenNthCalledWith(2, { isActive: false });
   });
 
   it('shows PiP button only when pip.enabled is true', () => {
@@ -298,10 +310,7 @@ describe('ProMamoPlayer', () => {
     expect(queryByTestId('pro-pip-button')).toBeNull();
 
     rerender(
-      <ProMamoPlayer
-        source={{ uri: 'https://example.com/video.mp4' }}
-        pip={{ enabled: true }}
-      />,
+      <ProMamoPlayer source={{ uri: 'https://example.com/video.mp4' }} pip={{ enabled: true }} />,
     );
 
     expect(queryByTestId('pro-pip-button')).not.toBeNull();
@@ -354,10 +363,7 @@ describe('ProMamoPlayer', () => {
     expect(mockSubscribeToPipEvents).not.toHaveBeenCalled();
 
     rerender(
-      <ProMamoPlayer
-        source={{ uri: 'https://example.com/video.mp4' }}
-        pip={{ enabled: true }}
-      />,
+      <ProMamoPlayer source={{ uri: 'https://example.com/video.mp4' }} pip={{ enabled: true }} />,
     );
 
     expect(mockSubscribeToPipEvents).toHaveBeenCalledTimes(1);
@@ -970,7 +976,10 @@ describe('ProMamoPlayer', () => {
           adBreaks: [
             {
               type: 'postroll',
-              source: { uri: 'https://example.com/postroll-for-session-end.mp4', type: 'video/mp4' },
+              source: {
+                uri: 'https://example.com/postroll-for-session-end.mp4',
+                type: 'video/mp4',
+              },
             },
           ],
         }}
@@ -1021,7 +1030,10 @@ describe('ProMamoPlayer', () => {
     const onEvent = jest.fn();
     const sessionId = 'session-native-ads';
     const nativeAdTagUrl = 'https://example.com/native-adtag-events';
-    const adSource = { uri: 'https://example.com/simulated-fallback-preroll.mp4', type: 'video/mp4' as const };
+    const adSource = {
+      uri: 'https://example.com/simulated-fallback-preroll.mp4',
+      type: 'video/mp4' as const,
+    };
 
     render(
       <ProMamoPlayer
@@ -1106,7 +1118,10 @@ describe('ProMamoPlayer', () => {
   it('falls back to simulated ads when native loadAds fails', async () => {
     mockLoadAds.mockRejectedValueOnce(new Error('native module missing'));
 
-    const adSource = { uri: 'https://example.com/fallback-after-load-failure.mp4', type: 'video/mp4' as const };
+    const adSource = {
+      uri: 'https://example.com/fallback-after-load-failure.mp4',
+      type: 'video/mp4' as const,
+    };
 
     render(
       <ProMamoPlayer
@@ -1485,6 +1500,54 @@ describe('ProMamoPlayer', () => {
 
     fireEvent.press(getByLabelText('Close settings overlay'));
     expect(queryByTestId('pro-settings-overlay')).toBeNull();
+  });
+
+  it('renders modern ott main controls and moves pip into settings overlay', () => {
+    const { getByTestId, queryByTestId, getByText } = render(
+      <ProMamoPlayer
+        source={{ uri: 'https://example.com/ott-controls-layout.mp4' }}
+        layoutVariant="ott"
+        pip={{ enabled: true }}
+        tracks={{
+          qualities: [
+            {
+              id: 'auto',
+              label: 'Auto',
+              uri: 'https://example.com/auto.m3u8',
+              isDefault: true,
+            },
+          ],
+        }}
+      />,
+    );
+
+    expect(getByTestId('pro-transport-play-toggle')).toBeTruthy();
+    expect(getByTestId('pro-transport-seek-back-10')).toBeTruthy();
+    expect(getByTestId('pro-transport-seek-forward-10')).toBeTruthy();
+    expect(getByTestId('pro-transport-settings')).toBeTruthy();
+    expect(getByTestId('pro-transport-fullscreen')).toBeTruthy();
+
+    expect(queryByTestId('pro-settings-button')).toBeNull();
+    expect(queryByTestId('pro-pip-button')).toBeNull();
+    expect(queryByTestId('pro-settings-pip-button')).toBeNull();
+
+    expect(getByText('Play')).toBeTruthy();
+
+    act(() => {
+      emitPlayback({ type: 'play', duration: 100, position: 0 });
+    });
+
+    expect(getByText('Pause')).toBeTruthy();
+
+    act(() => {
+      emitPlayback({ type: 'pause', duration: 100, position: 5 });
+    });
+
+    expect(getByText('Play')).toBeTruthy();
+
+    fireEvent.press(getByTestId('pro-transport-settings'));
+
+    expect(getByTestId('pro-settings-pip-button')).toBeTruthy();
   });
 
   it('renders only enabled settings sections in the overlay', () => {

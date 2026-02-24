@@ -2,7 +2,11 @@ node_modules
 coverage
 android/.gradle
 android/build
+android/.cxx
+android/app/.cxx
 ios/build
 ios/Pods
 dist
 build
+docs/build
+docs/.docusaurus

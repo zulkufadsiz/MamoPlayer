@@ -1,6 +1,6 @@
 import { MamoPlayer, type MamoPlayerProps, type PlaybackEvent } from '@mamoplayer/core';
 import React, { useRef } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { VideoRef } from 'react-native-video';
 import { AdStateMachine } from './ads/AdState';
 import { loadAds, releaseAds, subscribeToAdsEvents } from './ima/nativeBridge';
@@ -325,6 +325,14 @@ interface ProMamoPlayerOverlaysProps {
   selectQualityOption?: (qualityId: string) => void;
   selectSubtitleOption?: (subtitleTrackId: string | 'off') => void;
   selectAudioOption?: (audioTrackId: string) => void;
+  showTransportControls: boolean;
+  isPlaying: boolean;
+  isFullscreen: boolean;
+  progressRatio: number;
+  onTogglePlayback: () => void;
+  onSeekBackTenSeconds: () => void;
+  onSeekForwardTenSeconds: () => void;
+  onToggleFullscreen: () => void;
   layoutVariant: PlayerLayoutVariant;
   icons?: PlayerIconSet;
   watermark?: WatermarkConfig;
@@ -373,18 +381,70 @@ const ProMamoPlayerOverlays: React.FC<ProMamoPlayerOverlaysProps> = ({
   selectQualityOption,
   selectSubtitleOption,
   selectAudioOption,
+  showTransportControls,
+  isPlaying,
+  isFullscreen,
+  progressRatio,
+  onTogglePlayback,
+  onSeekBackTenSeconds,
+  onSeekForwardTenSeconds,
+  onToggleFullscreen,
   layoutVariant,
   icons,
   watermark,
   watermarkPosition,
 }) => {
   const playerTheme = usePlayerTheme();
+  const isOttLayout = layoutVariant === 'ott';
+  const settingsAnimation = React.useRef(new Animated.Value(1)).current;
+
+  React.useEffect(() => {
+    if (!isSettingsOpen) {
+      settingsAnimation.setValue(0);
+      return;
+    }
+
+    Animated.timing(settingsAnimation, {
+      toValue: 1,
+      duration: isOttLayout ? 220 : 180,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: false,
+    }).start();
+  }, [isOttLayout, isSettingsOpen, settingsAnimation]);
+
+  const settingsPanelAnimatedStyle = React.useMemo(
+    () => ({
+      opacity: settingsAnimation,
+      transform: isOttLayout
+        ? [
+            {
+              translateY: settingsAnimation.interpolate({
+                inputRange: [0, 1],
+                outputRange: [44, 0],
+              }),
+            },
+          ]
+        : [
+            {
+              scale: settingsAnimation.interpolate({
+                inputRange: [0, 1],
+                outputRange: [0.96, 1],
+              }),
+            },
+          ],
+    }),
+    [isOttLayout, settingsAnimation],
+  );
+
   const overlayIconColor = React.useMemo(() => {
     const { colors } = getThemePrimitives(playerTheme);
 
     return colors.primaryText ?? colors.textPrimary ?? colors.secondaryText ?? '#FFFFFF';
   }, [playerTheme]);
-  const styles = React.useMemo(() => stylesFactory(playerTheme, layoutVariant), [layoutVariant, playerTheme]);
+  const styles = React.useMemo(
+    () => stylesFactory(playerTheme, layoutVariant),
+    [layoutVariant, playerTheme],
+  );
   const handleSectionOptionPress = React.useCallback(
     (sectionKey: OverlaySection['key'], optionId: string) => {
       if (sectionKey === 'quality') {
@@ -423,7 +483,80 @@ const ProMamoPlayerOverlays: React.FC<ProMamoPlayerOverlaysProps> = ({
           ) : null}
         </View>
       ) : null}
-      {showPipButton || showSettingsButton ? (
+      {showTransportControls ? (
+        <View style={styles.transportControlsRoot}>
+          <View style={styles.transportControlsRow}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Seek backward 10 seconds"
+              accessibilityHint="Rewinds by ten seconds"
+              onPress={onSeekBackTenSeconds}
+              style={styles.transportButton}
+              testID="pro-transport-seek-back-10"
+            >
+              <Text style={styles.transportButtonText}>-10s</Text>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={isPlaying ? 'Pause' : 'Play'}
+              accessibilityHint={isPlaying ? 'Pauses playback' : 'Resumes playback'}
+              onPress={onTogglePlayback}
+              style={styles.transportPrimaryButton}
+              testID="pro-transport-play-toggle"
+            >
+              <Text style={styles.transportButtonText}>{isPlaying ? 'Pause' : 'Play'}</Text>
+            </Pressable>
+            {showSettingsButton ? (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Open settings overlay"
+                accessibilityHint="Opens quality, subtitles and audio settings"
+                onPress={openSettings}
+                style={styles.transportButton}
+                testID="pro-transport-settings"
+              >
+                <Text style={styles.transportButtonText}>Settings</Text>
+              </Pressable>
+            ) : null}
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
+              accessibilityHint={
+                isFullscreen ? 'Returns to inline mode' : 'Expands to fullscreen mode'
+              }
+              onPress={onToggleFullscreen}
+              style={styles.transportButton}
+              testID="pro-transport-fullscreen"
+            >
+              <Text style={styles.transportButtonText}>
+                {isFullscreen ? 'Minimize' : 'Fullscreen'}
+              </Text>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Seek forward 10 seconds"
+              accessibilityHint="Advances by ten seconds"
+              onPress={onSeekForwardTenSeconds}
+              style={styles.transportButton}
+              testID="pro-transport-seek-forward-10"
+            >
+              <Text style={styles.transportButtonText}>+10s</Text>
+            </Pressable>
+          </View>
+
+          <View style={styles.ottProgressTrack}>
+            <View
+              style={[
+                styles.ottProgressFill,
+                {
+                  width: `${Math.max(0, Math.min(progressRatio, 1)) * 100}%`,
+                },
+              ]}
+            />
+          </View>
+        </View>
+      ) : null}
+      {!isOttLayout && (showPipButton || showSettingsButton) ? (
         <View style={styles.controlsRow}>
           {showSettingsButton ? (
             <Pressable
@@ -434,12 +567,7 @@ const ProMamoPlayerOverlays: React.FC<ProMamoPlayerOverlaysProps> = ({
               style={styles.settingsButton}
               testID="pro-settings-button"
             >
-              {renderOverlayIcon(
-                icons?.Settings,
-                '⚙',
-                layoutVariant === 'ott' ? 24 : 18,
-                overlayIconColor,
-              )}
+              {renderOverlayIcon(icons?.Settings, '⚙', 18, overlayIconColor)}
               <Text style={styles.settingsButtonText}>Settings</Text>
             </Pressable>
           ) : null}
@@ -460,7 +588,11 @@ const ProMamoPlayerOverlays: React.FC<ProMamoPlayerOverlaysProps> = ({
         </View>
       ) : null}
       {isSettingsOpen ? (
-        <View style={styles.settingsOverlayRoot} testID="pro-settings-overlay" pointerEvents="box-none">
+        <View
+          style={styles.settingsOverlayRoot}
+          testID="pro-settings-overlay"
+          pointerEvents="box-none"
+        >
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Close settings overlay background"
@@ -470,7 +602,7 @@ const ProMamoPlayerOverlays: React.FC<ProMamoPlayerOverlaysProps> = ({
             testID="pro-settings-overlay-backdrop"
           />
 
-          <View style={styles.settingsPanel}>
+          <Animated.View style={[styles.settingsPanel, settingsPanelAnimatedStyle]}>
             <View style={styles.settingsHeader}>
               <Text style={styles.settingsTitle}>{settingsHeaderTitle}</Text>
               <Pressable
@@ -507,7 +639,12 @@ const ProMamoPlayerOverlays: React.FC<ProMamoPlayerOverlaysProps> = ({
                         style={styles.settingsOptionRow}
                         testID={`pro-settings-option-${section.key}-${option.id}`}
                       >
-                        <Text style={[styles.settingsOptionLabel, isSelected ? styles.settingsOptionLabelSelected : null]}>
+                        <Text
+                          style={[
+                            styles.settingsOptionLabel,
+                            isSelected ? styles.settingsOptionLabelSelected : null,
+                          ]}
+                        >
                           {option.label}
                         </Text>
                         {isSelected ? (
@@ -528,7 +665,9 @@ const ProMamoPlayerOverlays: React.FC<ProMamoPlayerOverlaysProps> = ({
                       <Text
                         style={[
                           styles.settingsOptionLabel,
-                          section.selectedOptionId === 'off' ? styles.settingsOptionLabelSelected : null,
+                          section.selectedOptionId === 'off'
+                            ? styles.settingsOptionLabelSelected
+                            : null,
                         ]}
                       >
                         {settingsLabelForOff}
@@ -540,8 +679,24 @@ const ProMamoPlayerOverlays: React.FC<ProMamoPlayerOverlaysProps> = ({
                   ) : null}
                 </View>
               ))}
+              {isOttLayout && showPipButton ? (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={
+                    pipState === 'active'
+                      ? 'Picture in picture is active'
+                      : 'Enter picture in picture'
+                  }
+                  accessibilityHint="Moves playback into picture in picture"
+                  onPress={requestPip}
+                  style={styles.settingsOptionRow}
+                  testID="pro-settings-pip-button"
+                >
+                  <Text style={styles.settingsOptionLabel}>Picture in Picture</Text>
+                </Pressable>
+              ) : null}
             </View>
-          </View>
+          </Animated.View>
         </View>
       ) : null}
       {watermark ? (
@@ -582,6 +737,10 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
   onPipEvent,
   ...rest
 }) => {
+  const ProCompatibleMamoPlayer = MamoPlayer as unknown as React.ComponentType<
+    Record<string, unknown>
+  >;
+
   const resolvedSettings = {
     enabled: settingsOverlay?.enabled ?? true,
     showQuality: settingsOverlay?.showQuality ?? true,
@@ -618,7 +777,8 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
   const adMainContentStartPositionRef = React.useRef<number | null>(null);
   const [isAdMode, setIsAdMode] = React.useState(false);
   const [resumeMainAfterAd, setResumeMainAfterAd] = React.useState(false);
-  const [activeSource, setActiveSource] = React.useState<MamoPlayerProps['source']>(initialMainSource);
+  const [activeSource, setActiveSource] =
+    React.useState<MamoPlayerProps['source']>(initialMainSource);
   const [watermarkPosition, setWatermarkPosition] = React.useState({ top: 10, left: 10 });
   const [adStartedAt, setAdStartedAt] = React.useState<number | null>(null);
   const [overlayTimestamp, setOverlayTimestamp] = React.useState(() => Date.now());
@@ -634,11 +794,18 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
   );
   const [currentSubtitleTrackId, setCurrentSubtitleTrackId] = React.useState<
     string | 'off' | undefined
-  >(
-    initialSubtitleTrackId,
-  );
+  >(initialSubtitleTrackId);
   const [pipState, setPipState] = React.useState<PipState>('inactive');
   const [isSettingsOpen, setIsSettingsOpen] = React.useState(false);
+  const [isInlinePlaybackPaused, setIsInlinePlaybackPaused] = React.useState<boolean | undefined>(
+    undefined,
+  );
+  const [isInlinePlaybackActive, setIsInlinePlaybackActive] = React.useState(
+    Boolean(rest.autoPlay),
+  );
+  const [mediaDuration, setMediaDuration] = React.useState(0);
+  const [currentPosition, setCurrentPosition] = React.useState(0);
+  const [isFullscreen, setIsFullscreen] = React.useState(false);
 
   const settingsSections = React.useMemo<OverlaySection[]>(() => {
     const sections: OverlaySection[] = [];
@@ -668,7 +835,10 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
       sections.push({
         key: 'audio',
         title: 'Audio',
-        options: tracks.audioTracks.map((audioTrack) => ({ id: audioTrack.id, label: audioTrack.label })),
+        options: tracks.audioTracks.map((audioTrack) => ({
+          id: audioTrack.id,
+          label: audioTrack.label,
+        })),
         selectedOptionId: currentAudioTrackId,
       });
     }
@@ -705,6 +875,61 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
   const closeSettings = React.useCallback(() => {
     setIsSettingsOpen(false);
   }, []);
+
+  const resolvedPausedState =
+    typeof rest.paused === 'boolean' ? rest.paused : isInlinePlaybackPaused;
+  const canTogglePlayback = typeof rest.paused !== 'boolean';
+
+  const handleTogglePlayback = React.useCallback(() => {
+    if (!canTogglePlayback) {
+      return;
+    }
+
+    setIsInlinePlaybackPaused((previousValue) => {
+      const currentlyPaused =
+        typeof previousValue === 'boolean' ? previousValue : !isInlinePlaybackActive;
+      return !currentlyPaused;
+    });
+  }, [canTogglePlayback, isInlinePlaybackActive]);
+
+  const handleSeekBackTenSeconds = React.useCallback(() => {
+    const nextPosition = Math.max(0, positionRef.current - 10);
+    playerRef.current?.seek(nextPosition);
+  }, []);
+
+  const handleSeekForwardTenSeconds = React.useCallback(() => {
+    const targetDuration = mediaDuration > 0 ? mediaDuration : Number.MAX_SAFE_INTEGER;
+    const nextPosition = Math.min(targetDuration, positionRef.current + 10);
+    playerRef.current?.seek(nextPosition);
+  }, [mediaDuration]);
+
+  const handleToggleFullscreen = React.useCallback(() => {
+    const nextFullscreenState = !isFullscreen;
+    const fullscreenRef = playerRef.current as
+      | (VideoRef & {
+          presentFullscreenPlayer?: () => void;
+          dismissFullscreenPlayer?: () => void;
+          setFullScreen?: (fullScreen: boolean) => void;
+        })
+      | null;
+
+    if (nextFullscreenState) {
+      fullscreenRef?.presentFullscreenPlayer?.();
+    } else {
+      fullscreenRef?.dismissFullscreenPlayer?.();
+    }
+
+    fullscreenRef?.setFullScreen?.(nextFullscreenState);
+    setIsFullscreen(nextFullscreenState);
+  }, [isFullscreen]);
+
+  const ottProgressRatio = React.useMemo(() => {
+    if (mediaDuration <= 0) {
+      return 0;
+    }
+
+    return currentPosition / mediaDuration;
+  }, [currentPosition, mediaDuration]);
   const emitPipEvent = React.useCallback(
     (event: PipEvent) => {
       setPipState(event.state);
@@ -747,7 +972,8 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
         }
       });
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unable to subscribe to native PiP events.';
+      const message =
+        error instanceof Error ? error.message : 'Unable to subscribe to native PiP events.';
       console.warn(`[MamoPlayer Pro] ${message}`);
     }
 
@@ -756,7 +982,8 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
     };
   }, [handleNativePipStateChange, pip?.enabled]);
   const handlePictureInPictureStatusChanged = React.useCallback(
-    (isActive: boolean) => {
+    (event: Readonly<{ isActive: boolean }>) => {
+      const isActive = event.isActive;
       const shouldEmitPipEvents = pip?.enabled !== false;
 
       if (shouldEmitPipEvents) {
@@ -765,7 +992,7 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
         });
       }
 
-      onPictureInPictureStatusChanged?.(isActive);
+      onPictureInPictureStatusChanged?.(event);
     },
     [emitPipEvent, onPictureInPictureStatusChanged, pip?.enabled],
   );
@@ -810,8 +1037,7 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
         adTagUrl: ima?.adTagUrl,
         adPosition: getAdPositionFromPayload(payload),
         errorMessage: message,
-        mainContentPositionAtAdStart:
-          adMainContentStartPositionRef.current ?? positionRef.current,
+        mainContentPositionAtAdStart: adMainContentStartPositionRef.current ?? positionRef.current,
       });
       adMainContentStartPositionRef.current = null;
 
@@ -897,7 +1123,8 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
       }
 
       void releaseAds().catch((error: unknown) => {
-        const message = error instanceof Error ? error.message : 'Unable to release native IMA ads.';
+        const message =
+          error instanceof Error ? error.message : 'Unable to release native IMA ads.';
         console.error(`[MamoPlayer] ${message}`);
       });
     };
@@ -991,7 +1218,9 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
 
   const changeAudioTrack = React.useCallback(
     (audioTrackId: string) => {
-      const audioTrackExists = tracks?.audioTracks?.some((audioTrack) => audioTrack.id === audioTrackId);
+      const audioTrackExists = tracks?.audioTracks?.some(
+        (audioTrack) => audioTrack.id === audioTrackId,
+      );
 
       if (!audioTrackExists || audioTrackId === currentAudioTrackId) {
         return;
@@ -1121,8 +1350,7 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
         playbackEvent,
         fallbackPosition: positionRef.current,
         adPosition: currentAdBreak?.type,
-        mainContentPositionAtAdStart:
-          adMainContentStartPositionRef.current ?? positionRef.current,
+        mainContentPositionAtAdStart: adMainContentStartPositionRef.current ?? positionRef.current,
       });
       adMainContentStartPositionRef.current = null;
     },
@@ -1147,8 +1375,7 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
         fallbackPosition: positionRef.current,
         adPosition: currentAdBreak?.type,
         errorMessage: getErrorMessageFromPlaybackEvent(playbackEvent),
-        mainContentPositionAtAdStart:
-          adMainContentStartPositionRef.current ?? positionRef.current,
+        mainContentPositionAtAdStart: adMainContentStartPositionRef.current ?? positionRef.current,
       });
       adMainContentStartPositionRef.current = null;
     },
@@ -1156,7 +1383,11 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
   );
 
   const beginAdPlayback = React.useCallback(
-    (adBreak: { type: 'preroll' | 'midroll' | 'postroll'; offset?: number }, adSource: unknown, playbackEvent?: PlaybackEvent) => {
+    (
+      adBreak: { type: 'preroll' | 'midroll' | 'postroll'; offset?: number },
+      adSource: unknown,
+      playbackEvent?: PlaybackEvent,
+    ) => {
       adRef.current.markAdStarted(adBreak);
       mainSourceRef.current = rest.source;
       setActiveSource(adSource as MamoPlayerProps['source']);
@@ -1251,9 +1482,20 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
 
   const handlePlaybackEvent = React.useCallback(
     (playbackEvent: PlaybackEvent) => {
+      setCurrentPosition(playbackEvent.position);
+
+      if (typeof playbackEvent.duration === 'number' && playbackEvent.duration > 0) {
+        setMediaDuration(playbackEvent.duration);
+      }
+
+      if (playbackEvent.type === 'play') {
+        setIsInlinePlaybackActive(true);
+      } else if (playbackEvent.type === 'pause' || playbackEvent.type === 'ended') {
+        setIsInlinePlaybackActive(false);
+      }
+
       // Native IMA path
       if (useNativeIMA) {
-
         positionRef.current = playbackEvent.position;
         onPlaybackEvent?.(playbackEvent);
 
@@ -1614,13 +1856,13 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
   return (
     <ThemeProvider theme={theme} themeName={themeName}>
       <View style={styles.playerContainer}>
-        <MamoPlayer
+        <ProCompatibleMamoPlayer
           ref={playerRef}
           {...rest}
           source={activeSource}
           autoPlay={effectiveAutoPlay}
-          textTracks={textTracks}
-          selectedTextTrack={selectedTextTrack}
+          textTracks={textTracks as MamoPlayerProps['textTracks']}
+          selectedTextTrack={selectedTextTrack as MamoPlayerProps['selectedTextTrack']}
           audioTracks={shouldShowAudioTrackSettings ? tracks?.audioTracks : undefined}
           subtitleTracks={shouldShowSubtitleSettings ? tracks?.subtitleTracks : undefined}
           defaultAudioTrackId={initialAudioTrackId ?? null}
@@ -1633,7 +1875,9 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
           onSubtitleTrackChange={shouldShowSubtitleSettings ? changeSubtitleTrack : undefined}
           onPlaybackEvent={handlePlaybackEvent}
           onPictureInPictureStatusChanged={handlePictureInPictureStatusChanged}
+          paused={resolvedPausedState}
         />
+        {/* Modern OTT layout: enable with layoutVariant="ott" and themeName="ott". */}
         <ProMamoPlayerOverlays
           showAdOverlay={adRef.current.isAdPlaying === true || isNativeAdPlaying}
           skipButtonEnabled={skipButtonEnabled}
@@ -1653,6 +1897,16 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
           selectQualityOption={selectQualityOption}
           selectSubtitleOption={selectSubtitleOption}
           selectAudioOption={selectAudioOption}
+          showTransportControls={layoutVariant === 'ott'}
+          isPlaying={
+            resolvedPausedState === undefined ? isInlinePlaybackActive : !resolvedPausedState
+          }
+          isFullscreen={isFullscreen}
+          progressRatio={ottProgressRatio}
+          onTogglePlayback={handleTogglePlayback}
+          onSeekBackTenSeconds={handleSeekBackTenSeconds}
+          onSeekForwardTenSeconds={handleSeekForwardTenSeconds}
+          onToggleFullscreen={handleToggleFullscreen}
           layoutVariant={layoutVariant}
           icons={icons}
           watermark={watermark}
@@ -1673,44 +1927,49 @@ const stylesFactory = (theme: PlayerThemeConfig, layoutVariant: PlayerLayoutVari
   const { colors, typography, shape } = getThemePrimitives(theme);
   const isOttLayout = layoutVariant === 'ott';
 
+  // Modern OTT layout: enable by setting layoutVariant="ott" and themeName="ott".
+
   const overlayBackgroundColor =
-    colors.backgroundOverlay ?? colors.controlBackground ?? colors.background;
+    colors.overlay ?? colors.backgroundOverlay ?? colors.controlBackground ?? colors.background;
   const primaryTextColor = colors.primaryText ?? colors.textPrimary ?? colors.secondaryText;
   const secondaryTextColor = colors.secondaryText ?? colors.primaryText ?? colors.textSecondary;
   const buttonBackgroundColor = colors.primary ?? colors.accent ?? colors.background;
   const panelBackgroundColor = colors.background ?? '#0B0D10';
+  const panelOverlayColor = colors.overlay ?? colors.backgroundOverlay ?? overlayBackgroundColor;
   const panelBorderColor = colors.border ?? 'rgba(255, 255, 255, 0.15)';
   const accentColor = colors.accent ?? colors.primary ?? primaryTextColor;
   const textSmallSize =
-    (typeof typography.fontSizeSmall === 'number'
+    typeof typography.fontSizeSmall === 'number'
       ? typography.fontSizeSmall
       : typeof typography.captionSize === 'number'
         ? typography.captionSize
-        : 12);
+        : 12;
   const textMediumSize =
-    (typeof typography.fontSizeMedium === 'number'
+    typeof typography.fontSizeMedium === 'number'
       ? typography.fontSizeMedium
       : typeof typography.bodySize === 'number'
         ? typography.bodySize
-        : 14);
+        : 14;
   const textLargeSize =
-    (typeof typography.fontSizeLarge === 'number'
+    typeof typography.fontSizeLarge === 'number'
       ? typography.fontSizeLarge
       : typeof typography.headingSize === 'number'
         ? typography.headingSize
-        : 20);
+        : 20;
+  const tokenLargeTypography =
+    typeof typography.large === 'number' ? typography.large : textLargeSize;
   const mediumRadius =
-    (typeof shape.borderRadiusMedium === 'number'
+    typeof shape.borderRadiusMedium === 'number'
       ? shape.borderRadiusMedium
       : typeof shape.radiusMd === 'number'
         ? shape.radiusMd
-        : 12);
+        : 12;
   const largeRadius =
-    (typeof shape.borderRadiusLarge === 'number'
+    typeof shape.borderRadiusLarge === 'number'
       ? shape.borderRadiusLarge
       : typeof shape.radiusLg === 'number'
         ? shape.radiusLg
-        : 18);
+        : 18;
 
   return StyleSheet.create({
     adOverlay: {
@@ -1759,6 +2018,60 @@ const stylesFactory = (theme: PlayerThemeConfig, layoutVariant: PlayerLayoutVari
       justifyContent: 'center',
       gap: 8,
     },
+    transportControlsRoot: {
+      position: 'absolute',
+      bottom: 10,
+      left: 12,
+      right: 12,
+      zIndex: 2,
+      gap: 10,
+    },
+    transportControlsRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      gap: 8,
+    },
+    transportButton: {
+      minHeight: isOttLayout ? 56 : 44,
+      minWidth: isOttLayout ? 56 : 44,
+      paddingHorizontal: isOttLayout ? 14 : 10,
+      borderRadius: isOttLayout ? largeRadius : mediumRadius,
+      backgroundColor: panelOverlayColor,
+      borderWidth: 1,
+      borderColor: panelBorderColor,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    transportPrimaryButton: {
+      minHeight: isOttLayout ? 58 : 46,
+      minWidth: isOttLayout ? 92 : 72,
+      paddingHorizontal: isOttLayout ? 18 : 14,
+      borderRadius: isOttLayout ? largeRadius : mediumRadius,
+      backgroundColor: buttonBackgroundColor,
+      borderWidth: 1,
+      borderColor: panelBorderColor,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    transportButtonText: {
+      color: primaryTextColor,
+      fontSize: isOttLayout ? textMediumSize + 2 : textMediumSize,
+      fontWeight: '700',
+    },
+    ottProgressTrack: {
+      height: isOttLayout ? 8 : 5,
+      borderRadius: isOttLayout ? 999 : 8,
+      overflow: 'hidden',
+      backgroundColor: panelOverlayColor,
+      borderWidth: 1,
+      borderColor: panelBorderColor,
+    },
+    ottProgressFill: {
+      height: '100%',
+      borderRadius: isOttLayout ? 999 : 8,
+      backgroundColor: accentColor,
+    },
     settingsButtonText: {
       color: primaryTextColor,
       fontSize: isOttLayout ? textMediumSize : textSmallSize,
@@ -1780,23 +2093,27 @@ const stylesFactory = (theme: PlayerThemeConfig, layoutVariant: PlayerLayoutVari
     settingsOverlayRoot: {
       ...StyleSheet.absoluteFillObject,
       zIndex: 4,
-      justifyContent: 'flex-end',
+      justifyContent: isOttLayout ? 'flex-end' : 'center',
+      alignItems: isOttLayout ? 'stretch' : 'center',
     },
     settingsOverlayBackdrop: {
       ...StyleSheet.absoluteFillObject,
-      backgroundColor: 'rgba(0, 0, 0, 0.7)',
+      backgroundColor: panelOverlayColor,
     },
     settingsPanel: {
       backgroundColor: panelBackgroundColor,
-      borderTopLeftRadius: largeRadius,
-      borderTopRightRadius: largeRadius,
+      borderTopLeftRadius: isOttLayout ? largeRadius : mediumRadius,
+      borderTopRightRadius: isOttLayout ? largeRadius : mediumRadius,
+      borderBottomLeftRadius: isOttLayout ? 0 : mediumRadius,
+      borderBottomRightRadius: isOttLayout ? 0 : mediumRadius,
       borderWidth: 1,
       borderColor: panelBorderColor,
-      borderBottomWidth: 0,
+      borderBottomWidth: isOttLayout ? 0 : 1,
       paddingHorizontal: isOttLayout ? 20 : 16,
       paddingTop: isOttLayout ? 16 : 12,
       paddingBottom: isOttLayout ? 28 : 20,
       maxHeight: isOttLayout ? '78%' : '66%',
+      width: isOttLayout ? '100%' : '88%',
     },
     settingsHeader: {
       flexDirection: 'row',
@@ -1806,7 +2123,7 @@ const stylesFactory = (theme: PlayerThemeConfig, layoutVariant: PlayerLayoutVari
     },
     settingsTitle: {
       color: primaryTextColor,
-      fontSize: isOttLayout ? textLargeSize : textMediumSize,
+      fontSize: isOttLayout ? tokenLargeTypography : textMediumSize,
       fontWeight: '800',
     },
     settingsCloseButton: {
@@ -1828,23 +2145,23 @@ const stylesFactory = (theme: PlayerThemeConfig, layoutVariant: PlayerLayoutVari
     },
     settingsSectionTitle: {
       color: primaryTextColor,
-      fontSize: isOttLayout ? textMediumSize : textSmallSize,
+      fontSize: isOttLayout ? tokenLargeTypography : textSmallSize,
       fontWeight: '700',
     },
     settingsOptionRow: {
-      minHeight: isOttLayout ? 50 : 42,
+      minHeight: isOttLayout ? 58 : 42,
       borderRadius: mediumRadius,
-      backgroundColor: overlayBackgroundColor,
+      backgroundColor: panelOverlayColor,
       borderWidth: 1,
       borderColor: panelBorderColor,
-      paddingHorizontal: isOttLayout ? 14 : 12,
+      paddingHorizontal: isOttLayout ? 18 : 12,
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
     },
     settingsOptionLabel: {
       color: secondaryTextColor,
-      fontSize: isOttLayout ? textMediumSize : textSmallSize,
+      fontSize: isOttLayout ? textLargeSize : textSmallSize,
       fontWeight: '500',
       flexShrink: 1,
     },

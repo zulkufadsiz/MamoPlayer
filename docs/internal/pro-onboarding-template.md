@@ -1,6 +1,7 @@
 # Pro Onboarding Email Template
 
 ## Subject
+
 Your MamoPlayer Pro Access
 
 ## Email Body
@@ -12,6 +13,7 @@ Thank you for purchasing **MamoPlayer Pro** — we’re excited to have you onbo
 To get started, please follow the steps below.
 
 ### 1) Configure your npm registry access
+
 Create or update your `.npmrc` file with your private registry settings and token:
 
 ```ini
@@ -23,6 +25,7 @@ always-auth=true
 If your organization uses a different private registry, replace the registry URL accordingly.
 
 ### 2) Install the Pro package
+
 Run the install command in your project:
 
 ```bash
@@ -38,6 +41,7 @@ pnpm add @mamoplayer/pro
 ```
 
 ### 3) Read the documentation
+
 Use this docs base URL: {{DOCS_URL}}
 
 - Getting Started: {{DOCS_URL}}/getting-started
@@ -46,6 +50,7 @@ Use this docs base URL: {{DOCS_URL}}
 - Theming: {{DOCS_URL}}/theming-skins
 
 ### 4) License key (if issued)
+
 Your license key:
 
 ```text

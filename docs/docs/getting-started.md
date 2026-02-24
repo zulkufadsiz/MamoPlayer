@@ -86,10 +86,7 @@ import { MamoPlayer } from '@mamoplayer/core';
 export default function PlayerScreen() {
   return (
     <SafeAreaView style={styles.container}>
-      <MamoPlayer
-        source={{ uri: 'https://example.com/video.mp4' }}
-        autoPlay
-      />
+      <MamoPlayer source={{ uri: 'https://example.com/video.mp4' }} autoPlay />
     </SafeAreaView>
   );
 }

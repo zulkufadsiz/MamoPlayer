@@ -197,7 +197,7 @@ import { ProMamoPlayer } from '@mamoplayer/pro';
       console.log(event.type, event.position);
     },
   }}
-/>
+/>;
 ```
 
 Skip behavior:

@@ -11,21 +11,29 @@ jest.mock('@/components/lib/Timeline', () => {
   return TimelineMock;
 });
 
-jest.mock('react-native-safe-area-context', () => ({
-  useSafeAreaInsets: () => ({ top: 10, right: 20, bottom: 30, left: 0 }),
-}), { virtual: true });
+jest.mock(
+  'react-native-safe-area-context',
+  () => ({
+    useSafeAreaInsets: () => ({ top: 10, right: 20, bottom: 30, left: 0 }),
+  }),
+  { virtual: true },
+);
 
-jest.mock('react-native', () => {
-  const React = require('react');
-  const { Text } = require('react-native');
+jest.mock(
+  'react-native',
+  () => {
+    const React = require('react');
+    const { Text } = require('react-native');
 
-  const IconMock = ({ name }: { name: string }) => <Text>{name}</Text>;
+    const IconMock = ({ name }: { name: string }) => <Text>{name}</Text>;
 
-  return {
-    Ionicons: IconMock,
-    MaterialIcons: IconMock,
-  };
-}, { virtual: true });
+    return {
+      Ionicons: IconMock,
+      MaterialIcons: IconMock,
+    };
+  },
+  { virtual: true },
+);
 
 describe('PlaybackControls', () => {
   const baseProps = {

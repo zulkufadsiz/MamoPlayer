@@ -71,8 +71,7 @@ export const SimplePlayer: React.FC<SimplePlayerProps> = ({
 }) => {
   const [isPlaying, setIsPlaying] = useState(autoPlay);
   const resolvedSource = useMemo(() => resolveSource(source), [source]);
-  const effectiveResizeMode =
-    resizeMode ?? (contentFit === 'fill' ? 'stretch' : contentFit);
+  const effectiveResizeMode = resizeMode ?? (contentFit === 'fill' ? 'stretch' : contentFit);
 
   const handleTogglePlay = () => {
     const next = !isPlaying;

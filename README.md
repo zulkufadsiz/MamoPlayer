@@ -34,11 +34,11 @@ MamoPlayer Pro is built for OTT teams that need production features like ad mone
 
 ## MamoPlayer Pro Pricing Tiers (Placeholder)
 
-| Tier | Usage | Price | Notes |
-| --- | --- | --- | --- |
-| Indie | For solo developers | `$[INDIE_PRICE]_one-time` (e.g. `$79`) | Placeholder pricing; adjust before publishing. |
-| Team | For small teams (up to `[X]` developers) | `$[TEAM_PRICE]_one-time` (e.g. `$199`) | Placeholder pricing; adjust team size and amount before publishing. |
-| Enterprise | For organizations needing custom plans | `Custom` | Includes priority support and potential custom features. |
+| Tier       | Usage                                    | Price                                  | Notes                                                               |
+| ---------- | ---------------------------------------- | -------------------------------------- | ------------------------------------------------------------------- |
+| Indie      | For solo developers                      | `$[INDIE_PRICE]_one-time` (e.g. `$79`) | Placeholder pricing; adjust before publishing.                      |
+| Team       | For small teams (up to `[X]` developers) | `$[TEAM_PRICE]_one-time` (e.g. `$199`) | Placeholder pricing; adjust team size and amount before publishing. |
+| Enterprise | For organizations needing custom plans   | `Custom`                               | Includes priority support and potential custom features.            |
 
 ## Features (OTT-focused)
 
@@ -58,11 +58,7 @@ MamoPlayer Pro is built for OTT teams that need production features like ad mone
 - Layout variants for different use cases
 
 ```tsx
-<ProMamoPlayer
-  themeName="ott"
-  layoutVariant="ott"
-  icons={{ Play: CustomPlayIcon }}
-/>
+<ProMamoPlayer themeName="ott" layoutVariant="ott" icons={{ Play: CustomPlayIcon }} />
 ```
 
 ## Code example for Core
@@ -124,20 +120,20 @@ export default function ProPlayerScreen() {
 
 `ProMamoPlayer` supports two props for styling:
 
-| Prop | Type | Purpose | Priority |
-| --- | --- | --- | --- |
-| `themeName` | `'light' \| 'dark' \| 'ott'` | Applies one of the built-in themes. | Used when `theme` is not provided. |
-| `theme` | `PlayerThemeConfig` | Applies your custom design tokens (colors, typography, shape). | Highest priority (overrides `themeName`). |
+| Prop        | Type                         | Purpose                                                        | Priority                                  |
+| ----------- | ---------------------------- | -------------------------------------------------------------- | ----------------------------------------- |
+| `themeName` | `'light' \| 'dark' \| 'ott'` | Applies one of the built-in themes.                            | Used when `theme` is not provided.        |
+| `theme`     | `PlayerThemeConfig`          | Applies your custom design tokens (colors, typography, shape). | Highest priority (overrides `themeName`). |
 
 If neither prop is provided, Pro uses the default `dark` theme.
 
 ### Built-in themes
 
-| Theme | Best for |
-| --- | --- |
-| `light` | Bright UI surfaces and daytime viewing contexts |
-| `dark` | Low-light apps and cinema-style playback |
-| `ott` | Streaming-brand style UI with stronger accent emphasis |
+| Theme   | Best for                                               |
+| ------- | ------------------------------------------------------ |
+| `light` | Bright UI surfaces and daytime viewing contexts        |
+| `dark`  | Low-light apps and cinema-style playback               |
+| `ott`   | Streaming-brand style UI with stronger accent emphasis |
 
 ### Example: use a built-in theme
 
@@ -209,11 +205,11 @@ export default function ProCustomThemeScreen() {
 
 `PlayerThemeConfig` is token-based and contains three sections:
 
-| Section | Description | Key fields |
-| --- | --- | --- |
-| `colors` | Visual palette used by overlays and controls | `background`, `backgroundOverlay`, `primary`, `primaryText`, `secondaryText`, `accent`, `danger`, `border`, `sliderTrack`, `sliderThumb` |
-| `typography` | Text sizing and optional font family | `fontFamily?`, `fontSizeSmall`, `fontSizeMedium`, `fontSizeLarge` |
-| `shape` | Corner radius scale for UI components | `borderRadiusSmall`, `borderRadiusMedium`, `borderRadiusLarge` |
+| Section      | Description                                  | Key fields                                                                                                                               |
+| ------------ | -------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `colors`     | Visual palette used by overlays and controls | `background`, `backgroundOverlay`, `primary`, `primaryText`, `secondaryText`, `accent`, `danger`, `border`, `sliderTrack`, `sliderThumb` |
+| `typography` | Text sizing and optional font family         | `fontFamily?`, `fontSizeSmall`, `fontSizeMedium`, `fontSizeLarge`                                                                        |
+| `shape`      | Corner radius scale for UI components        | `borderRadiusSmall`, `borderRadiusMedium`, `borderRadiusLarge`                                                                           |
 
 ```ts
 type PlayerThemeConfig = {
@@ -298,7 +294,10 @@ export default function ProAdsScreen() {
             {
               type: 'midroll',
               time: 120,
-              source: { uri: 'https://cdn.example.com/ads/mid.m3u8', type: 'application/x-mpegURL' },
+              source: {
+                uri: 'https://cdn.example.com/ads/mid.m3u8',
+                type: 'application/x-mpegURL',
+              },
             },
             { type: 'postroll', source: { uri: 'https://cdn.example.com/ads/post.mp4' } },
           ],
