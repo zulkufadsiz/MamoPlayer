@@ -1446,4 +1446,138 @@ describe('ProMamoPlayer', () => {
     expect(latestVideoProps?.currentSubtitleTrackId).toBe('en');
     expect(latestVideoProps?.onSubtitleTrackChange).toBeDefined();
   });
+
+  it('opens and closes the settings overlay from controls', () => {
+    const { getByTestId, queryByTestId, getByLabelText } = render(
+      <ProMamoPlayer
+        source={{ uri: 'https://example.com/settings-overlay-open-close.mp4' }}
+        tracks={{
+          qualities: [
+            {
+              id: 'auto',
+              label: 'Auto',
+              uri: 'https://example.com/auto.m3u8',
+              isDefault: true,
+            },
+          ],
+          subtitleTracks: [
+            {
+              id: 'en',
+              language: 'en',
+              label: 'English',
+              uri: 'https://example.com/subtitles-en.vtt',
+            },
+          ],
+        }}
+      />,
+    );
+
+    expect(queryByTestId('pro-settings-overlay')).toBeNull();
+
+    fireEvent.press(getByTestId('pro-settings-button'));
+    expect(getByTestId('pro-settings-overlay')).toBeTruthy();
+
+    fireEvent.press(getByLabelText('Close settings overlay background'));
+    expect(queryByTestId('pro-settings-overlay')).toBeNull();
+
+    fireEvent.press(getByTestId('pro-settings-button'));
+    expect(getByTestId('pro-settings-overlay')).toBeTruthy();
+
+    fireEvent.press(getByLabelText('Close settings overlay'));
+    expect(queryByTestId('pro-settings-overlay')).toBeNull();
+  });
+
+  it('renders only enabled settings sections in the overlay', () => {
+    const { getByTestId, queryByText, getByText } = render(
+      <ProMamoPlayer
+        source={{ uri: 'https://example.com/settings-overlay-sections.mp4' }}
+        tracks={{
+          qualities: [
+            {
+              id: 'auto',
+              label: 'Auto',
+              uri: 'https://example.com/auto.m3u8',
+              isDefault: true,
+            },
+            {
+              id: '720p',
+              label: '720p',
+              uri: 'https://example.com/720.m3u8',
+            },
+          ],
+          audioTracks: [
+            { id: 'en', label: 'English', language: 'en' },
+            { id: 'tr', label: 'Turkish', language: 'tr' },
+          ],
+          subtitleTracks: [
+            {
+              id: 'en',
+              language: 'en',
+              label: 'English',
+              uri: 'https://example.com/subtitles-en.vtt',
+            },
+          ],
+        }}
+        settingsOverlay={{ showSubtitles: false }}
+      />,
+    );
+
+    fireEvent.press(getByTestId('pro-settings-button'));
+
+    expect(getByText('Quality')).toBeTruthy();
+    expect(getByText('Audio')).toBeTruthy();
+    expect(queryByText('Subtitles')).toBeNull();
+  });
+
+  it('selects quality, audio and subtitle options from the settings overlay', () => {
+    const { getByTestId } = render(
+      <ProMamoPlayer
+        source={{ uri: 'https://example.com/settings-overlay-select-options.mp4' }}
+        tracks={{
+          qualities: [
+            {
+              id: 'auto',
+              label: 'Auto',
+              uri: 'https://example.com/auto.m3u8',
+              isDefault: true,
+            },
+            {
+              id: '720p',
+              label: '720p',
+              uri: 'https://example.com/720.m3u8',
+            },
+          ],
+          audioTracks: [
+            { id: 'en', label: 'English', language: 'en' },
+            { id: 'tr', label: 'Turkish', language: 'tr' },
+          ],
+          subtitleTracks: [
+            {
+              id: 'en',
+              language: 'en',
+              label: 'English',
+              uri: 'https://example.com/subtitles-en.vtt',
+            },
+          ],
+          defaultQualityId: 'auto',
+          defaultAudioTrackId: 'en',
+          defaultSubtitleTrackId: 'off',
+        }}
+      />,
+    );
+
+    fireEvent.press(getByTestId('pro-settings-button'));
+
+    fireEvent.press(getByTestId('pro-settings-option-quality-720p'));
+    expect(latestVideoProps?.currentQualityId).toBe('720p');
+
+    fireEvent.press(getByTestId('pro-settings-option-audio-tr'));
+    expect(latestVideoProps?.currentAudioTrackId).toBe('tr');
+
+    fireEvent.press(getByTestId('pro-settings-option-subtitles-en'));
+    expect(latestVideoProps?.currentSubtitleTrackId).toBe('en');
+
+    fireEvent.press(getByTestId('pro-settings-option-subtitles-off'));
+    expect(latestVideoProps?.currentSubtitleTrackId).toBe('off');
+  });
 });

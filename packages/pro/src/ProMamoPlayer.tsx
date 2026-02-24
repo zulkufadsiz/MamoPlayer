@@ -38,6 +38,18 @@ export interface ProMamoPlayerProps extends MamoPlayerProps {
   onPipEvent?: (event: PipEvent) => void;
 }
 
+type OverlayOption = {
+  id: string;
+  label: string;
+};
+
+type OverlaySection = {
+  key: 'quality' | 'subtitles' | 'audio';
+  title: 'Quality' | 'Subtitles' | 'Audio';
+  options: OverlayOption[];
+  selectedOptionId?: string;
+};
+
 type Quartile = 25 | 50 | 75 | 100;
 
 const QUARTILES: Quartile[] = [25, 50, 75, 100];
@@ -303,9 +315,44 @@ interface ProMamoPlayerOverlaysProps {
   showPipButton: boolean;
   pipState: PipState;
   requestPip: () => void;
+  showSettingsButton: boolean;
+  isSettingsOpen: boolean;
+  openSettings: () => void;
+  closeSettings: () => void;
+  settingsSections: OverlaySection[];
+  settingsHeaderTitle: string;
+  settingsLabelForOff: string;
+  selectQualityOption?: (qualityId: string) => void;
+  selectSubtitleOption?: (subtitleTrackId: string | 'off') => void;
+  selectAudioOption?: (audioTrackId: string) => void;
+  layoutVariant: PlayerLayoutVariant;
+  icons?: PlayerIconSet;
   watermark?: WatermarkConfig;
   watermarkPosition: { top: number; left: number };
 }
+
+const renderOverlayIcon = (
+  IconComponent: PlayerIconSet[keyof PlayerIconSet] | undefined,
+  fallbackLabel: string,
+  size: number,
+  color: string,
+) => {
+  if (IconComponent) {
+    return <IconComponent size={size} color={color} />;
+  }
+
+  return (
+    <Text
+      style={{
+        color,
+        fontSize: size,
+        fontWeight: '700',
+      }}
+    >
+      {fallbackLabel}
+    </Text>
+  );
+};
 
 const ProMamoPlayerOverlays: React.FC<ProMamoPlayerOverlaysProps> = ({
   showAdOverlay,
@@ -316,11 +363,46 @@ const ProMamoPlayerOverlays: React.FC<ProMamoPlayerOverlaysProps> = ({
   showPipButton,
   pipState,
   requestPip,
+  showSettingsButton,
+  isSettingsOpen,
+  openSettings,
+  closeSettings,
+  settingsSections,
+  settingsHeaderTitle,
+  settingsLabelForOff,
+  selectQualityOption,
+  selectSubtitleOption,
+  selectAudioOption,
+  layoutVariant,
+  icons,
   watermark,
   watermarkPosition,
 }) => {
   const playerTheme = usePlayerTheme();
-  const styles = React.useMemo(() => stylesFactory(playerTheme), [playerTheme]);
+  const overlayIconColor = React.useMemo(() => {
+    const { colors } = getThemePrimitives(playerTheme);
+
+    return colors.primaryText ?? colors.textPrimary ?? colors.secondaryText ?? '#FFFFFF';
+  }, [playerTheme]);
+  const styles = React.useMemo(() => stylesFactory(playerTheme, layoutVariant), [layoutVariant, playerTheme]);
+  const handleSectionOptionPress = React.useCallback(
+    (sectionKey: OverlaySection['key'], optionId: string) => {
+      if (sectionKey === 'quality') {
+        selectQualityOption?.(optionId);
+        return;
+      }
+
+      if (sectionKey === 'audio') {
+        selectAudioOption?.(optionId);
+        return;
+      }
+
+      if (sectionKey === 'subtitles') {
+        selectSubtitleOption?.(optionId);
+      }
+    },
+    [selectAudioOption, selectQualityOption, selectSubtitleOption],
+  );
 
   return (
     <>
@@ -341,19 +423,125 @@ const ProMamoPlayerOverlays: React.FC<ProMamoPlayerOverlaysProps> = ({
           ) : null}
         </View>
       ) : null}
-      {showPipButton ? (
+      {showPipButton || showSettingsButton ? (
         <View style={styles.controlsRow}>
+          {showSettingsButton ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Open settings overlay"
+              accessibilityHint="Opens quality, subtitles and audio settings"
+              onPress={openSettings}
+              style={styles.settingsButton}
+              testID="pro-settings-button"
+            >
+              {renderOverlayIcon(
+                icons?.Settings,
+                '⚙',
+                layoutVariant === 'ott' ? 24 : 18,
+                overlayIconColor,
+              )}
+              <Text style={styles.settingsButtonText}>Settings</Text>
+            </Pressable>
+          ) : null}
+
+          {showPipButton ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={
+                pipState === 'active' ? 'Picture in picture is active' : 'Enter picture in picture'
+              }
+              onPress={requestPip}
+              style={styles.pipButton}
+              testID="pro-pip-button"
+            >
+              <Text style={styles.pipButtonText}>PiP</Text>
+            </Pressable>
+          ) : null}
+        </View>
+      ) : null}
+      {isSettingsOpen ? (
+        <View style={styles.settingsOverlayRoot} testID="pro-settings-overlay" pointerEvents="box-none">
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={
-              pipState === 'active' ? 'Picture in picture is active' : 'Enter picture in picture'
-            }
-            onPress={requestPip}
-            style={styles.pipButton}
-            testID="pro-pip-button"
-          >
-            <Text style={styles.pipButtonText}>PiP</Text>
-          </Pressable>
+            accessibilityLabel="Close settings overlay background"
+            accessibilityHint="Closes the settings overlay"
+            onPress={closeSettings}
+            style={styles.settingsOverlayBackdrop}
+            testID="pro-settings-overlay-backdrop"
+          />
+
+          <View style={styles.settingsPanel}>
+            <View style={styles.settingsHeader}>
+              <Text style={styles.settingsTitle}>{settingsHeaderTitle}</Text>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Close settings overlay"
+                accessibilityHint="Closes the settings overlay"
+                onPress={closeSettings}
+                style={styles.settingsCloseButton}
+                testID="pro-settings-close-button"
+              >
+                {renderOverlayIcon(
+                  undefined,
+                  '✕',
+                  layoutVariant === 'ott' ? 22 : 18,
+                  overlayIconColor,
+                )}
+              </Pressable>
+            </View>
+
+            <View style={styles.settingsSectionsContainer}>
+              {settingsSections.map((section) => (
+                <View key={section.key} style={styles.settingsSection}>
+                  <Text style={styles.settingsSectionTitle}>{section.title}</Text>
+                  {section.options.map((option) => {
+                    const isSelected = option.id === section.selectedOptionId;
+
+                    return (
+                      <Pressable
+                        key={`${section.key}-${option.id}`}
+                        accessibilityRole="button"
+                        accessibilityLabel={`${section.title} ${option.label}`}
+                        accessibilityHint={`Select ${option.label} for ${section.title.toLowerCase()}`}
+                        onPress={() => handleSectionOptionPress(section.key, option.id)}
+                        style={styles.settingsOptionRow}
+                        testID={`pro-settings-option-${section.key}-${option.id}`}
+                      >
+                        <Text style={[styles.settingsOptionLabel, isSelected ? styles.settingsOptionLabelSelected : null]}>
+                          {option.label}
+                        </Text>
+                        {isSelected ? (
+                          <Text style={styles.settingsOptionSelectedLabel}>Current</Text>
+                        ) : null}
+                      </Pressable>
+                    );
+                  })}
+                  {section.key === 'subtitles' ? (
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={`${section.title} ${settingsLabelForOff}`}
+                      accessibilityHint="Turns subtitles off"
+                      onPress={() => selectSubtitleOption?.('off')}
+                      style={styles.settingsOptionRow}
+                      testID="pro-settings-option-subtitles-off"
+                    >
+                      <Text
+                        style={[
+                          styles.settingsOptionLabel,
+                          section.selectedOptionId === 'off' ? styles.settingsOptionLabelSelected : null,
+                        ]}
+                      >
+                        {settingsLabelForOff}
+                      </Text>
+                      {section.selectedOptionId === 'off' ? (
+                        <Text style={styles.settingsOptionSelectedLabel}>Current</Text>
+                      ) : null}
+                    </Pressable>
+                  ) : null}
+                </View>
+              ))}
+            </View>
+          </View>
         </View>
       ) : null}
       {watermark ? (
@@ -385,6 +573,8 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
   watermark,
   theme,
   themeName,
+  layoutVariant = 'standard',
+  icons,
   pip,
   settingsOverlay,
   onPictureInPictureStatusChanged,
@@ -448,6 +638,73 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
     initialSubtitleTrackId,
   );
   const [pipState, setPipState] = React.useState<PipState>('inactive');
+  const [isSettingsOpen, setIsSettingsOpen] = React.useState(false);
+
+  const settingsSections = React.useMemo<OverlaySection[]>(() => {
+    const sections: OverlaySection[] = [];
+
+    if (shouldShowQualitySettings && tracks?.qualities?.length) {
+      sections.push({
+        key: 'quality',
+        title: 'Quality',
+        options: tracks.qualities.map((quality) => ({ id: quality.id, label: quality.label })),
+        selectedOptionId: currentQualityId,
+      });
+    }
+
+    if (shouldShowSubtitleSettings && tracks?.subtitleTracks?.length) {
+      sections.push({
+        key: 'subtitles',
+        title: 'Subtitles',
+        options: tracks.subtitleTracks.map((subtitleTrack) => ({
+          id: subtitleTrack.id,
+          label: subtitleTrack.label,
+        })),
+        selectedOptionId: currentSubtitleTrackId,
+      });
+    }
+
+    if (shouldShowAudioTrackSettings && tracks?.audioTracks?.length) {
+      sections.push({
+        key: 'audio',
+        title: 'Audio',
+        options: tracks.audioTracks.map((audioTrack) => ({ id: audioTrack.id, label: audioTrack.label })),
+        selectedOptionId: currentAudioTrackId,
+      });
+    }
+
+    return sections;
+  }, [
+    currentAudioTrackId,
+    currentQualityId,
+    currentSubtitleTrackId,
+    shouldShowAudioTrackSettings,
+    shouldShowQualitySettings,
+    shouldShowSubtitleSettings,
+    tracks?.audioTracks,
+    tracks?.qualities,
+    tracks?.subtitleTracks,
+  ]);
+
+  const hasSettingsSections = settingsSections.length > 0;
+
+  React.useEffect(() => {
+    if (!hasSettingsSections && isSettingsOpen) {
+      setIsSettingsOpen(false);
+    }
+  }, [hasSettingsSections, isSettingsOpen]);
+
+  const openSettings = React.useCallback(() => {
+    if (!hasSettingsSections) {
+      return;
+    }
+
+    setIsSettingsOpen(true);
+  }, [hasSettingsSections]);
+
+  const closeSettings = React.useCallback(() => {
+    setIsSettingsOpen(false);
+  }, []);
   const emitPipEvent = React.useCallback(
     (event: PipEvent) => {
       setPipState(event.state);
@@ -776,6 +1033,39 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
       setCurrentSubtitleTrackId(subtitleTrackId);
     },
     [currentSubtitleTrackId, tracks?.subtitleTracks],
+  );
+
+  const selectQualityOption = React.useCallback(
+    (qualityId: string) => {
+      if (!shouldShowQualitySettings) {
+        return;
+      }
+
+      changeQuality(qualityId as VideoQualityId);
+    },
+    [changeQuality, shouldShowQualitySettings],
+  );
+
+  const selectAudioOption = React.useCallback(
+    (audioTrackId: string) => {
+      if (!shouldShowAudioTrackSettings) {
+        return;
+      }
+
+      changeAudioTrack(audioTrackId);
+    },
+    [changeAudioTrack, shouldShowAudioTrackSettings],
+  );
+
+  const selectSubtitleOption = React.useCallback(
+    (subtitleTrackId: string | 'off') => {
+      if (!shouldShowSubtitleSettings) {
+        return;
+      }
+
+      changeSubtitleTrack(subtitleTrackId);
+    },
+    [changeSubtitleTrack, shouldShowSubtitleSettings],
   );
 
   const textTracks = React.useMemo(() => {
@@ -1353,6 +1643,18 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
           showPipButton={pip?.enabled === true}
           pipState={pipState}
           requestPip={requestPip}
+          showSettingsButton={hasSettingsSections}
+          isSettingsOpen={isSettingsOpen}
+          openSettings={openSettings}
+          closeSettings={closeSettings}
+          settingsSections={settingsSections}
+          settingsHeaderTitle="Settings"
+          settingsLabelForOff="Off"
+          selectQualityOption={selectQualityOption}
+          selectSubtitleOption={selectSubtitleOption}
+          selectAudioOption={selectAudioOption}
+          layoutVariant={layoutVariant}
+          icons={icons}
           watermark={watermark}
           watermarkPosition={watermarkPosition}
         />
@@ -1367,13 +1669,18 @@ const styles = StyleSheet.create({
   },
 });
 
-const stylesFactory = (theme: PlayerThemeConfig) => {
+const stylesFactory = (theme: PlayerThemeConfig, layoutVariant: PlayerLayoutVariant) => {
   const { colors, typography, shape } = getThemePrimitives(theme);
+  const isOttLayout = layoutVariant === 'ott';
 
   const overlayBackgroundColor =
     colors.backgroundOverlay ?? colors.controlBackground ?? colors.background;
   const primaryTextColor = colors.primaryText ?? colors.textPrimary ?? colors.secondaryText;
+  const secondaryTextColor = colors.secondaryText ?? colors.primaryText ?? colors.textSecondary;
   const buttonBackgroundColor = colors.primary ?? colors.accent ?? colors.background;
+  const panelBackgroundColor = colors.background ?? '#0B0D10';
+  const panelBorderColor = colors.border ?? 'rgba(255, 255, 255, 0.15)';
+  const accentColor = colors.accent ?? colors.primary ?? primaryTextColor;
   const textSmallSize =
     (typeof typography.fontSizeSmall === 'number'
       ? typography.fontSizeSmall
@@ -1386,12 +1693,24 @@ const stylesFactory = (theme: PlayerThemeConfig) => {
       : typeof typography.bodySize === 'number'
         ? typography.bodySize
         : 14);
+  const textLargeSize =
+    (typeof typography.fontSizeLarge === 'number'
+      ? typography.fontSizeLarge
+      : typeof typography.headingSize === 'number'
+        ? typography.headingSize
+        : 20);
   const mediumRadius =
     (typeof shape.borderRadiusMedium === 'number'
       ? shape.borderRadiusMedium
       : typeof shape.radiusMd === 'number'
         ? shape.radiusMd
         : 12);
+  const largeRadius =
+    (typeof shape.borderRadiusLarge === 'number'
+      ? shape.borderRadiusLarge
+      : typeof shape.radiusLg === 'number'
+        ? shape.radiusLg
+        : 18);
 
   return StyleSheet.create({
     adOverlay: {
@@ -1424,6 +1743,26 @@ const stylesFactory = (theme: PlayerThemeConfig) => {
       top: 12,
       right: 12,
       zIndex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: isOttLayout ? 10 : 8,
+    },
+    settingsButton: {
+      backgroundColor: 'rgba(0, 0, 0, 0.65)',
+      borderRadius: isOttLayout ? largeRadius : mediumRadius,
+      borderWidth: 1,
+      borderColor: panelBorderColor,
+      minHeight: isOttLayout ? 50 : 40,
+      paddingHorizontal: isOttLayout ? 16 : 12,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+    },
+    settingsButtonText: {
+      color: primaryTextColor,
+      fontSize: isOttLayout ? textMediumSize : textSmallSize,
+      fontWeight: '700',
     },
     pipButton: {
       backgroundColor: buttonBackgroundColor,
@@ -1437,6 +1776,86 @@ const stylesFactory = (theme: PlayerThemeConfig) => {
       color: primaryTextColor,
       fontSize: textSmallSize,
       fontWeight: '600',
+    },
+    settingsOverlayRoot: {
+      ...StyleSheet.absoluteFillObject,
+      zIndex: 4,
+      justifyContent: 'flex-end',
+    },
+    settingsOverlayBackdrop: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    },
+    settingsPanel: {
+      backgroundColor: panelBackgroundColor,
+      borderTopLeftRadius: largeRadius,
+      borderTopRightRadius: largeRadius,
+      borderWidth: 1,
+      borderColor: panelBorderColor,
+      borderBottomWidth: 0,
+      paddingHorizontal: isOttLayout ? 20 : 16,
+      paddingTop: isOttLayout ? 16 : 12,
+      paddingBottom: isOttLayout ? 28 : 20,
+      maxHeight: isOttLayout ? '78%' : '66%',
+    },
+    settingsHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: isOttLayout ? 14 : 10,
+    },
+    settingsTitle: {
+      color: primaryTextColor,
+      fontSize: isOttLayout ? textLargeSize : textMediumSize,
+      fontWeight: '800',
+    },
+    settingsCloseButton: {
+      minWidth: isOttLayout ? 44 : 36,
+      minHeight: isOttLayout ? 44 : 36,
+      borderRadius: isOttLayout ? 22 : 18,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: overlayBackgroundColor,
+    },
+    settingsCloseButtonText: {
+      color: primaryTextColor,
+    },
+    settingsSectionsContainer: {
+      gap: isOttLayout ? 16 : 12,
+    },
+    settingsSection: {
+      gap: 8,
+    },
+    settingsSectionTitle: {
+      color: primaryTextColor,
+      fontSize: isOttLayout ? textMediumSize : textSmallSize,
+      fontWeight: '700',
+    },
+    settingsOptionRow: {
+      minHeight: isOttLayout ? 50 : 42,
+      borderRadius: mediumRadius,
+      backgroundColor: overlayBackgroundColor,
+      borderWidth: 1,
+      borderColor: panelBorderColor,
+      paddingHorizontal: isOttLayout ? 14 : 12,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    settingsOptionLabel: {
+      color: secondaryTextColor,
+      fontSize: isOttLayout ? textMediumSize : textSmallSize,
+      fontWeight: '500',
+      flexShrink: 1,
+    },
+    settingsOptionLabelSelected: {
+      color: primaryTextColor,
+      fontWeight: '700',
+    },
+    settingsOptionSelectedLabel: {
+      color: accentColor,
+      fontSize: isOttLayout ? textSmallSize : Math.max(11, textSmallSize - 1),
+      fontWeight: '700',
     },
     watermarkText: {
       position: 'absolute',
