@@ -12,6 +12,10 @@ let latestVideoProps:
       autoPlay?: boolean;
       currentQualityId?: string;
       onQualityChange?: (qualityId: string) => void;
+      audioTracks?: { id: string; label: string; language?: string }[];
+      defaultAudioTrackId?: string | null;
+      currentAudioTrackId?: string;
+      onAudioTrackChange?: (audioTrackId: string) => void;
     }
   | undefined;
 let latestNativeAdsHandler:
@@ -44,6 +48,10 @@ jest.mock('@mamoplayer/core', () => {
     autoPlay,
     currentQualityId,
     onQualityChange,
+    audioTracks,
+    defaultAudioTrackId,
+    currentAudioTrackId,
+    onAudioTrackChange,
   }: {
     onPlaybackEvent?: (event: PlaybackEvent) => void;
     rate?: number;
@@ -51,13 +59,27 @@ jest.mock('@mamoplayer/core', () => {
     autoPlay?: boolean;
     currentQualityId?: string;
     onQualityChange?: (qualityId: string) => void;
+    audioTracks?: { id: string; label: string; language?: string }[];
+    defaultAudioTrackId?: string | null;
+    currentAudioTrackId?: string;
+    onAudioTrackChange?: (audioTrackId: string) => void;
   }, ref: React.Ref<{ seek: (position: number) => void }>) => {
     React.useImperativeHandle(ref, () => ({
       seek: (position: number) => mockSeek(position),
     }));
 
     latestOnPlaybackEvent = onPlaybackEvent;
-    latestVideoProps = { rate, source, autoPlay, currentQualityId, onQualityChange };
+    latestVideoProps = {
+      rate,
+      source,
+      autoPlay,
+      currentQualityId,
+      onQualityChange,
+      audioTracks,
+      defaultAudioTrackId,
+      currentAudioTrackId,
+      onAudioTrackChange,
+    };
     return <View testID="mamoplayer-mock" />;
   });
 
@@ -419,6 +441,64 @@ describe('ProMamoPlayer', () => {
     });
 
     expect(mockSeek).toHaveBeenCalledWith(42);
+  });
+
+  it('uses tracks.defaultAudioTrackId as initial audio selection when available', () => {
+    render(
+      <ProMamoPlayer
+        source={{ uri: 'https://example.com/main-audio-default.mp4' }}
+        tracks={{
+          audioTracks: [
+            { id: 'en', label: 'English', language: 'en' },
+            { id: 'tr', label: 'Türkçe', language: 'tr' },
+          ],
+          defaultAudioTrackId: 'tr',
+        }}
+      />,
+    );
+
+    expect(latestVideoProps?.defaultAudioTrackId).toBe('tr');
+    expect(latestVideoProps?.currentAudioTrackId).toBe('tr');
+    expect(latestVideoProps?.audioTracks).toHaveLength(2);
+  });
+
+  it('falls back to the first audio track when no valid defaultAudioTrackId is configured', () => {
+    render(
+      <ProMamoPlayer
+        source={{ uri: 'https://example.com/main-audio-fallback.mp4' }}
+        tracks={{
+          audioTracks: [
+            { id: 'en', label: 'English', language: 'en' },
+            { id: 'tr', label: 'Türkçe', language: 'tr' },
+          ],
+          defaultAudioTrackId: 'de',
+        }}
+      />,
+    );
+
+    expect(latestVideoProps?.defaultAudioTrackId).toBe('en');
+    expect(latestVideoProps?.currentAudioTrackId).toBe('en');
+  });
+
+  it('updates currentAudioTrackId when onAudioTrackChange is triggered', () => {
+    render(
+      <ProMamoPlayer
+        source={{ uri: 'https://example.com/main-audio-change.mp4' }}
+        tracks={{
+          audioTracks: [
+            { id: 'en', label: 'English', language: 'en' },
+            { id: 'tr', label: 'Türkçe', language: 'tr' },
+          ],
+          defaultAudioTrackId: 'en',
+        }}
+      />,
+    );
+
+    act(() => {
+      latestVideoProps?.onAudioTrackChange?.('tr');
+    });
+
+    expect(latestVideoProps?.currentAudioTrackId).toBe('tr');
   });
 
   it('switches to ad source and restores main source after ad ends', () => {
