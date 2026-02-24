@@ -1,5 +1,5 @@
 import type { PlaybackEvent } from '@mamoplayer/core';
-import { act, render } from '@testing-library/react-native';
+import { act, fireEvent, render } from '@testing-library/react-native';
 import { StyleSheet } from 'react-native';
 import { ProMamoPlayer } from './ProMamoPlayer';
 import type { PlayerThemeConfig } from './types/theme';
@@ -27,10 +27,14 @@ let latestVideoProps:
 let latestNativeAdsHandler:
   | ((eventName: 'mamo_ads_loaded' | 'mamo_ads_started' | 'mamo_ads_completed' | 'mamo_ads_error', payload?: unknown) => void)
   | undefined;
+let latestNativePipHandler:
+  | ((eventName: 'mamo_pip_active' | 'mamo_pip_exiting', payload?: unknown) => void)
+  | undefined;
 const mockSeek = jest.fn();
 const mockLoadAds = jest.fn(async (_adTagUrl: string) => {});
 const mockReleaseAds = jest.fn(async () => {});
 const mockUnsubscribeAdsEvents = jest.fn();
+const mockUnsubscribePipEvents = jest.fn();
 const mockSubscribeToAdsEvents = jest.fn(
   (
     handler: (
@@ -40,6 +44,17 @@ const mockSubscribeToAdsEvents = jest.fn(
   ) => {
     latestNativeAdsHandler = handler;
     return mockUnsubscribeAdsEvents;
+  },
+);
+const mockSubscribeToPipEvents = jest.fn(
+  (
+    handler: (
+      eventName: 'mamo_pip_active' | 'mamo_pip_exiting',
+      payload?: unknown,
+    ) => void,
+  ) => {
+    latestNativePipHandler = handler;
+    return mockUnsubscribePipEvents;
   },
 );
 
@@ -126,11 +141,21 @@ jest.mock('./ima/nativeBridge', () => ({
   ) => mockSubscribeToAdsEvents(handler),
 }));
 
+jest.mock('./pip/nativeBridge', () => ({
+  subscribeToPipEvents: (
+    handler: (
+      eventName: 'mamo_pip_active' | 'mamo_pip_exiting',
+      payload?: unknown,
+    ) => void,
+  ) => mockSubscribeToPipEvents(handler),
+}));
+
 describe('ProMamoPlayer', () => {
   beforeEach(() => {
     latestOnPlaybackEvent = undefined;
     latestVideoProps = undefined;
     latestNativeAdsHandler = undefined;
+    latestNativePipHandler = undefined;
     jest.clearAllMocks();
     jest.useRealTimers();
     mockLoadAds.mockResolvedValue(undefined);
@@ -263,6 +288,83 @@ describe('ProMamoPlayer', () => {
     expect(onPictureInPictureStatusChanged).toHaveBeenCalledTimes(2);
     expect(onPictureInPictureStatusChanged).toHaveBeenNthCalledWith(1, true);
     expect(onPictureInPictureStatusChanged).toHaveBeenNthCalledWith(2, false);
+  });
+
+  it('shows PiP button only when pip.enabled is true', () => {
+    const { queryByTestId, rerender } = render(
+      <ProMamoPlayer source={{ uri: 'https://example.com/video.mp4' }} />,
+    );
+
+    expect(queryByTestId('pro-pip-button')).toBeNull();
+
+    rerender(
+      <ProMamoPlayer
+        source={{ uri: 'https://example.com/video.mp4' }}
+        pip={{ enabled: true }}
+      />,
+    );
+
+    expect(queryByTestId('pro-pip-button')).not.toBeNull();
+  });
+
+  it('requests PiP by emitting entering state and logging placeholder message', () => {
+    const onPipEvent = jest.fn();
+    const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation(() => undefined);
+    const { getByTestId } = render(
+      <ProMamoPlayer
+        source={{ uri: 'https://example.com/video.mp4' }}
+        pip={{ enabled: true }}
+        onPipEvent={onPipEvent}
+      />,
+    );
+
+    fireEvent.press(getByTestId('pro-pip-button'));
+
+    expect(onPipEvent).toHaveBeenCalledWith({ state: 'entering' });
+    expect(consoleLogSpy).toHaveBeenCalledWith('PiP requested');
+
+    consoleLogSpy.mockRestore();
+  });
+
+  it('maps native PiP events to active and exiting states', () => {
+    const onPipEvent = jest.fn();
+
+    render(
+      <ProMamoPlayer
+        source={{ uri: 'https://example.com/video.mp4' }}
+        pip={{ enabled: true }}
+        onPipEvent={onPipEvent}
+      />,
+    );
+
+    act(() => {
+      latestNativePipHandler?.('mamo_pip_active');
+      latestNativePipHandler?.('mamo_pip_exiting');
+    });
+
+    expect(onPipEvent).toHaveBeenCalledWith({ state: 'active' });
+    expect(onPipEvent).toHaveBeenCalledWith({ state: 'exiting' });
+  });
+
+  it('subscribes to native PiP events only when pip is enabled and unsubscribes on unmount', () => {
+    const { rerender, unmount } = render(
+      <ProMamoPlayer source={{ uri: 'https://example.com/video.mp4' }} />,
+    );
+
+    expect(mockSubscribeToPipEvents).not.toHaveBeenCalled();
+
+    rerender(
+      <ProMamoPlayer
+        source={{ uri: 'https://example.com/video.mp4' }}
+        pip={{ enabled: true }}
+      />,
+    );
+
+    expect(mockSubscribeToPipEvents).toHaveBeenCalledTimes(1);
+
+    unmount();
+
+    expect(mockUnsubscribePipEvents).toHaveBeenCalledTimes(1);
   });
 
   it('randomizes watermark position at configured interval', () => {

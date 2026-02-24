@@ -5,6 +5,7 @@ import type { VideoRef } from 'react-native-video';
 import { AdStateMachine } from './ads/AdState';
 import { loadAds, releaseAds, subscribeToAdsEvents } from './ima/nativeBridge';
 import { validateLicenseKey } from './licensing/license';
+import { subscribeToPipEvents } from './pip/nativeBridge';
 import { ThemeProvider, usePlayerTheme } from './theme/ThemeContext';
 import type { AdBreak, AdsConfig } from './types/ads';
 import type { AnalyticsConfig, AnalyticsEvent } from './types/analytics';
@@ -295,6 +296,9 @@ interface ProMamoPlayerOverlaysProps {
   isSkipDisabled: boolean;
   skipSecondsRemaining: number;
   handleSkipAd: () => void;
+  showPipButton: boolean;
+  pipState: PipState;
+  requestPip: () => void;
   watermark?: WatermarkConfig;
   watermarkPosition: { top: number; left: number };
 }
@@ -305,6 +309,9 @@ const ProMamoPlayerOverlays: React.FC<ProMamoPlayerOverlaysProps> = ({
   isSkipDisabled,
   skipSecondsRemaining,
   handleSkipAd,
+  showPipButton,
+  pipState,
+  requestPip,
   watermark,
   watermarkPosition,
 }) => {
@@ -328,6 +335,21 @@ const ProMamoPlayerOverlays: React.FC<ProMamoPlayerOverlaysProps> = ({
               </Text>
             </Pressable>
           ) : null}
+        </View>
+      ) : null}
+      {showPipButton ? (
+        <View style={styles.controlsRow}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={
+              pipState === 'active' ? 'Picture in picture is active' : 'Enter picture in picture'
+            }
+            onPress={requestPip}
+            style={styles.pipButton}
+            testID="pro-pip-button"
+          >
+            <Text style={styles.pipButtonText}>PiP</Text>
+          </Pressable>
         </View>
       ) : null}
       {watermark ? (
@@ -417,6 +439,49 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
     },
     [onPipEvent],
   );
+  const requestPip = React.useCallback(() => {
+    emitPipEvent({
+      state: 'entering',
+    });
+
+    console.log('PiP requested');
+    // TODO: Invoke native PiP entry request once native bridge API is available.
+    // TODO: Hook this to the underlying player's PiP APIs and error handling callbacks.
+  }, [emitPipEvent]);
+  const handleNativePipStateChange = React.useCallback(
+    (state: Extract<PipState, 'active' | 'exiting'>) => {
+      emitPipEvent({ state });
+    },
+    [emitPipEvent],
+  );
+
+  React.useEffect(() => {
+    if (pip?.enabled !== true) {
+      return;
+    }
+
+    let unsubscribe: (() => void) | null = null;
+
+    try {
+      unsubscribe = subscribeToPipEvents((eventName) => {
+        if (eventName === 'mamo_pip_active') {
+          handleNativePipStateChange('active');
+          return;
+        }
+
+        if (eventName === 'mamo_pip_exiting') {
+          handleNativePipStateChange('exiting');
+        }
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unable to subscribe to native PiP events.';
+      console.warn(`[MamoPlayer Pro] ${message}`);
+    }
+
+    return () => {
+      unsubscribe?.();
+    };
+  }, [handleNativePipStateChange, pip?.enabled]);
   const handlePictureInPictureStatusChanged = React.useCallback(
     (isActive: boolean) => {
       const shouldEmitPipEvents = pip?.enabled !== false;
@@ -431,7 +496,6 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
     },
     [emitPipEvent, onPictureInPictureStatusChanged, pip?.enabled],
   );
-  void pipState;
   const useNativeIMA = shouldUseNativeIMA && !hasNativeIMAFailed;
   const hasConfiguredPreroll = React.useMemo(
     () => Boolean(ads?.adBreaks.some((adBreak) => adBreak.type === 'preroll')),
@@ -1270,6 +1334,9 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
           isSkipDisabled={isSkipDisabled}
           skipSecondsRemaining={skipSecondsRemaining}
           handleSkipAd={handleSkipAd}
+          showPipButton={pip?.enabled === true}
+          pipState={pipState}
+          requestPip={requestPip}
           watermark={watermark}
           watermarkPosition={watermarkPosition}
         />
@@ -1335,6 +1402,25 @@ const stylesFactory = (theme: PlayerThemeConfig) => {
     skipButtonText: {
       color: primaryTextColor,
       fontSize: textSmallSize,
+    },
+    controlsRow: {
+      position: 'absolute',
+      top: 12,
+      right: 12,
+      zIndex: 1,
+    },
+    pipButton: {
+      backgroundColor: buttonBackgroundColor,
+      borderRadius: mediumRadius,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    pipButtonText: {
+      color: primaryTextColor,
+      fontSize: textSmallSize,
+      fontWeight: '600',
     },
     watermarkText: {
       position: 'absolute',
