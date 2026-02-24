@@ -1,6 +1,7 @@
 import { MamoPlayer, type MamoPlayerProps, type PlaybackEvent } from '@mamoplayer/core';
 import React, { useRef } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import type { VideoRef } from 'react-native-video';
 import { AdStateMachine } from './ads/AdState';
 import { loadAds, releaseAds, subscribeToAdsEvents } from './ima/nativeBridge';
 import { validateLicenseKey } from './licensing/license';
@@ -12,7 +13,7 @@ import type { IMAConfig } from './types/ima';
 import type { PlayerLayoutVariant } from './types/layout';
 import type { PlaybackRestrictions } from './types/restrictions';
 import type { PlayerThemeConfig, ThemeName } from './types/theme';
-import type { TracksConfig } from './types/tracks';
+import type { TracksConfig, VideoQualityId } from './types/tracks';
 import type { WatermarkConfig } from './types/watermark';
 
 export interface ProMamoPlayerProps extends MamoPlayerProps {
@@ -191,6 +192,50 @@ const getThemePrimitives = (theme: PlayerThemeConfig): OverlayThemePrimitives =>
   };
 };
 
+const getInitialQualityId = (tracks?: TracksConfig): VideoQualityId | undefined => {
+  const qualities = tracks?.qualities;
+
+  if (!qualities || qualities.length === 0) {
+    return tracks?.defaultQualityId;
+  }
+
+  if (tracks?.defaultQualityId) {
+    const configuredDefault = qualities.find((quality) => quality.id === tracks.defaultQualityId);
+
+    if (configuredDefault) {
+      return configuredDefault.id;
+    }
+  }
+
+  const flaggedDefault = qualities.find((quality) => quality.isDefault === true);
+
+  if (flaggedDefault) {
+    return flaggedDefault.id;
+  }
+
+  const autoQuality = qualities.find((quality) => quality.id === 'auto');
+
+  if (autoQuality) {
+    return autoQuality.id;
+  }
+
+  return qualities[0]?.id;
+};
+
+const resolveSourceWithQualityUri = (
+  source: MamoPlayerProps['source'],
+  qualityUri: string,
+): MamoPlayerProps['source'] => {
+  if (source && typeof source === 'object' && !Array.isArray(source)) {
+    return {
+      ...source,
+      uri: qualityUri,
+    } as MamoPlayerProps['source'];
+  }
+
+  return { uri: qualityUri } as MamoPlayerProps['source'];
+};
+
 interface ProMamoPlayerOverlaysProps {
   showAdOverlay: boolean;
   skipButtonEnabled: boolean;
@@ -264,16 +309,30 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
   onPlaybackEvent,
   ...rest
 }) => {
+  const playerRef = React.useRef<VideoRef | null>(null);
   const adRef = useRef(new AdStateMachine());
   const quartileStateRef = React.useRef<Record<Quartile, boolean>>(createQuartileState());
   const positionRef = React.useRef(0);
-  const mainSourceRef = React.useRef(rest.source);
+  const initialQualityId = React.useMemo(() => getInitialQualityId(tracks), [tracks]);
+  const initialQualityVariant = React.useMemo(
+    () => tracks?.qualities?.find((quality) => quality.id === initialQualityId),
+    [initialQualityId, tracks?.qualities],
+  );
+  const initialMainSource = React.useMemo(
+    () =>
+      initialQualityVariant?.uri
+        ? resolveSourceWithQualityUri(rest.source, initialQualityVariant.uri)
+        : rest.source,
+    [initialQualityVariant?.uri, rest.source],
+  );
+  const mainSourceRef = React.useRef(initialMainSource);
   const pendingSessionEndEventRef = React.useRef<PlaybackEvent | null>(null);
+  const pendingQualitySeekPositionRef = React.useRef<number | null>(null);
   const adSourceMapRef = React.useRef<Map<string, AdBreak>>(new Map());
   const adMainContentStartPositionRef = React.useRef<number | null>(null);
   const [isAdMode, setIsAdMode] = React.useState(false);
   const [resumeMainAfterAd, setResumeMainAfterAd] = React.useState(false);
-  const [activeSource, setActiveSource] = React.useState<MamoPlayerProps['source']>(rest.source);
+  const [activeSource, setActiveSource] = React.useState<MamoPlayerProps['source']>(initialMainSource);
   const [watermarkPosition, setWatermarkPosition] = React.useState({ top: 10, left: 10 });
   const [adStartedAt, setAdStartedAt] = React.useState<number | null>(null);
   const [overlayTimestamp, setOverlayTimestamp] = React.useState(() => Date.now());
@@ -281,7 +340,9 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
   const [hasNativeIMAFailed, setHasNativeIMAFailed] = React.useState(false);
   const [isNativeAdPlaying, setIsNativeAdPlaying] = React.useState(false);
   const [isMainContentPausedByNativeAd, setIsMainContentPausedByNativeAd] = React.useState(false);
-  const [currentQualityId, setCurrentQualityId] = React.useState(tracks?.defaultQualityId);
+  const [currentQualityId, setCurrentQualityId] = React.useState<VideoQualityId | undefined>(
+    initialQualityId,
+  );
   const [currentAudioTrackId, setCurrentAudioTrackId] = React.useState(
     tracks?.defaultAudioTrackId,
   );
@@ -429,6 +490,10 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
   }, [rest.source]);
 
   React.useEffect(() => {
+    setCurrentQualityId(initialQualityId);
+  }, [initialQualityId]);
+
+  React.useEffect(() => {
     const adBreaks = ads?.adBreaks;
 
     if (!adBreaks) {
@@ -453,9 +518,48 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
       return;
     }
 
-    mainSourceRef.current = rest.source;
-    setActiveSource(rest.source);
-  }, [isAdMode, rest.source]);
+    const qualityVariant =
+      tracks?.qualities?.find((quality) => quality.id === currentQualityId) ??
+      tracks?.qualities?.find((quality) => quality.id === initialQualityId);
+
+    const nextSource = qualityVariant?.uri
+      ? resolveSourceWithQualityUri(rest.source, qualityVariant.uri)
+      : rest.source;
+
+    if (qualityVariant?.id && qualityVariant.id !== currentQualityId) {
+      setCurrentQualityId(qualityVariant.id);
+    }
+
+    mainSourceRef.current = nextSource;
+    setActiveSource(nextSource);
+  }, [currentQualityId, initialQualityId, isAdMode, rest.source, tracks?.qualities]);
+
+  const changeQuality = React.useCallback(
+    (qualityId: VideoQualityId) => {
+      const qualityVariant = tracks?.qualities?.find((quality) => quality.id === qualityId);
+
+      if (!qualityVariant) {
+        return;
+      }
+
+      if (qualityVariant.id === currentQualityId) {
+        return;
+      }
+
+      const previousPosition = positionRef.current;
+      pendingQualitySeekPositionRef.current = previousPosition > 0 ? previousPosition : null;
+
+      const nextSource = resolveSourceWithQualityUri(rest.source, qualityVariant.uri);
+      mainSourceRef.current = nextSource;
+
+      setCurrentQualityId(qualityVariant.id);
+
+      if (!isAdMode) {
+        setActiveSource(nextSource);
+      }
+    },
+    [currentQualityId, isAdMode, rest.source, tracks?.qualities],
+  );
 
   const completeAdPlayback = React.useCallback(
     (playbackEvent?: PlaybackEvent) => {
@@ -611,6 +715,16 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
         onPlaybackEvent?.(playbackEvent);
 
         if (playbackEvent.type === 'ready') {
+          if (
+            pendingQualitySeekPositionRef.current !== null &&
+            !isNativeAdPlaying &&
+            !isMainContentPausedByNativeAd
+          ) {
+            const positionToRestore = pendingQualitySeekPositionRef.current;
+            pendingQualitySeekPositionRef.current = null;
+            playerRef.current?.seek(positionToRestore);
+          }
+
           quartileStateRef.current = createQuartileState();
         }
 
@@ -802,6 +916,12 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
       }
 
       if (playbackEvent.type === 'ready') {
+        if (pendingQualitySeekPositionRef.current !== null) {
+          const positionToRestore = pendingQualitySeekPositionRef.current;
+          pendingQualitySeekPositionRef.current = null;
+          playerRef.current?.seek(positionToRestore);
+        }
+
         quartileStateRef.current = createQuartileState();
         positionRef.current = playbackEvent.position;
       }
@@ -952,6 +1072,7 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
     <ThemeProvider theme={theme} themeName={themeName}>
       <View style={styles.playerContainer}>
         <MamoPlayer
+          ref={playerRef}
           {...rest}
           source={activeSource}
           autoPlay={effectiveAutoPlay}
@@ -959,7 +1080,7 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
           currentQualityId={currentQualityId}
           currentAudioTrackId={currentAudioTrackId}
           currentSubtitleTrackId={currentSubtitleTrackId}
-          onQualityChange={setCurrentQualityId}
+          onQualityChange={changeQuality}
           onAudioTrackChange={setCurrentAudioTrackId}
           onSubtitleTrackChange={setCurrentSubtitleTrackId}
           onPlaybackEvent={handlePlaybackEvent}
