@@ -242,6 +242,36 @@ const getInitialAudioTrackId = (tracks?: TracksConfig): string | undefined => {
   return audioTracks[0]?.id;
 };
 
+const getInitialSubtitleTrackId = (tracks?: TracksConfig): string | 'off' | undefined => {
+  const subtitleTracks = tracks?.subtitleTracks;
+
+  if (!subtitleTracks) {
+    return tracks?.defaultSubtitleTrackId ?? undefined;
+  }
+
+  if (tracks?.defaultSubtitleTrackId === 'off') {
+    return 'off';
+  }
+
+  if (tracks?.defaultSubtitleTrackId) {
+    const configuredDefault = subtitleTracks.find(
+      (subtitleTrack) => subtitleTrack.id === tracks.defaultSubtitleTrackId,
+    );
+
+    if (configuredDefault) {
+      return configuredDefault.id;
+    }
+  }
+
+  const flaggedDefault = subtitleTracks.find((subtitleTrack) => subtitleTrack.isDefault === true);
+
+  if (flaggedDefault) {
+    return flaggedDefault.id;
+  }
+
+  return 'off';
+};
+
 const resolveSourceWithQualityUri = (
   source: MamoPlayerProps['source'],
   qualityUri: string,
@@ -335,6 +365,7 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
   const positionRef = React.useRef(0);
   const initialQualityId = React.useMemo(() => getInitialQualityId(tracks), [tracks]);
   const initialAudioTrackId = React.useMemo(() => getInitialAudioTrackId(tracks), [tracks]);
+  const initialSubtitleTrackId = React.useMemo(() => getInitialSubtitleTrackId(tracks), [tracks]);
   const initialQualityVariant = React.useMemo(
     () => tracks?.qualities?.find((quality) => quality.id === initialQualityId),
     [initialQualityId, tracks?.qualities],
@@ -367,8 +398,10 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
   const [currentAudioTrackId, setCurrentAudioTrackId] = React.useState<string | undefined>(
     initialAudioTrackId,
   );
-  const [currentSubtitleTrackId, setCurrentSubtitleTrackId] = React.useState(
-    tracks?.defaultSubtitleTrackId,
+  const [currentSubtitleTrackId, setCurrentSubtitleTrackId] = React.useState<
+    string | 'off' | undefined
+  >(
+    initialSubtitleTrackId,
   );
   const useNativeIMA = shouldUseNativeIMA && !hasNativeIMAFailed;
   const hasConfiguredPreroll = React.useMemo(
@@ -559,6 +592,10 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
     setCurrentAudioTrackId(initialAudioTrackId);
   }, [initialAudioTrackId]);
 
+  React.useEffect(() => {
+    setCurrentSubtitleTrackId(initialSubtitleTrackId);
+  }, [initialSubtitleTrackId]);
+
   const changeQuality = React.useCallback(
     (qualityId: VideoQualityId) => {
       const qualityVariant = tracks?.qualities?.find((quality) => quality.id === qualityId);
@@ -601,6 +638,72 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
     },
     [currentAudioTrackId, tracks?.audioTracks],
   );
+
+  const changeSubtitleTrack = React.useCallback(
+    (subtitleTrackId: string | 'off') => {
+      const subtitleTracks = tracks?.subtitleTracks;
+
+      if (!subtitleTracks) {
+        return;
+      }
+
+      if (subtitleTrackId === 'off') {
+        if (currentSubtitleTrackId === 'off') {
+          return;
+        }
+
+        setCurrentSubtitleTrackId('off');
+        return;
+      }
+
+      const subtitleTrackExists = subtitleTracks.some(
+        (subtitleTrack) => subtitleTrack.id === subtitleTrackId,
+      );
+
+      if (!subtitleTrackExists || subtitleTrackId === currentSubtitleTrackId) {
+        return;
+      }
+
+      setCurrentSubtitleTrackId(subtitleTrackId);
+    },
+    [currentSubtitleTrackId, tracks?.subtitleTracks],
+  );
+
+  const textTracks = React.useMemo(() => {
+    if (!tracks?.subtitleTracks) {
+      return undefined;
+    }
+
+    return tracks.subtitleTracks.map((subtitleTrack) => ({
+      title: subtitleTrack.label,
+      language: subtitleTrack.language,
+      type: 'text/vtt' as const,
+      uri: subtitleTrack.uri,
+    }));
+  }, [tracks?.subtitleTracks]);
+
+  const selectedTextTrack = React.useMemo(() => {
+    if (!tracks?.subtitleTracks) {
+      return undefined;
+    }
+
+    if (currentSubtitleTrackId === 'off') {
+      return { type: 'disabled' as const };
+    }
+
+    const selectedSubtitleTrackIndex = tracks.subtitleTracks.findIndex(
+      (subtitleTrack) => subtitleTrack.id === currentSubtitleTrackId,
+    );
+
+    if (selectedSubtitleTrackIndex < 0) {
+      return { type: 'disabled' as const };
+    }
+
+    return {
+      type: 'index' as const,
+      value: selectedSubtitleTrackIndex,
+    };
+  }, [currentSubtitleTrackId, tracks?.subtitleTracks]);
 
   const completeAdPlayback = React.useCallback(
     (playbackEvent?: PlaybackEvent) => {
@@ -1117,7 +1220,10 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
           {...rest}
           source={activeSource}
           autoPlay={effectiveAutoPlay}
+          textTracks={textTracks}
+          selectedTextTrack={selectedTextTrack}
           audioTracks={tracks?.audioTracks}
+          subtitleTracks={tracks?.subtitleTracks}
           defaultAudioTrackId={initialAudioTrackId ?? null}
           rate={rate}
           currentQualityId={currentQualityId}
@@ -1125,7 +1231,7 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
           currentSubtitleTrackId={currentSubtitleTrackId}
           onQualityChange={changeQuality}
           onAudioTrackChange={changeAudioTrack}
-          onSubtitleTrackChange={setCurrentSubtitleTrackId}
+          onSubtitleTrackChange={changeSubtitleTrack}
           onPlaybackEvent={handlePlaybackEvent}
         />
         <ProMamoPlayerOverlays
