@@ -15,6 +15,7 @@ import type { PlayerLayoutVariant } from './types/layout';
 import type { PipConfig, PipEvent, PipState } from './types/pip';
 import type { PlaybackRestrictions } from './types/restrictions';
 import type { PlayerThemeConfig, ThemeName } from './types/theme';
+import type { ThumbnailsConfig } from './types/thumbnails';
 import type { TracksConfig, VideoQualityId } from './types/tracks';
 import type { WatermarkConfig } from './types/watermark';
 
@@ -24,6 +25,7 @@ export interface ProMamoPlayerProps extends MamoPlayerProps {
   ima?: IMAConfig;
   analytics?: AnalyticsConfig;
   tracks?: TracksConfig;
+  thumbnails?: ThumbnailsConfig;
   restrictions?: PlaybackRestrictions;
   watermark?: WatermarkConfig;
   themeName?: ThemeName;
