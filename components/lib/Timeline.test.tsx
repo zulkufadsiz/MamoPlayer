@@ -1,33 +1,28 @@
 import Timeline from '@/components/lib/Timeline';
-import { act, fireEvent, render } from '@testing-library/react-native';
-
-const mockGetThumbnailAsync = jest.fn();
+import { fireEvent, render } from '@testing-library/react-native';
 
 jest.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({ top: 0, right: 30, bottom: 10, left: 6 }),
 }));
 
-jest.mock('react-native', () => ({
-  getThumbnailAsync: (...args: unknown[]) => mockGetThumbnailAsync(...args),
-}));
-
 jest.mock('@react-native-community/slider', () => {
   const React = require('react');
-  const { Pressable } = require('react-native');
+  const { Pressable, View } = require('react-native');
   const SliderMock = ({
     onSlidingStart,
     onValueChange,
     onSlidingComplete,
     accessibilityLabel,
   }: any) => (
-    <Pressable
-      accessibilityLabel={accessibilityLabel ?? 'Playback position'}
-      onPress={() => {
-        onSlidingStart?.();
-        onValueChange?.(42);
-        onSlidingComplete?.(42);
-      }}
-    />
+    <View>
+      <Pressable
+        testID="slider-start"
+        accessibilityLabel={accessibilityLabel ?? 'Playback position'}
+        onPress={() => onSlidingStart?.()}
+      />
+      <Pressable testID="slider-change" onPress={() => onValueChange?.(42)} />
+      <Pressable testID="slider-complete" onPress={() => onSlidingComplete?.(42)} />
+    </View>
   );
   SliderMock.displayName = 'SliderMock';
   return SliderMock;
@@ -54,7 +49,7 @@ describe('Timeline', () => {
 
   it('calls onSeek when slider interaction completes', () => {
     const onSeek = jest.fn();
-    const { getByLabelText } = render(
+    const { getByTestId } = render(
       <Timeline
         isPlaying={false}
         player={{ currentTime: 10, duration: 100 }}
@@ -63,32 +58,49 @@ describe('Timeline', () => {
       />,
     );
 
-    fireEvent.press(getByLabelText('Playback position'));
+    fireEvent.press(getByTestId('slider-complete'));
     expect(onSeek).toHaveBeenCalledWith(42);
   });
 
-  it('requests thumbnails when mediaUrl exists and user seeks', async () => {
-    jest.useFakeTimers();
-    mockGetThumbnailAsync.mockResolvedValue({ uri: 'thumb://1' });
-
-    const { getByLabelText } = render(
+  it('shows thumbnail overlay while scrubbing when thumbnails are provided', () => {
+    const { getByTestId, getByProps, queryByProps } = render(
       <Timeline
         isPlaying={false}
         player={{ currentTime: 10, duration: 100 }}
         duration={100}
-        mediaUrl="https://example.com/video.mp4"
+        thumbnails={{
+          frames: [
+            { time: 0, uri: 'thumb://0' },
+            { time: 40, uri: 'thumb://40' },
+          ],
+        }}
         onSeek={jest.fn()}
       />,
     );
 
-    fireEvent.press(getByLabelText('Playback position'));
+    fireEvent.press(getByTestId('slider-start'));
+    fireEvent.press(getByTestId('slider-change'));
 
-    await act(async () => {
-      jest.advanceTimersByTime(100);
-      await Promise.resolve();
-    });
+    expect(getByProps({ source: { uri: 'thumb://40' } })).toBeTruthy();
 
-    expect(mockGetThumbnailAsync).toHaveBeenCalled();
-    jest.useRealTimers();
+    fireEvent.press(getByTestId('slider-complete'));
+
+    expect(queryByProps({ source: { uri: 'thumb://40' } })).toBeNull();
+  });
+
+  it('does not show thumbnail overlay while scrubbing without thumbnails', () => {
+    const { getByTestId, queryByProps } = render(
+      <Timeline
+        isPlaying={false}
+        player={{ currentTime: 10, duration: 100 }}
+        duration={100}
+        onSeek={jest.fn()}
+      />,
+    );
+
+    fireEvent.press(getByTestId('slider-start'));
+    fireEvent.press(getByTestId('slider-change'));
+
+    expect(queryByProps({ source: { uri: 'thumb://40' } })).toBeNull();
   });
 });

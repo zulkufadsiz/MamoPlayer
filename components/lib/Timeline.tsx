@@ -3,6 +3,38 @@ import React, { useEffect, useState } from 'react';
 import { Image, LayoutChangeEvent, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+type ThumbnailFrame = {
+  time: number;
+  uri: string;
+};
+
+type ThumbnailsConfig = {
+  frames: ThumbnailFrame[];
+};
+
+function getThumbnailForTime(
+  config: ThumbnailsConfig | undefined,
+  time: number,
+): ThumbnailFrame | null {
+  if (!config || !Array.isArray(config.frames) || config.frames.length === 0) {
+    return null;
+  }
+
+  let closestFrame: ThumbnailFrame | null = null;
+
+  for (const frame of config.frames) {
+    if (frame.time > time) {
+      continue;
+    }
+
+    if (!closestFrame || frame.time > closestFrame.time) {
+      closestFrame = frame;
+    }
+  }
+
+  return closestFrame;
+}
+
 interface TimelineProps {
   isPlaying: boolean;
   player: any;
@@ -10,6 +42,7 @@ interface TimelineProps {
   onSeek: (time: number) => void;
   isFullscreen?: boolean;
   mediaUrl?: string | null;
+  thumbnails?: ThumbnailsConfig;
 }
 
 export default function Timeline({
@@ -18,17 +51,15 @@ export default function Timeline({
   duration,
   onSeek,
   isFullscreen = false,
-  mediaUrl,
+  mediaUrl: _mediaUrl,
+  thumbnails,
 }: TimelineProps) {
   const insets = useSafeAreaInsets();
   const fullscreenHorizontalInset = Math.max(insets.left, insets.right);
   const [isSeeking, setIsSeeking] = useState(false);
   const [seekPosition, setSeekPosition] = useState(0);
-  const [previewUri, setPreviewUri] = useState<string | null>(null);
+  const [scrubTime, setScrubTime] = useState<number | null>(null);
   const [sliderWidth, setSliderWidth] = useState(0);
-  const thumbnailCacheRef = React.useRef<Record<number, string>>({});
-  const previewTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
-  const previewRequestIdRef = React.useRef(0);
 
   const getSafeCurrentTime = () => {
     try {
@@ -59,19 +90,6 @@ export default function Timeline({
     return () => clearInterval(interval);
   }, [isPlaying, isSeeking, player]);
 
-  useEffect(() => {
-    thumbnailCacheRef.current = {};
-    setPreviewUri(null);
-  }, [mediaUrl]);
-
-  useEffect(() => {
-    return () => {
-      if (previewTimerRef.current) {
-        clearTimeout(previewTimerRef.current);
-      }
-    };
-  }, []);
-
   const formatTime = (seconds: number) => {
     if (isNaN(seconds) || !isFinite(seconds)) {
       return '00:00:00';
@@ -88,22 +106,24 @@ export default function Timeline({
 
   const handleSlidingStart = () => {
     setIsSeeking(true);
-    scheduleThumbnailLoad(seekPosition);
+    setScrubTime(seekPosition);
   };
 
   const handleSlidingComplete = (value: number) => {
     setIsSeeking(false);
+    setSeekPosition(value);
+    setScrubTime(null);
     onSeek(value);
   };
 
   const handleValueChange = (value: number) => {
-    setSeekPosition(value);
-    scheduleThumbnailLoad(value);
+    setScrubTime(value);
   };
 
   const resolvedDuration = duration > 0 ? duration : getSafeDuration();
+  const timelinePosition = isSeeking && scrubTime !== null ? scrubTime : seekPosition;
   const previewBubbleWidth = 132;
-  const previewProgress = resolvedDuration > 0 ? seekPosition / resolvedDuration : 0;
+  const previewProgress = resolvedDuration > 0 ? timelinePosition / resolvedDuration : 0;
   const previewLeft = Math.max(
     0,
     Math.min(
@@ -112,19 +132,10 @@ export default function Timeline({
     ),
   );
 
-  const loadThumbnail = async (_timeSeconds: number) => {
-    setPreviewUri(null);
-  };
-
-  const scheduleThumbnailLoad = (timeSeconds: number) => {
-    if (!mediaUrl) return;
-    if (previewTimerRef.current) {
-      clearTimeout(previewTimerRef.current);
-    }
-    previewTimerRef.current = setTimeout(() => {
-      void loadThumbnail(timeSeconds);
-    }, 80);
-  };
+  const shouldShowScrubOverlay = isSeeking && thumbnails !== undefined && scrubTime !== null;
+  const activeThumbnail = shouldShowScrubOverlay
+    ? getThumbnailForTime(thumbnails, scrubTime)
+    : null;
 
   const handleSliderLayout = (event: LayoutChangeEvent) => {
     setSliderWidth(event.nativeEvent.layout.width);
@@ -145,28 +156,22 @@ export default function Timeline({
       <View style={styles.timelineContainer}>
         <Text
           style={styles.timeText}
-          accessibilityLabel={`Current time ${formatTime(seekPosition)}`}
+          accessibilityLabel={`Current time ${formatTime(timelinePosition)}`}
         >
-          {formatTime(seekPosition)}
+          {formatTime(timelinePosition)}
         </Text>
         <View style={styles.sliderWrapper} onLayout={handleSliderLayout}>
-          {isSeeking && (
+          {activeThumbnail && (
             <View style={[styles.previewBubble, { left: previewLeft }]} pointerEvents="none">
               <View style={styles.previewImageWrap}>
-                {previewUri ? (
-                  <Image source={{ uri: previewUri }} style={styles.previewImage} />
-                ) : (
-                  <View style={styles.previewFallback}>
-                    <Text style={styles.previewFallbackText}>Preview</Text>
-                  </View>
-                )}
+                <Image source={{ uri: activeThumbnail.uri }} style={styles.previewImage} />
               </View>
-              <Text style={styles.previewTime}>{formatTime(seekPosition)}</Text>
+              <Text style={styles.previewTime}>{formatTime(scrubTime ?? 0)}</Text>
             </View>
           )}
           <Slider
             style={styles.slider}
-            value={seekPosition}
+            value={timelinePosition}
             minimumValue={0}
             maximumValue={resolvedDuration || 1}
             onSlidingStart={handleSlidingStart}
@@ -236,16 +241,6 @@ const styles = StyleSheet.create({
   previewImage: {
     width: '100%',
     height: '100%',
-  },
-  previewFallback: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  previewFallbackText: {
-    color: '#BDBDBD',
-    fontSize: 12,
-    fontWeight: '600',
   },
   previewTime: {
     color: '#FFFFFF',
