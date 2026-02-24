@@ -35,6 +35,6 @@ export type TracksConfig = {
   audioTracks?: AudioTrack[];
   subtitleTracks?: SubtitleTrack[];
   defaultQualityId?: VideoQualityId;
-  defaultAudioTrackId?: string;
-  defaultSubtitleTrackId?: string | 'off';
+  defaultAudioTrackId?: string | null;
+  defaultSubtitleTrackId?: string | 'off' | null;
 };
