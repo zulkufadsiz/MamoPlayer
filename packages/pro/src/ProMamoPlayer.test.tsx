@@ -1,5 +1,5 @@
 import type { PlaybackEvent } from '@mamoplayer/core';
-import { act, fireEvent, render } from '@testing-library/react-native';
+import { act, fireEvent, render, within } from '@testing-library/react-native';
 import { StyleSheet } from 'react-native';
 import { ProMamoPlayer } from './ProMamoPlayer';
 import type { PlayerThemeConfig } from './types/theme';
@@ -1527,6 +1527,55 @@ describe('ProMamoPlayer', () => {
     expect(getByText('Quality')).toBeTruthy();
     expect(getByText('Audio')).toBeTruthy();
     expect(queryByText('Subtitles')).toBeNull();
+  });
+
+  it('highlights current quality, audio and subtitle selections in settings overlay', () => {
+    const { getByTestId } = render(
+      <ProMamoPlayer
+        source={{ uri: 'https://example.com/settings-overlay-current-selections.mp4' }}
+        tracks={{
+          qualities: [
+            {
+              id: 'auto',
+              label: 'Auto',
+              uri: 'https://example.com/auto.m3u8',
+              isDefault: true,
+            },
+            {
+              id: '720p',
+              label: '720p',
+              uri: 'https://example.com/720.m3u8',
+            },
+          ],
+          audioTracks: [
+            { id: 'en', label: 'English', language: 'en' },
+            { id: 'tr', label: 'Turkish', language: 'tr' },
+          ],
+          subtitleTracks: [
+            {
+              id: 'en',
+              language: 'en',
+              label: 'English',
+              uri: 'https://example.com/subtitles-en.vtt',
+            },
+          ],
+          defaultQualityId: 'auto',
+          defaultAudioTrackId: 'tr',
+          defaultSubtitleTrackId: 'off',
+        }}
+      />,
+    );
+
+    fireEvent.press(getByTestId('pro-settings-button'));
+
+    expect(within(getByTestId('pro-settings-option-quality-auto')).getByText('Current')).toBeTruthy();
+    expect(within(getByTestId('pro-settings-option-audio-tr')).getByText('Current')).toBeTruthy();
+    expect(within(getByTestId('pro-settings-option-subtitles-off')).getByText('Current')).toBeTruthy();
+
+    fireEvent.press(getByTestId('pro-settings-option-subtitles-en'));
+    expect(latestVideoProps?.currentSubtitleTrackId).toBe('en');
+    expect(getByTestId('pro-settings-overlay')).toBeTruthy();
+    expect(within(getByTestId('pro-settings-option-subtitles-en')).getByText('Current')).toBeTruthy();
   });
 
   it('selects quality, audio and subtitle options from the settings overlay', () => {
