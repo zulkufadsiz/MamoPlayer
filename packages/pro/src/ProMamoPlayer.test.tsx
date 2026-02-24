@@ -10,6 +10,7 @@ let latestVideoProps:
       rate?: number;
       source?: unknown;
       autoPlay?: boolean;
+  onPictureInPictureStatusChanged?: (isActive: boolean) => void;
       currentQualityId?: string;
       onQualityChange?: (qualityId: string) => void;
       audioTracks?: { id: string; label: string; language?: string }[];
@@ -51,6 +52,7 @@ jest.mock('@mamoplayer/core', () => {
     rate,
     source,
     autoPlay,
+    onPictureInPictureStatusChanged,
     currentQualityId,
     onQualityChange,
     audioTracks,
@@ -67,6 +69,7 @@ jest.mock('@mamoplayer/core', () => {
     rate?: number;
     source?: unknown;
     autoPlay?: boolean;
+    onPictureInPictureStatusChanged?: (isActive: boolean) => void;
     currentQualityId?: string;
     onQualityChange?: (qualityId: string) => void;
     audioTracks?: { id: string; label: string; language?: string }[];
@@ -88,6 +91,7 @@ jest.mock('@mamoplayer/core', () => {
       rate,
       source,
       autoPlay,
+      onPictureInPictureStatusChanged,
       currentQualityId,
       onQualityChange,
       audioTracks,
@@ -233,6 +237,32 @@ describe('ProMamoPlayer', () => {
       }),
     );
     expect(watermark.props.pointerEvents).toBe('none');
+  });
+
+  it('emits PiP events and forwards picture-in-picture status callback', () => {
+    const onPipEvent = jest.fn();
+    const onPictureInPictureStatusChanged = jest.fn();
+
+    render(
+      <ProMamoPlayer
+        source={{ uri: 'https://example.com/video.mp4' }}
+        pip={{ enabled: true }}
+        onPipEvent={onPipEvent}
+        onPictureInPictureStatusChanged={onPictureInPictureStatusChanged}
+      />,
+    );
+
+    act(() => {
+      latestVideoProps?.onPictureInPictureStatusChanged?.(true);
+      latestVideoProps?.onPictureInPictureStatusChanged?.(false);
+    });
+
+    expect(onPipEvent).toHaveBeenCalledTimes(2);
+    expect(onPipEvent).toHaveBeenNthCalledWith(1, { state: 'active' });
+    expect(onPipEvent).toHaveBeenNthCalledWith(2, { state: 'inactive' });
+    expect(onPictureInPictureStatusChanged).toHaveBeenCalledTimes(2);
+    expect(onPictureInPictureStatusChanged).toHaveBeenNthCalledWith(1, true);
+    expect(onPictureInPictureStatusChanged).toHaveBeenNthCalledWith(2, false);
   });
 
   it('randomizes watermark position at configured interval', () => {

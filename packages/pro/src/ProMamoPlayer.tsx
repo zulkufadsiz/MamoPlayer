@@ -11,6 +11,7 @@ import type { AnalyticsConfig, AnalyticsEvent } from './types/analytics';
 import type { PlayerIconSet } from './types/icons';
 import type { IMAConfig } from './types/ima';
 import type { PlayerLayoutVariant } from './types/layout';
+import type { PipConfig, PipEvent, PipState } from './types/pip';
 import type { PlaybackRestrictions } from './types/restrictions';
 import type { PlayerThemeConfig, ThemeName } from './types/theme';
 import type { TracksConfig, VideoQualityId } from './types/tracks';
@@ -28,6 +29,8 @@ export interface ProMamoPlayerProps extends MamoPlayerProps {
   theme?: PlayerThemeConfig;
   icons?: PlayerIconSet;
   layoutVariant?: PlayerLayoutVariant;
+  pip?: PipConfig;
+  onPipEvent?: (event: PipEvent) => void;
 }
 
 type Quartile = 25 | 50 | 75 | 100;
@@ -356,7 +359,10 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
   watermark,
   theme,
   themeName,
+  pip,
+  onPictureInPictureStatusChanged,
   onPlaybackEvent,
+  onPipEvent,
   ...rest
 }) => {
   const playerRef = React.useRef<VideoRef | null>(null);
@@ -403,6 +409,29 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
   >(
     initialSubtitleTrackId,
   );
+  const [pipState, setPipState] = React.useState<PipState>('inactive');
+  const emitPipEvent = React.useCallback(
+    (event: PipEvent) => {
+      setPipState(event.state);
+      onPipEvent?.(event);
+    },
+    [onPipEvent],
+  );
+  const handlePictureInPictureStatusChanged = React.useCallback(
+    (isActive: boolean) => {
+      const shouldEmitPipEvents = pip?.enabled !== false;
+
+      if (shouldEmitPipEvents) {
+        emitPipEvent({
+          state: isActive ? 'active' : 'inactive',
+        });
+      }
+
+      onPictureInPictureStatusChanged?.(isActive);
+    },
+    [emitPipEvent, onPictureInPictureStatusChanged, pip?.enabled],
+  );
+  void pipState;
   const useNativeIMA = shouldUseNativeIMA && !hasNativeIMAFailed;
   const hasConfiguredPreroll = React.useMemo(
     () => Boolean(ads?.adBreaks.some((adBreak) => adBreak.type === 'preroll')),
@@ -1233,6 +1262,7 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
           onAudioTrackChange={changeAudioTrack}
           onSubtitleTrackChange={changeSubtitleTrack}
           onPlaybackEvent={handlePlaybackEvent}
+          onPictureInPictureStatusChanged={handlePictureInPictureStatusChanged}
         />
         <ProMamoPlayerOverlays
           showAdOverlay={adRef.current.isAdPlaying === true || isNativeAdPlaying}
