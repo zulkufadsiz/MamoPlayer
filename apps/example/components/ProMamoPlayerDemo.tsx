@@ -47,10 +47,7 @@ export default function ProMamoPlayerDemo() {
           <View style={styles.optionsRow}>
             {THEME_OPTIONS.map((themeName) => {
               return (
-                <View
-                  key={themeName}
-                  style={styles.optionButtonContainer}
-                >
+                <View key={themeName} style={styles.optionButtonContainer}>
                   <Button
                     title={`${selectedThemeName === themeName ? '✓ ' : ''}${themeName.toUpperCase()}`}
                     onPress={() => setSelectedThemeName(themeName)}
@@ -64,10 +61,7 @@ export default function ProMamoPlayerDemo() {
           <View style={styles.optionsRow}>
             {LAYOUT_OPTIONS.map((layoutVariant) => {
               return (
-                <View
-                  key={layoutVariant}
-                  style={styles.optionButtonContainer}
-                >
+                <View key={layoutVariant} style={styles.optionButtonContainer}>
                   <Button
                     title={`${selectedLayoutVariant === layoutVariant ? '✓ ' : ''}${layoutVariant.toUpperCase()}`}
                     onPress={() => setSelectedLayoutVariant(layoutVariant)}
@@ -99,8 +93,8 @@ export default function ProMamoPlayerDemo() {
             </View>
           </View>
           <Text style={styles.helperText}>
-            Open player settings to switch subtitle language. “Track Default” uses the first subtitle
-            track marked as default.
+            Open player settings to switch subtitle language. “Track Default” uses the first
+            subtitle track marked as default.
           </Text>
         </View>
 

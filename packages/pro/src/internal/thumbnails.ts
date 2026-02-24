@@ -2,7 +2,7 @@ import type { ThumbnailFrame, ThumbnailsConfig } from '../types/thumbnails';
 
 export function getThumbnailForTime(
   config: ThumbnailsConfig | undefined,
-  time: number
+  time: number,
 ): ThumbnailFrame | null {
   if (!config || !Array.isArray(config.frames) || config.frames.length === 0) {
     return null;

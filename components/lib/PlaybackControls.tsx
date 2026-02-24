@@ -2,22 +2,38 @@ import type { PlayerIconSet } from '@/types/icons';
 import type { PlayerLayoutVariant } from '@/types/layout';
 import { useEffect, useState } from 'react';
 import {
-    Pressable,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    useWindowDimensions,
-    View,
+  Pressable,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  useWindowDimensions,
+  View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Timeline from './Timeline';
 
-const Ionicons = ({ name, size = 20, color = '#fff' }: { name: string; size?: number; color?: string }) => {
+const Ionicons = ({
+  name,
+  size = 20,
+  color = '#fff',
+}: {
+  name: string;
+  size?: number;
+  color?: string;
+}) => {
   const fallback = name.includes('chat') ? '💬' : '•';
   return <Text style={{ fontSize: size, color }}>{fallback}</Text>;
 };
 
-const MaterialIcons = ({ name, size = 20, color = '#fff' }: { name: string; size?: number; color?: string }) => {
+const MaterialIcons = ({
+  name,
+  size = 20,
+  color = '#fff',
+}: {
+  name: string;
+  size?: number;
+  color?: string;
+}) => {
   const fallback = name.includes('picture') ? '▣' : '•';
   return <Text style={{ fontSize: size, color }}>{fallback}</Text>;
 };
@@ -340,7 +356,9 @@ export default function PlaybackControls({
                 accessibilityHint="Moves playback position backward"
                 hitSlop={10}
               >
-                <Text style={[styles.skipIconText, { fontSize: layoutStyles.skipIconSize }]}>↺</Text>
+                <Text style={[styles.skipIconText, { fontSize: layoutStyles.skipIconSize }]}>
+                  ↺
+                </Text>
                 <Text style={[styles.skipText, { fontSize: layoutStyles.skipTextSize }]}>
                   {skipSeconds}
                 </Text>
@@ -385,7 +403,9 @@ export default function PlaybackControls({
                 accessibilityHint="Moves playback position forward"
                 hitSlop={10}
               >
-                <Text style={[styles.skipIconText, { fontSize: layoutStyles.skipIconSize }]}>↻</Text>
+                <Text style={[styles.skipIconText, { fontSize: layoutStyles.skipIconSize }]}>
+                  ↻
+                </Text>
                 <Text style={[styles.skipText, { fontSize: layoutStyles.skipTextSize }]}>
                   {skipSeconds}
                 </Text>

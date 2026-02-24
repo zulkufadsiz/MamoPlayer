@@ -25,7 +25,7 @@ import { ProMamoPlayer } from '@mamoplayer/pro';
       console.log('[analytics]', event.type, event.position, event.quartile);
     },
   }}
-/>
+/>;
 ```
 
 ## ads
@@ -46,7 +46,7 @@ import { ProMamoPlayer } from '@mamoplayer/pro';
     skipButtonEnabled: true,
     skipAfterSeconds: 5,
   }}
-/>
+/>;
 ```
 
 ## ima
@@ -63,7 +63,7 @@ import { ProMamoPlayer } from '@mamoplayer/pro';
     adTagUrl:
       'https://pubads.g.doubleclick.net/gampad/ads?iu=/21775744923/external/single_ad_samples&sz=640x480&output=vast',
   }}
-/>
+/>;
 ```
 
 ## watermark
@@ -81,7 +81,7 @@ import { ProMamoPlayer } from '@mamoplayer/pro';
     randomizePosition: true,
     intervalMs: 5000,
   }}
-/>
+/>;
 ```
 
 ## restrictions
@@ -98,7 +98,7 @@ import { ProMamoPlayer } from '@mamoplayer/pro';
     disableSeekingBackward: false,
     maxPlaybackRate: 1.0,
   }}
-/>
+/>;
 ```
 
 ## theme / themeName
@@ -108,10 +108,7 @@ Use `themeName` for built-in themes (`light`, `dark`, `ott`), or `theme` for ful
 ```tsx
 import { ProMamoPlayer } from '@mamoplayer/pro';
 
-<ProMamoPlayer
-  source={{ uri: 'https://cdn.example.com/premium/master.m3u8' }}
-  themeName="ott"
-/>
+<ProMamoPlayer source={{ uri: 'https://cdn.example.com/premium/master.m3u8' }} themeName="ott" />;
 ```
 
 ```tsx
@@ -145,7 +142,7 @@ import { ProMamoPlayer } from '@mamoplayer/pro';
       },
     },
   }}
-/>
+/>;
 ```
 
 ## layoutVariant
@@ -158,7 +155,7 @@ import { ProMamoPlayer } from '@mamoplayer/pro';
 <ProMamoPlayer
   source={{ uri: 'https://cdn.example.com/premium/master.m3u8' }}
   layoutVariant="ott"
-/>
+/>;
 ```
 
 ## icons
@@ -175,7 +172,7 @@ import { MyPlayIcon, MyPauseIcon } from './player-icons';
     Play: MyPlayIcon,
     Pause: MyPauseIcon,
   }}
-/>
+/>;
 ```
 
 ## Full OTT-style setup
@@ -203,7 +200,11 @@ export function OttPlayerScreen() {
       ads={{
         adBreaks: [
           { type: 'preroll', source: { uri: 'https://cdn.example.com/ads/preroll.mp4' } },
-          { type: 'midroll', time: 180, source: { uri: 'https://cdn.example.com/ads/midroll.mp4' } },
+          {
+            type: 'midroll',
+            time: 180,
+            source: { uri: 'https://cdn.example.com/ads/midroll.mp4' },
+          },
         ],
         skipButtonEnabled: true,
         skipAfterSeconds: 5,

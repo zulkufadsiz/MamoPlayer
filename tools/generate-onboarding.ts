@@ -1,9 +1,9 @@
 // @ts-nocheck
 
-import { promises as fs } from "node:fs";
-import path from "node:path";
-import { stdin as input, stdout as output } from "node:process";
-import { createInterface } from "node:readline/promises";
+import { promises as fs } from 'node:fs';
+import path from 'node:path';
+import { stdin as input, stdout as output } from 'node:process';
+import { createInterface } from 'node:readline/promises';
 
 type ParsedArgs = {
   name?: string;
@@ -17,13 +17,8 @@ type ParsedArgs = {
 };
 
 const ROOT_DIR = process.cwd();
-const TEMPLATE_PATH = path.join(
-  ROOT_DIR,
-  "docs",
-  "internal",
-  "pro-onboarding-template.md"
-);
-const GENERATED_DIR = path.join(ROOT_DIR, "generated");
+const TEMPLATE_PATH = path.join(ROOT_DIR, 'docs', 'internal', 'pro-onboarding-template.md');
+const GENERATED_DIR = path.join(ROOT_DIR, 'generated');
 
 function parseArgs(argv: string[]): ParsedArgs {
   const parsed: ParsedArgs = { stdout: false, file: false };
@@ -32,17 +27,15 @@ function parseArgs(argv: string[]): ParsedArgs {
   for (let index = 0; index < argv.length; index += 1) {
     const token = argv[index];
 
-    if (!token.startsWith("-")) {
+    if (!token.startsWith('-')) {
       positional.push(token);
       continue;
     }
 
-    const [flag, inlineValue] = token.split("=", 2);
+    const [flag, inlineValue] = token.split('=', 2);
     const nextValue =
       inlineValue ??
-      (argv[index + 1] && !argv[index + 1].startsWith("-")
-        ? argv[index + 1]
-        : undefined);
+      (argv[index + 1] && !argv[index + 1].startsWith('-') ? argv[index + 1] : undefined);
 
     const consumeNext = inlineValue === undefined && nextValue !== undefined;
     if (consumeNext) {
@@ -50,35 +43,35 @@ function parseArgs(argv: string[]): ParsedArgs {
     }
 
     switch (flag) {
-      case "--name":
-      case "-n":
+      case '--name':
+      case '-n':
         parsed.name = nextValue;
         break;
-      case "--email":
-      case "-e":
+      case '--email':
+      case '-e':
         parsed.email = nextValue;
         break;
-      case "--license-key":
-      case "--licenseKey":
-      case "-k":
+      case '--license-key':
+      case '--licenseKey':
+      case '-k':
         parsed.licenseKey = nextValue;
         break;
-      case "--docs-url":
-      case "--docsUrl":
+      case '--docs-url':
+      case '--docsUrl':
         parsed.docsUrl = nextValue;
         break;
-      case "--support-email":
-      case "--supportEmail":
+      case '--support-email':
+      case '--supportEmail':
         parsed.supportEmail = nextValue;
         break;
-      case "--out":
-      case "-o":
+      case '--out':
+      case '-o':
         parsed.out = nextValue;
         break;
-      case "--stdout":
+      case '--stdout':
         parsed.stdout = true;
         break;
-      case "--file":
+      case '--file':
         parsed.file = true;
         break;
       default:
@@ -103,20 +96,17 @@ function getDefaultOutputFileName(customerName: string): string {
   const slug = customerName
     .trim()
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
   const timestamp = new Date().toISOString().slice(0, 10);
-  return `onboarding-${slug || "customer"}-${timestamp}.md`;
+  return `onboarding-${slug || 'customer'}-${timestamp}.md`;
 }
 
-function replaceTemplatePlaceholders(
-  template: string,
-  values: Record<string, string>
-): string {
+function replaceTemplatePlaceholders(template: string, values: Record<string, string>): string {
   let content = template;
 
   for (const [key, value] of Object.entries(values)) {
-    const pattern = new RegExp(`{{\\s*${key}\\s*}}`, "g");
+    const pattern = new RegExp(`{{\\s*${key}\\s*}}`, 'g');
     content = content.replace(pattern, value);
   }
 
@@ -132,32 +122,24 @@ async function main() {
   const args = parseArgs(process.argv.slice(2));
 
   const rl = createInterface({ input, output });
-  const ask = async (label: string, currentValue?: string, fallback = "") => {
+  const ask = async (label: string, currentValue?: string, fallback = '') => {
     if (currentValue && currentValue.trim()) {
       return currentValue.trim();
     }
 
-    const promptSuffix = fallback ? ` (${fallback})` : "";
+    const promptSuffix = fallback ? ` (${fallback})` : '';
     const response = await rl.question(`${label}${promptSuffix}: `);
     return (response.trim() || fallback).trim();
   };
 
   try {
-    const customerName = await ask("Customer name", args.name);
-    const customerEmail = await ask("Customer email", args.email);
-    const licenseKey = await ask("License key", args.licenseKey);
-    const docsUrl = await ask(
-      "Docs URL",
-      args.docsUrl,
-      "https://docs.mamoplayer.com"
-    );
-    const supportEmail = await ask(
-      "Support email",
-      args.supportEmail,
-      "support@mamoplayer.com"
-    );
+    const customerName = await ask('Customer name', args.name);
+    const customerEmail = await ask('Customer email', args.email);
+    const licenseKey = await ask('License key', args.licenseKey);
+    const docsUrl = await ask('Docs URL', args.docsUrl, 'https://docs.mamoplayer.com');
+    const supportEmail = await ask('Support email', args.supportEmail, 'support@mamoplayer.com');
 
-    const templateRaw = await fs.readFile(TEMPLATE_PATH, "utf8");
+    const templateRaw = await fs.readFile(TEMPLATE_PATH, 'utf8');
     const renderedTemplate = replaceTemplatePlaceholders(templateRaw, {
       CUSTOMER_NAME: customerName,
       CUSTOMER_EMAIL: customerEmail,
@@ -170,9 +152,7 @@ async function main() {
 
     let shouldWriteFile = args.file || Boolean(args.out);
     if (!args.stdout && !shouldWriteFile) {
-      const saveAnswer = await rl.question(
-        "Save output to generated/ file? (y/N): "
-      );
+      const saveAnswer = await rl.question('Save output to generated/ file? (y/N): ');
       shouldWriteFile = /^y(es)?$/i.test(saveAnswer.trim());
     }
 
@@ -187,12 +167,12 @@ async function main() {
         : path.join(GENERATED_DIR, chosenName);
 
       await fs.mkdir(path.dirname(outputPath), { recursive: true });
-      await fs.writeFile(outputPath, finalEmailBody, "utf8");
+      await fs.writeFile(outputPath, finalEmailBody, 'utf8');
       output.write(`\nGenerated onboarding email: ${outputPath}\n`);
     } else {
-      output.write("\n--- Onboarding Email Body ---\n\n");
+      output.write('\n--- Onboarding Email Body ---\n\n');
       output.write(`${finalEmailBody}\n`);
-      output.write("\n--- End ---\n");
+      output.write('\n--- End ---\n');
     }
   } finally {
     rl.close();

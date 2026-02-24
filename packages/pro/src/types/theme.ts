@@ -1,4 +1,4 @@
-export type ThemeName = "light" | "dark" | "ott";
+export type ThemeName = 'light' | 'dark' | 'ott';
 
 export interface PlayerColorPalette {
   background: string;

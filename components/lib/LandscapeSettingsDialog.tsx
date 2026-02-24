@@ -1,7 +1,15 @@
 import React from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-const Ionicons = ({ name, size = 20, color = '#fff' }: { name: string; size?: number; color?: string }) => {
+const Ionicons = ({
+  name,
+  size = 20,
+  color = '#fff',
+}: {
+  name: string;
+  size?: number;
+  color?: string;
+}) => {
   const fallback = name.includes('close')
     ? '✕'
     : name.includes('check')

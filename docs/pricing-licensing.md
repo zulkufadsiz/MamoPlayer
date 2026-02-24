@@ -11,11 +11,11 @@ This page explains how MamoPlayer Core and MamoPlayer Pro are packaged, priced, 
 
 > Prices below are placeholders and can be updated before public launch.
 
-| Tier | Usage | Price | Notes |
-| --- | --- | --- | --- |
-| Indie | For solo developers | `$[INDIE_PRICE]_one-time` (e.g. `$79`) | Placeholder pricing; adjust before publishing. |
-| Team | For small teams (up to `[X]` developers) | `$[TEAM_PRICE]_one-time` (e.g. `$199`) | Placeholder pricing; adjust team size and amount before publishing. |
-| Enterprise | For organizations needing custom plans | `Custom` | Includes priority support and potential custom features. |
+| Tier       | Usage                                    | Price                                  | Notes                                                               |
+| ---------- | ---------------------------------------- | -------------------------------------- | ------------------------------------------------------------------- |
+| Indie      | For solo developers                      | `$[INDIE_PRICE]_one-time` (e.g. `$79`) | Placeholder pricing; adjust before publishing.                      |
+| Team       | For small teams (up to `[X]` developers) | `$[TEAM_PRICE]_one-time` (e.g. `$199`) | Placeholder pricing; adjust team size and amount before publishing. |
+| Enterprise | For organizations needing custom plans   | `Custom`                               | Includes priority support and potential custom features.            |
 
 ## 3. Licensing model
 

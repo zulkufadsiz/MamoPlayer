@@ -1,16 +1,24 @@
 import React, { useState } from 'react';
 import {
-    Modal,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Switch,
-    Text,
-    TouchableOpacity,
-    View,
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
-const Ionicons = ({ name, size = 20, color = '#333' }: { name: string; size?: number; color?: string }) => {
+const Ionicons = ({
+  name,
+  size = 20,
+  color = '#333',
+}: {
+  name: string;
+  size?: number;
+  color?: string;
+}) => {
   const fallback = name.includes('close')
     ? '✕'
     : name.includes('check')

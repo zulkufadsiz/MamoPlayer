@@ -14,10 +14,7 @@ If both are provided, `theme` should be considered the source of truth.
 ```tsx
 import { MamoPlayer } from '@mamoplayer/core';
 
-<MamoPlayer
-  source={{ uri: 'https://cdn.example.com/video/master.m3u8' }}
-  themeName="dark"
-/>
+<MamoPlayer source={{ uri: 'https://cdn.example.com/video/master.m3u8' }} themeName="dark" />;
 ```
 
 ## tokens
@@ -66,10 +63,7 @@ import { MamoPlayer } from '@mamoplayer/core';
 
 export function DarkPlayer() {
   return (
-    <MamoPlayer
-      source={{ uri: 'https://cdn.example.com/video/master.m3u8' }}
-      themeName="dark"
-    />
+    <MamoPlayer source={{ uri: 'https://cdn.example.com/video/master.m3u8' }} themeName="dark" />
   );
 }
 ```
@@ -111,10 +105,7 @@ const customTheme: PlayerThemeConfig = {
 
 export function BrandedPlayer() {
   return (
-    <MamoPlayer
-      source={{ uri: 'https://cdn.example.com/video/master.m3u8' }}
-      theme={customTheme}
-    />
+    <MamoPlayer source={{ uri: 'https://cdn.example.com/video/master.m3u8' }} theme={customTheme} />
   );
 }
 ```
@@ -136,7 +127,7 @@ import { MyPlayIcon, MyPauseIcon, MySeekForwardIcon } from './player-icons';
     Pause: MyPauseIcon,
     SeekForward: MySeekForwardIcon,
   }}
-/>
+/>;
 ```
 
 ### `layoutVariant`: `compact`, `standard`, `ott`
@@ -150,10 +141,7 @@ Pick a layout preset based on context:
 ```tsx
 import { MamoPlayer } from '@mamoplayer/core';
 
-<MamoPlayer
-  source={{ uri: 'https://cdn.example.com/video/master.m3u8' }}
-  layoutVariant="ott"
-/>
+<MamoPlayer source={{ uri: 'https://cdn.example.com/video/master.m3u8' }} layoutVariant="ott" />;
 ```
 
 ## pseudo-layout (visual guide)

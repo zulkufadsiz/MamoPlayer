@@ -125,12 +125,7 @@ describe('MamoPlayerCore', () => {
   it('forwards ref to underlying video instance', () => {
     const ref = React.createRef<VideoRef>();
 
-    render(
-      <MamoPlayerCore
-        ref={ref}
-        source={{ uri: 'https://example.com/video.mp4' }}
-      />,
-    );
+    render(<MamoPlayerCore ref={ref} source={{ uri: 'https://example.com/video.mp4' }} />);
 
     expect(ref.current).toBeTruthy();
     expect(ref.current).toBe(latestVideoInstance);
