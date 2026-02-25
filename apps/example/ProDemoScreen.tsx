@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Button, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { AnalyticsEvent } from '../../packages/pro/src/types/analytics';
 import type { ThemeName } from '../../packages/pro/src/types/theme';
+import type { TracksConfig } from '../../packages/pro/src/types/tracks';
 
 const MP4_SOURCE_URI = 'https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4';
 const HLS_SOURCE_URI = 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8';
@@ -39,6 +40,31 @@ const settingsOverlay = {
   showQuality: true,
   showSubtitles: true,
   showAudioTracks: true,
+};
+
+const demoTracks: TracksConfig = {
+  qualities: [
+    { id: 'auto', label: 'Auto', uri: 'https://master.m3u8', isDefault: true },
+    { id: '720p', label: '720p', uri: 'https://720p.m3u8' },
+    { id: '1080p', label: '1080p', uri: 'https://1080p.m3u8' },
+  ],
+  audioTracks: [
+    { id: 'audio-en', language: 'en', label: 'English' },
+    { id: 'audio-tr', language: 'tr', label: 'Türkçe' },
+  ],
+  subtitleTracks: [
+    {
+      id: 'sub-en',
+      language: 'en',
+      label: 'English',
+      uri: 'https://subs-en.vtt',
+      isDefault: true,
+    },
+    { id: 'sub-tr', language: 'tr', label: 'Türkçe', uri: 'https://subs-tr.vtt' },
+  ],
+  defaultQualityId: 'auto',
+  defaultAudioTrackId: 'audio-en',
+  defaultSubtitleTrackId: 'sub-en',
 };
 
 const ProDemoScreen = () => {
@@ -131,6 +157,7 @@ const ProDemoScreen = () => {
         <View style={styles.playerArea}>
           <ProMamoPlayer
             source={source}
+            tracks={demoTracks}
             ads={demoAds}
             watermark={watermark}
             themeName={themeName}
