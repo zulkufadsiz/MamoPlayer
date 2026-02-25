@@ -6,6 +6,17 @@ import type { AnalyticsEvent } from '../../packages/pro/src/types/analytics';
 const MP4_SOURCE_URI = 'https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4';
 const HLS_SOURCE_URI = 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8';
 
+const demoAds = {
+  enabled: true,
+  adBreaks: [
+    { type: 'preroll', source: { uri: 'https://your-ad1.mp4' } },
+    { type: 'midroll', time: 30, source: { uri: 'https://your-ad2.mp4' } },
+    { type: 'postroll', source: { uri: 'https://your-ad3.mp4' } },
+  ],
+  skipButtonEnabled: true,
+  skipAfterSeconds: 5,
+};
+
 const ProDemoScreen = () => {
   const [source, setSource] = useState<{ uri: string }>({
     uri: MP4_SOURCE_URI,
@@ -42,6 +53,7 @@ const ProDemoScreen = () => {
         <View style={styles.playerArea}>
           <ProMamoPlayer
             source={source}
+            ads={demoAds}
             style={styles.player}
             analytics={{
               onEvent: (event) => {
@@ -54,6 +66,10 @@ const ProDemoScreen = () => {
             }}
           />
         </View>
+
+        <Text style={styles.descriptionText}>
+          This demo uses simulated pre-roll, mid-roll (at 30s), and post-roll ads with skip after 5s.
+        </Text>
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Analytics (last 10 events)</Text>
@@ -83,7 +99,7 @@ const ProDemoScreen = () => {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Ads</Text>
-          <Text style={styles.placeholderText}>Coming soon</Text>
+          <Text style={styles.placeholderText}>Simulated ads enabled: pre-roll, mid-roll (30s), post-roll, skip after 5s</Text>
         </View>
 
         <View style={styles.section}>
@@ -134,6 +150,9 @@ const styles = StyleSheet.create({
   },
   placeholderText: {
     fontSize: 14,
+  },
+  descriptionText: {
+    fontSize: 12,
   },
   analyticsList: {
     gap: 8,
