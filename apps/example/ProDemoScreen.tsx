@@ -2,6 +2,7 @@ import { ProMamoPlayer } from '@mamoplayer/pro';
 import { useState } from 'react';
 import { Button, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { AnalyticsEvent } from '../../packages/pro/src/types/analytics';
+import type { ThemeName } from '../../packages/pro/src/types/theme';
 
 const MP4_SOURCE_URI = 'https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4';
 const HLS_SOURCE_URI = 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8';
@@ -36,6 +37,8 @@ const ProDemoScreen = () => {
   const [source, setSource] = useState<{ uri: string }>({
     uri: MP4_SOURCE_URI,
   });
+  const [themeName, setThemeName] = useState<ThemeName>('ott');
+  const [layoutVariant, setLayoutVariant] = useState<'compact' | 'standard' | 'ott'>('ott');
   const [analyticsEvents, setAnalyticsEvents] = useState<AnalyticsEvent[]>([]);
 
   return (
@@ -65,11 +68,65 @@ const ProDemoScreen = () => {
           </View>
         </View>
 
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Player Appearance</Text>
+
+          <Text style={styles.label}>Theme</Text>
+          <View style={styles.optionsRow}>
+            <View style={styles.optionButtonContainer}>
+              <Button
+                title={`${themeName === 'light' ? '✓ ' : ''}Light`}
+                onPress={() => setThemeName('light')}
+              />
+            </View>
+            <View style={styles.optionButtonContainer}>
+              <Button
+                title={`${themeName === 'dark' ? '✓ ' : ''}Dark`}
+                onPress={() => setThemeName('dark')}
+              />
+            </View>
+            <View style={styles.optionButtonContainer}>
+              <Button
+                title={`${themeName === 'ott' ? '✓ ' : ''}OTT`}
+                onPress={() => setThemeName('ott')}
+              />
+            </View>
+          </View>
+
+          <Text style={styles.label}>Layout</Text>
+          <View style={styles.optionsRow}>
+            <View style={styles.optionButtonContainer}>
+              <Button
+                title={`${layoutVariant === 'compact' ? '✓ ' : ''}Compact`}
+                onPress={() => setLayoutVariant('compact')}
+              />
+            </View>
+            <View style={styles.optionButtonContainer}>
+              <Button
+                title={`${layoutVariant === 'standard' ? '✓ ' : ''}Standard`}
+                onPress={() => setLayoutVariant('standard')}
+              />
+            </View>
+            <View style={styles.optionButtonContainer}>
+              <Button
+                title={`${layoutVariant === 'ott' ? '✓ ' : ''}OTT`}
+                onPress={() => setLayoutVariant('ott')}
+              />
+            </View>
+          </View>
+
+          <Text style={styles.legendText}>
+            Use the controls above to preview built-in themes and layout variants.
+          </Text>
+        </View>
+
         <View style={styles.playerArea}>
           <ProMamoPlayer
             source={source}
             ads={demoAds}
             watermark={watermark}
+            themeName={themeName}
+            layoutVariant={layoutVariant}
             style={styles.player}
             analytics={{
               onEvent: (event) => {
@@ -173,8 +230,24 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
+  label: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  optionsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  optionButtonContainer: {
+    minWidth: 100,
+  },
   placeholderText: {
     fontSize: 14,
+  },
+  legendText: {
+    fontSize: 12,
+    opacity: 0.8,
   },
   descriptionText: {
     fontSize: 12,
