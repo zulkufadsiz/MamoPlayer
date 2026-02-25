@@ -12,6 +12,15 @@ const demoAds = {
       type: 'preroll' as const,
       source: { uri: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4' },
     },
+    {
+      type: 'midroll' as const,
+      time: 30,
+      source: { uri: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4' },
+    },
+    {
+      type: 'postroll' as const,
+      source: { uri: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4' },
+    },
   ],
   skipButtonEnabled: true,
   skipAfterSeconds: 5,
@@ -23,7 +32,6 @@ const watermark = {
   randomizePosition: true,
   intervalMs: 7000,
 };
-
 const ProDemoScreen = () => {
   const [source, setSource] = useState<{ uri: string }>({
     uri: MP4_SOURCE_URI,
@@ -79,6 +87,10 @@ const ProDemoScreen = () => {
           recording.
         </Text>
 
+        <Text style={styles.descriptionText}>
+          This demo uses simulated pre-roll, mid-roll (at 30s), and post-roll ads with skip after 5s.
+        </Text>
+
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Analytics (last 10 events)</Text>
           {analyticsEvents.length === 0 ? (
@@ -107,7 +119,7 @@ const ProDemoScreen = () => {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Ads</Text>
-          <Text style={styles.placeholderText}>Coming soon</Text>
+          <Text style={styles.placeholderText}>Simulated ads enabled: pre-roll, mid-roll (30s), post-roll, skip after 5s</Text>
         </View>
 
         <View style={styles.section}>
@@ -163,6 +175,9 @@ const styles = StyleSheet.create({
   },
   placeholderText: {
     fontSize: 14,
+  },
+  descriptionText: {
+    fontSize: 12,
   },
   analyticsList: {
     gap: 8,
