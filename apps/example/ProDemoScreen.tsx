@@ -67,6 +67,15 @@ const demoTracks: TracksConfig = {
   defaultSubtitleTrackId: 'sub-en',
 };
 
+const thumbnails = {
+  frames: [
+    { time: 0, uri: 'https://thumbs/frame-0.jpg' },
+    { time: 10, uri: 'https://thumbs/frame-10.jpg' },
+    { time: 30, uri: 'https://thumbs/frame-30.jpg' },
+    { time: 60, uri: 'https://thumbs/frame-60.jpg' },
+  ],
+};
+
 const ProDemoScreen = () => {
   const [source, setSource] = useState<{ uri: string }>({
     uri: MP4_SOURCE_URI,
@@ -158,6 +167,7 @@ const ProDemoScreen = () => {
           <ProMamoPlayer
             source={source}
             tracks={demoTracks}
+            thumbnails={thumbnails}
             ads={demoAds}
             watermark={watermark}
             themeName={themeName}
@@ -186,6 +196,10 @@ const ProDemoScreen = () => {
 
         <Text style={styles.descriptionText}>
           Tap the settings (gear) icon on the player to open the OTT-style overlay menu.
+        </Text>
+
+        <Text style={styles.descriptionText}>
+          Scrub the timeline to see thumbnail previews based on configured frames.
         </Text>
 
         <View style={styles.section}>
