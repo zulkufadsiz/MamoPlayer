@@ -33,6 +33,14 @@ const watermark = {
   randomizePosition: true,
   intervalMs: 7000,
 };
+
+const settingsOverlay = {
+  enabled: true,
+  showQuality: true,
+  showSubtitles: true,
+  showAudioTracks: true,
+};
+
 const ProDemoScreen = () => {
   const [source, setSource] = useState<{ uri: string }>({
     uri: MP4_SOURCE_URI,
@@ -128,6 +136,7 @@ const ProDemoScreen = () => {
             themeName={themeName}
             layoutVariant={layoutVariant}
             style={styles.player}
+            settingsOverlay={settingsOverlay}
             analytics={{
               onEvent: (event) => {
                 console.log('Pro analytics:', event);
@@ -146,6 +155,10 @@ const ProDemoScreen = () => {
 
         <Text style={styles.descriptionText}>
           This demo uses simulated pre-roll, mid-roll (at 30s), and post-roll ads with skip after 5s.
+        </Text>
+
+        <Text style={styles.descriptionText}>
+          Tap the settings (gear) icon on the player to open the OTT-style overlay menu.
         </Text>
 
         <View style={styles.section}>
