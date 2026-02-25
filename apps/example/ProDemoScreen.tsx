@@ -1,14 +1,18 @@
+import type { PlaybackEvent } from '@mamoplayer/core';
 import { ProMamoPlayer } from '@mamoplayer/pro';
 import { useState } from 'react';
 import { Button, SafeAreaView, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import type { AdsConfig } from '../../packages/pro/src/types/ads';
 import type { AnalyticsEvent } from '../../packages/pro/src/types/analytics';
 import type { ThemeName } from '../../packages/pro/src/types/theme';
 import type { TracksConfig } from '../../packages/pro/src/types/tracks';
 
 const MP4_SOURCE_URI = 'https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4';
 const HLS_SOURCE_URI = 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8';
+const INVALID_MAIN_SOURCE_URI = 'https://invalid-main.m3u8';
+const INVALID_AD_SOURCE_URI = 'https://not-found-ad.mp4';
 
-const demoAds = {
+const demoAds: AdsConfig = {
   adBreaks: [
     {
       type: 'preroll' as const,
@@ -26,6 +30,59 @@ const demoAds = {
   ],
   skipButtonEnabled: true,
   skipAfterSeconds: 5,
+};
+
+const demoAdsWithBrokenSource: AdsConfig = {
+  ...demoAds,
+  adBreaks: demoAds.adBreaks.map((adBreak, index) =>
+    index === 1 ? { ...adBreak, source: { uri: INVALID_AD_SOURCE_URI } } : adBreak,
+  ),
+};
+
+const getErrorMessageFromUnknown = (payload?: unknown): string | undefined => {
+  if (payload instanceof Error) {
+    return payload.message;
+  }
+
+  if (typeof payload === 'string') {
+    return payload;
+  }
+
+  if (!payload || typeof payload !== 'object') {
+    return undefined;
+  }
+
+  const payloadRecord = payload as {
+    message?: unknown;
+    errorMessage?: unknown;
+    error?: { message?: unknown } | unknown;
+  };
+
+  if (typeof payloadRecord.errorMessage === 'string' && payloadRecord.errorMessage.length > 0) {
+    return payloadRecord.errorMessage;
+  }
+
+  if (typeof payloadRecord.message === 'string' && payloadRecord.message.length > 0) {
+    return payloadRecord.message;
+  }
+
+  if (
+    payloadRecord.error &&
+    typeof payloadRecord.error === 'object' &&
+    typeof (payloadRecord.error as { message?: unknown }).message === 'string'
+  ) {
+    return (payloadRecord.error as { message: string }).message;
+  }
+
+  return undefined;
+};
+
+const getErrorMessageFromPlaybackEvent = (playbackEvent?: PlaybackEvent): string | undefined => {
+  if (!playbackEvent || playbackEvent.type !== 'error') {
+    return undefined;
+  }
+
+  return getErrorMessageFromUnknown(playbackEvent.error);
 };
 
 const watermark = {
@@ -83,7 +140,9 @@ const ProDemoScreen = () => {
   const [themeName, setThemeName] = useState<ThemeName>('ott');
   const [layoutVariant, setLayoutVariant] = useState<'compact' | 'standard' | 'ott'>('ott');
   const [pipEnabled, setPipEnabled] = useState(true);
+  const [adsConfig, setAdsConfig] = useState<AdsConfig>(demoAds);
   const [analyticsEvents, setAnalyticsEvents] = useState<AnalyticsEvent[]>([]);
+  const [errorBannerMessage, setErrorBannerMessage] = useState<string | null>(null);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -98,6 +157,7 @@ const ProDemoScreen = () => {
                 title="MP4 Source"
                 onPress={() => {
                   setSource({ uri: MP4_SOURCE_URI });
+                  setErrorBannerMessage(null);
                 }}
               />
             </View>
@@ -106,6 +166,31 @@ const ProDemoScreen = () => {
                 title="HLS Source (m3u8)"
                 onPress={() => {
                   setSource({ uri: HLS_SOURCE_URI });
+                  setErrorBannerMessage(null);
+                }}
+              />
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Error Scenarios</Text>
+          <View style={styles.optionsRow}>
+            <View style={styles.optionButtonContainer}>
+              <Button
+                title="Play Invalid Main Source"
+                onPress={() => {
+                  setSource({ uri: INVALID_MAIN_SOURCE_URI });
+                  setErrorBannerMessage(null);
+                }}
+              />
+            </View>
+            <View style={styles.optionButtonContainer}>
+              <Button
+                title="Play Invalid Ad Source"
+                onPress={() => {
+                  setAdsConfig(demoAdsWithBrokenSource);
+                  setErrorBannerMessage(null);
                 }}
               />
             </View>
@@ -174,9 +259,18 @@ const ProDemoScreen = () => {
             source={source}
             pip={{ enabled: pipEnabled }}
             onPipEvent={(e) => console.log('PiP event:', e)}
+            onPlaybackEvent={(event) => {
+              if (event.type !== 'error') {
+                return;
+              }
+
+              setErrorBannerMessage(
+                getErrorMessageFromUnknown(event.error) ?? 'Unknown playback error',
+              );
+            }}
             tracks={demoTracks}
             thumbnails={thumbnails}
-            ads={demoAds}
+            ads={adsConfig}
             watermark={watermark}
             themeName={themeName}
             layoutVariant={layoutVariant}
@@ -185,6 +279,13 @@ const ProDemoScreen = () => {
             analytics={{
               onEvent: (event) => {
                 console.log('Pro analytics:', event);
+                const analyticsErrorMessage =
+                  event.errorMessage ?? getErrorMessageFromPlaybackEvent(event.playbackEvent);
+
+                if (event.type === 'ad_error' || analyticsErrorMessage) {
+                  setErrorBannerMessage(analyticsErrorMessage ?? 'Unknown analytics error');
+                }
+
                 setAnalyticsEvents((prev) => {
                   const next = [event, ...prev];
                   return next.slice(0, 10);
@@ -193,6 +294,11 @@ const ProDemoScreen = () => {
             }}
           />
         </View>
+        {errorBannerMessage ? (
+          <View style={styles.errorBanner}>
+            <Text style={styles.errorBannerText}>Error occurred: {errorBannerMessage}</Text>
+          </View>
+        ) : null}
         <Text style={styles.watermarkDescription}>
           Watermark is shown on top of the video, moving every few seconds to help deter screen
           recording.
@@ -334,6 +440,16 @@ const styles = StyleSheet.create({
   },
   analyticsText: {
     fontSize: 12,
+  },
+  errorBanner: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderRadius: 8,
+  },
+  errorBannerText: {
+    fontSize: 13,
+    fontWeight: '600',
   },
 });
 
