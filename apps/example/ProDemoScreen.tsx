@@ -1,6 +1,6 @@
 import { ProMamoPlayer } from '@mamoplayer/pro';
 import { useState } from 'react';
-import { Button, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Button, SafeAreaView, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import type { AnalyticsEvent } from '../../packages/pro/src/types/analytics';
 import type { ThemeName } from '../../packages/pro/src/types/theme';
 import type { TracksConfig } from '../../packages/pro/src/types/tracks';
@@ -82,6 +82,7 @@ const ProDemoScreen = () => {
   });
   const [themeName, setThemeName] = useState<ThemeName>('ott');
   const [layoutVariant, setLayoutVariant] = useState<'compact' | 'standard' | 'ott'>('ott');
+  const [pipEnabled, setPipEnabled] = useState(true);
   const [analyticsEvents, setAnalyticsEvents] = useState<AnalyticsEvent[]>([]);
 
   return (
@@ -161,11 +162,18 @@ const ProDemoScreen = () => {
           <Text style={styles.legendText}>
             Use the controls above to preview built-in themes and layout variants.
           </Text>
+
+          <View style={styles.toggleRow}>
+            <Text style={styles.label}>Picture-in-Picture</Text>
+            <Switch value={pipEnabled} onValueChange={setPipEnabled} />
+          </View>
         </View>
 
         <View style={styles.playerArea}>
           <ProMamoPlayer
             source={source}
+            pip={{ enabled: pipEnabled }}
+            onPipEvent={(e) => console.log('PiP event:', e)}
             tracks={demoTracks}
             thumbnails={thumbnails}
             ads={demoAds}
@@ -200,6 +208,10 @@ const ProDemoScreen = () => {
 
         <Text style={styles.descriptionText}>
           Scrub the timeline to see thumbnail previews based on configured frames.
+        </Text>
+
+        <Text style={styles.descriptionText}>
+          PiP behavior depends on platform support and native integration.
         </Text>
 
         <View style={styles.section}>
@@ -295,6 +307,11 @@ const styles = StyleSheet.create({
   },
   optionButtonContainer: {
     minWidth: 100,
+  },
+  toggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   placeholderText: {
     fontSize: 14,
