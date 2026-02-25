@@ -7,16 +7,31 @@ const MP4_SOURCE_URI = 'https://storage.googleapis.com/gtv-videos-bucket/sample/
 const HLS_SOURCE_URI = 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8';
 
 const demoAds = {
-  enabled: true,
   adBreaks: [
-    { type: 'preroll', source: { uri: 'https://your-ad1.mp4' } },
-    { type: 'midroll', time: 30, source: { uri: 'https://your-ad2.mp4' } },
-    { type: 'postroll', source: { uri: 'https://your-ad3.mp4' } },
+    {
+      type: 'preroll' as const,
+      source: { uri: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4' },
+    },
+    {
+      type: 'midroll' as const,
+      time: 30,
+      source: { uri: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4' },
+    },
+    {
+      type: 'postroll' as const,
+      source: { uri: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4' },
+    },
   ],
   skipButtonEnabled: true,
   skipAfterSeconds: 5,
 };
 
+const watermark = {
+  text: 'demo-user@example.com',
+  opacity: 0.25,
+  randomizePosition: true,
+  intervalMs: 7000,
+};
 const ProDemoScreen = () => {
   const [source, setSource] = useState<{ uri: string }>({
     uri: MP4_SOURCE_URI,
@@ -54,6 +69,7 @@ const ProDemoScreen = () => {
           <ProMamoPlayer
             source={source}
             ads={demoAds}
+            watermark={watermark}
             style={styles.player}
             analytics={{
               onEvent: (event) => {
@@ -66,6 +82,10 @@ const ProDemoScreen = () => {
             }}
           />
         </View>
+        <Text style={styles.watermarkDescription}>
+          Watermark is shown on top of the video, moving every few seconds to help deter screen
+          recording.
+        </Text>
 
         <Text style={styles.descriptionText}>
           This demo uses simulated pre-roll, mid-roll (at 30s), and post-roll ads with skip after 5s.
@@ -104,7 +124,7 @@ const ProDemoScreen = () => {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Watermark</Text>
-          <Text style={styles.placeholderText}>Coming soon</Text>
+          <Text style={styles.placeholderText}>Enabled in the player above</Text>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -143,6 +163,11 @@ const styles = StyleSheet.create({
   player: {
     height: '100%',
     width: '100%',
+  },
+  watermarkDescription: {
+    fontSize: 14,
+    fontWeight: '500',
+    lineHeight: 20,
   },
   sectionTitle: {
     fontSize: 14,
