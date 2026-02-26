@@ -6,6 +6,16 @@ import {
     View,
 } from 'react-native';
 
+const TOUCH_TARGET_HEIGHT = 40;
+const TRACK_HEIGHT = 6;
+const TRACK_RADIUS = TRACK_HEIGHT / 2;
+const THUMB_SIZE = 14;
+const THUMB_RADIUS = THUMB_SIZE / 2;
+const TRACK_COLOR = '#1F1F1F';
+const BUFFERED_COLOR = '#6B7280';
+const PLAYED_COLOR = '#E50914';
+const THUMB_COLOR = '#F5F5F5';
+
 export interface TimelineProps {
   duration: number;
   position: number;
@@ -127,9 +137,6 @@ export const Timeline: React.FC<TimelineProps> = ({
   );
 };
 
-const TRACK_HEIGHT = 8;
-const THUMB_SIZE = 18;
-
 const styles = StyleSheet.create({
   container: {
     width: '100%',
@@ -137,14 +144,14 @@ const styles = StyleSheet.create({
   },
   touchArea: {
     width: '100%',
-    minHeight: 36,
+    minHeight: TOUCH_TARGET_HEIGHT,
     justifyContent: 'center',
   },
   track: {
     width: '100%',
     height: TRACK_HEIGHT,
-    borderRadius: TRACK_HEIGHT / 2,
-    backgroundColor: '#2A2A2A',
+    borderRadius: TRACK_RADIUS,
+    backgroundColor: TRACK_COLOR,
     overflow: 'hidden',
   },
   buffered: {
@@ -152,24 +159,24 @@ const styles = StyleSheet.create({
     left: 0,
     top: 0,
     bottom: 0,
-    backgroundColor: '#5A5A5A',
-    borderRadius: TRACK_HEIGHT / 2,
+    backgroundColor: BUFFERED_COLOR,
+    borderRadius: TRACK_RADIUS,
   },
   played: {
     position: 'absolute',
     left: 0,
     top: 0,
     bottom: 0,
-    backgroundColor: '#E50914',
-    borderRadius: TRACK_HEIGHT / 2,
+    backgroundColor: PLAYED_COLOR,
+    borderRadius: TRACK_RADIUS,
   },
   thumb: {
     position: 'absolute',
     width: THUMB_SIZE,
     height: THUMB_SIZE,
     marginLeft: -THUMB_SIZE / 2,
-    borderRadius: THUMB_SIZE / 2,
-    backgroundColor: '#FFFFFF',
+    borderRadius: THUMB_RADIUS,
+    backgroundColor: THUMB_COLOR,
     top: '50%',
     marginTop: -THUMB_SIZE / 2,
   },
