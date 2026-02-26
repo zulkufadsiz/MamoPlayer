@@ -1,10 +1,28 @@
 import { act, render } from '@testing-library/react-native';
 import React from 'react';
 import type { ReactVideoProps, VideoRef } from 'react-native-video';
-import { MamoPlayerCore } from './MamoPlayer';
 
 let latestVideoProps: ReactVideoProps | null = null;
 let latestVideoInstance: VideoRef | null = null;
+let latestTimelineProps: {
+  onScrubStart?: () => void;
+  onScrubEnd?: (time: number) => void;
+} | null = null;
+
+jest.mock('./components/Timeline', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+
+  const TimelineMock = (props: { onScrubStart?: () => void; onScrubEnd?: (time: number) => void }) => {
+    latestTimelineProps = props;
+    return <View testID="timeline-mock" />;
+  };
+
+  return {
+    __esModule: true,
+    Timeline: TimelineMock,
+  };
+});
 
 jest.mock('react-native-video', () => {
   const React = require('react');
@@ -41,10 +59,13 @@ jest.mock('react-native-video', () => {
   };
 });
 
+const { MamoPlayerCore } = require('./MamoPlayer') as typeof import('./MamoPlayer');
+
 describe('MamoPlayerCore', () => {
   beforeEach(() => {
     latestVideoProps = null;
     latestVideoInstance = null;
+    latestTimelineProps = null;
     jest.clearAllMocks();
   });
 
@@ -204,5 +225,17 @@ describe('MamoPlayerCore', () => {
     const eventTypes = onPlaybackEvent.mock.calls.map(([event]) => event.type);
     expect(eventTypes.filter((type) => type === 'buffer_start')).toHaveLength(1);
     expect(eventTypes.filter((type) => type === 'buffer_end')).toHaveLength(1);
+  });
+
+  it('seeks underlying video ref on timeline scrub end', () => {
+    setup();
+    const initialVideoInstance = latestVideoInstance;
+
+    act(() => {
+      latestTimelineProps?.onScrubStart?.();
+      latestTimelineProps?.onScrubEnd?.(42);
+    });
+
+    expect(initialVideoInstance?.seek).toHaveBeenCalledWith(42);
   });
 });
