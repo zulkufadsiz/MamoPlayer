@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import Video, {
   type OnBufferData,
   type OnLoadData,
@@ -9,6 +9,11 @@ import Video, {
   type ReactVideoProps,
   type VideoRef,
 } from 'react-native-video';
+import {
+  PlaybackOptions,
+  type PlaybackOption,
+  type PlaybackOptionId,
+} from './components/PlaybackOptions';
 import { Timeline } from './components/Timeline';
 import { type PlaybackEvent } from './types/playback';
 
@@ -24,12 +29,21 @@ export interface MamoPlayerCoreProps extends Omit<
   onPlaybackEvent?: (event: PlaybackEvent) => void;
 }
 
+const coreOptions: PlaybackOption[] = [
+  { id: 'seek-back', icon: <Text>⟲10</Text>, label: 'Back' },
+  { id: 'seek-forward', icon: <Text>10⟳</Text>, label: 'Next' },
+  { id: 'settings', icon: <Text>⚙</Text>, label: 'Settings' },
+  { id: 'fullscreen', icon: <Text>⛶</Text>, label: 'Full' },
+];
+
 export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
   ({ source, autoPlay = true, paused, onPlaybackEvent, ...rest }, ref) => {
     const [duration, setDuration] = React.useState<number>(0);
     const [position, setPosition] = React.useState<number>(0);
     const [buffered, setBuffered] = React.useState<number | undefined>(undefined);
     const [isPlaying, setIsPlaying] = React.useState<boolean>(false);
+    const [isFullscreen, setIsFullscreen] = React.useState<boolean>(false);
+    const [showSettings, setShowSettings] = React.useState<boolean>(false);
     const [, setIsBuffering] = React.useState<boolean>(false);
     const durationRef = React.useRef(0);
     const positionRef = React.useRef(0);
@@ -160,6 +174,48 @@ export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
       videoRef.current?.seek(nextTime);
     }, []);
 
+    const handlePressOption = React.useCallback(
+      (id: PlaybackOptionId) => {
+        switch (id) {
+          case 'seek-back': {
+            const nextPosition = Math.max(0, positionRef.current - 10);
+            positionRef.current = nextPosition;
+            setPosition(nextPosition);
+            videoRef.current?.seek(nextPosition);
+            emit({ type: 'seek', reason: 'user', position: nextPosition });
+            break;
+          }
+          case 'seek-forward': {
+            const maxDuration = durationRef.current > 0 ? durationRef.current : Number.MAX_SAFE_INTEGER;
+            const nextPosition = Math.min(maxDuration, positionRef.current + 10);
+            positionRef.current = nextPosition;
+            setPosition(nextPosition);
+            videoRef.current?.seek(nextPosition);
+            emit({ type: 'seek', reason: 'user', position: nextPosition });
+            break;
+          }
+          case 'settings':
+            setShowSettings(prev => !prev);
+            break;
+          case 'fullscreen': {
+            setIsFullscreen(prev => {
+              const nextFullscreen = !prev;
+              if (nextFullscreen) {
+                videoRef.current?.presentFullscreenPlayer?.();
+              } else {
+                videoRef.current?.dismissFullscreenPlayer?.();
+              }
+              return nextFullscreen;
+            });
+            break;
+          }
+          default:
+            break;
+        }
+      },
+      [emit],
+    );
+
     return (
       <View style={styles.container}>
         <Video
@@ -181,6 +237,14 @@ export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
           onScrubStart={handleScrubStart}
           onScrubEnd={handleScrubEnd}
         />
+        <View style={styles.controlsContainer}>
+          <PlaybackOptions options={coreOptions} onPressOption={handlePressOption} />
+        </View>
+        {showSettings ? (
+          <View style={styles.settingsOverlay}>
+            <Text style={styles.settingsText}>Settings</Text>
+          </View>
+        ) : null}
       </View>
     );
   },
@@ -191,6 +255,22 @@ MamoPlayerCore.displayName = 'MamoPlayerCore';
 const styles = StyleSheet.create({
   container: {
     width: '100%',
+  },
+  controlsContainer: {
+    marginTop: 8,
+  },
+  settingsOverlay: {
+    marginTop: 8,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    backgroundColor: 'rgba(17, 24, 39, 0.85)',
+    alignSelf: 'flex-start',
+  },
+  settingsText: {
+    color: '#F3F4F6',
+    fontSize: 12,
+    lineHeight: 16,
   },
 });
 

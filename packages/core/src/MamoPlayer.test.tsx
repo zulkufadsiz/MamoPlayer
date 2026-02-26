@@ -8,6 +8,9 @@ let latestTimelineProps: {
   onScrubStart?: () => void;
   onScrubEnd?: (time: number) => void;
 } | null = null;
+let latestPlaybackOptionsProps: {
+  onPressOption?: (id: 'seek-back' | 'seek-forward' | 'settings' | 'fullscreen' | 'pip') => void;
+} | null = null;
 
 jest.mock('./components/Timeline', () => {
   const React = require('react');
@@ -21,6 +24,23 @@ jest.mock('./components/Timeline', () => {
   return {
     __esModule: true,
     Timeline: TimelineMock,
+  };
+});
+
+jest.mock('./components/PlaybackOptions', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+
+  const PlaybackOptionsMock = (props: {
+    onPressOption?: (id: 'seek-back' | 'seek-forward' | 'settings' | 'fullscreen' | 'pip') => void;
+  }) => {
+    latestPlaybackOptionsProps = props;
+    return <View testID="playback-options-mock" />;
+  };
+
+  return {
+    __esModule: true,
+    PlaybackOptions: PlaybackOptionsMock,
   };
 });
 
@@ -66,6 +86,7 @@ describe('MamoPlayerCore', () => {
     latestVideoProps = null;
     latestVideoInstance = null;
     latestTimelineProps = null;
+    latestPlaybackOptionsProps = null;
     jest.clearAllMocks();
   });
 
@@ -237,5 +258,37 @@ describe('MamoPlayerCore', () => {
     });
 
     expect(initialVideoInstance?.seek).toHaveBeenCalledWith(42);
+  });
+
+  it('handles playback option actions for seek, settings, and fullscreen', () => {
+    const { onPlaybackEvent } = setup();
+
+    act(() => {
+      latestVideoProps?.onLoad?.({ duration: 100 } as never);
+      latestVideoProps?.onProgress?.({ currentTime: 50 } as never);
+    });
+
+    const initialVideoInstance = latestVideoInstance;
+
+    act(() => {
+      latestPlaybackOptionsProps?.onPressOption?.('seek-back');
+      latestPlaybackOptionsProps?.onPressOption?.('seek-forward');
+      latestPlaybackOptionsProps?.onPressOption?.('settings');
+      latestPlaybackOptionsProps?.onPressOption?.('fullscreen');
+      latestPlaybackOptionsProps?.onPressOption?.('fullscreen');
+      latestPlaybackOptionsProps?.onPressOption?.('settings');
+    });
+
+    expect(initialVideoInstance?.seek).toHaveBeenCalledWith(40);
+    expect(initialVideoInstance?.seek).toHaveBeenCalledWith(50);
+    expect(initialVideoInstance?.presentFullscreenPlayer).toHaveBeenCalledTimes(1);
+    expect(initialVideoInstance?.dismissFullscreenPlayer).toHaveBeenCalledTimes(1);
+
+    const seekEvents = onPlaybackEvent.mock.calls
+      .map(([event]) => event)
+      .filter(event => event.type === 'seek')
+      .map(event => event.position);
+
+    expect(seekEvents).toEqual(expect.arrayContaining([40, 50]));
   });
 });
