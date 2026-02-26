@@ -1,4 +1,4 @@
-import { act, render } from '@testing-library/react-native';
+import { act, fireEvent, render } from '@testing-library/react-native';
 import React from 'react';
 import type { ReactVideoProps, VideoRef } from 'react-native-video';
 
@@ -304,7 +304,7 @@ describe('MamoPlayerCore', () => {
     });
 
     expect(getByText('Settings')).toBeTruthy();
-    expect(getByText('Playback speed')).toBeTruthy();
+    expect(getByText('Playback Speed')).toBeTruthy();
     expect(getByText('Mute')).toBeTruthy();
   });
 
@@ -339,7 +339,59 @@ describe('MamoPlayerCore', () => {
     });
 
     expect(getByText('Settings')).toBeTruthy();
-    expect(queryByText('Playback speed')).toBeNull();
+    expect(queryByText('Playback Speed')).toBeNull();
     expect(getByText('Mute')).toBeTruthy();
+  });
+
+  it('updates playback rate when selecting speed in settings overlay', () => {
+    const { getByLabelText } = render(
+      <MamoPlayerCore source={{ uri: 'https://example.com/video.mp4' }} />,
+    );
+
+    act(() => {
+      latestPlaybackOptionsProps?.onPressOption?.('settings');
+    });
+
+    fireEvent.press(getByLabelText('1.5x'));
+
+    expect(latestVideoProps?.rate).toBe(1.5);
+  });
+
+  it('toggles mute state from settings overlay', () => {
+    const { getByLabelText } = render(
+      <MamoPlayerCore source={{ uri: 'https://example.com/video.mp4' }} />,
+    );
+
+    act(() => {
+      latestPlaybackOptionsProps?.onPressOption?.('settings');
+    });
+
+    fireEvent.press(getByLabelText('Muted'));
+    expect(latestVideoProps?.muted).toBe(true);
+
+    fireEvent.press(getByLabelText('Muted'));
+    expect(latestVideoProps?.muted).toBe(false);
+  });
+
+  it('closes settings overlay from close button and outside tap', () => {
+    const { getByLabelText, getByTestId, queryByText } = render(
+      <MamoPlayerCore source={{ uri: 'https://example.com/video.mp4' }} />,
+    );
+
+    act(() => {
+      latestPlaybackOptionsProps?.onPressOption?.('settings');
+    });
+
+    expect(queryByText('Settings')).toBeTruthy();
+    fireEvent.press(getByLabelText('Close'));
+    expect(queryByText('Settings')).toBeNull();
+
+    act(() => {
+      latestPlaybackOptionsProps?.onPressOption?.('settings');
+    });
+
+    expect(queryByText('Settings')).toBeTruthy();
+    fireEvent.press(getByTestId('settings-overlay-backdrop'));
+    expect(queryByText('Settings')).toBeNull();
   });
 });

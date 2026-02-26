@@ -1,19 +1,20 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Video, {
-  type OnBufferData,
-  type OnLoadData,
-  type OnProgressData,
-  type OnSeekData,
-  type OnVideoErrorData,
-  type ReactVideoProps,
-  type VideoRef,
+    type OnBufferData,
+    type OnLoadData,
+    type OnProgressData,
+    type OnSeekData,
+    type OnVideoErrorData,
+    type ReactVideoProps,
+    type VideoRef,
 } from 'react-native-video';
 import {
-  PlaybackOptions,
-  type PlaybackOption,
-  type PlaybackOptionId,
+    PlaybackOptions,
+    type PlaybackOption,
+    type PlaybackOptionId,
 } from './components/PlaybackOptions';
+import { SettingsOverlay } from './components/SettingsOverlay';
 import { Timeline } from './components/Timeline';
 import { type PlaybackEvent } from './types/playback';
 import { type SettingsOverlayConfig } from './types/settings';
@@ -46,6 +47,8 @@ export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
     const [isPlaying, setIsPlaying] = React.useState<boolean>(false);
     const [isFullscreen, setIsFullscreen] = React.useState<boolean>(false);
     const [showSettings, setShowSettings] = React.useState<boolean>(false);
+    const [playbackRate, setPlaybackRate] = React.useState<number>(1);
+    const [muted, setMuted] = React.useState<boolean>(false);
     const [, setIsBuffering] = React.useState<boolean>(false);
     const durationRef = React.useRef(0);
     const positionRef = React.useRef(0);
@@ -174,6 +177,7 @@ export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
     );
 
     const resolvedPaused = paused ?? !isPlaying;
+    const hasVisibleSettingsSections = resolvedSettings.showPlaybackSpeed || resolvedSettings.showMute;
 
     const handleScrubStart = React.useCallback(() => {
       isScrubbingRef.current = true;
@@ -237,6 +241,8 @@ export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
           {...rest}
           source={source as ReactVideoProps['source']}
           paused={resolvedPaused}
+          rate={playbackRate}
+          muted={muted}
           onLoad={handleLoad}
           onProgress={handleProgress}
           onEnd={handleEnd}
@@ -254,14 +260,16 @@ export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
         <View style={styles.controlsContainer}>
           <PlaybackOptions options={controlOptions} onPressOption={handlePressOption} />
         </View>
-        {showSettings && resolvedSettings.enabled ? (
-          <View style={styles.settingsOverlay}>
-            <Text style={styles.settingsText}>Settings</Text>
-            {resolvedSettings.showPlaybackSpeed ? (
-              <Text style={styles.settingsItemText}>Playback speed</Text>
-            ) : null}
-            {resolvedSettings.showMute ? <Text style={styles.settingsItemText}>Mute</Text> : null}
-          </View>
+        {showSettings && resolvedSettings.enabled && hasVisibleSettingsSections ? (
+          <SettingsOverlay
+            showPlaybackSpeed={resolvedSettings.showPlaybackSpeed}
+            showMute={resolvedSettings.showMute}
+            playbackRate={playbackRate}
+            muted={muted}
+            onSelectPlaybackRate={setPlaybackRate}
+            onToggleMuted={() => setMuted(prev => !prev)}
+            onClose={() => setShowSettings(false)}
+          />
         ) : null}
       </View>
     );
@@ -276,26 +284,6 @@ const styles = StyleSheet.create({
   },
   controlsContainer: {
     marginTop: 8,
-  },
-  settingsOverlay: {
-    marginTop: 8,
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    backgroundColor: 'rgba(17, 24, 39, 0.85)',
-    alignSelf: 'flex-start',
-  },
-  settingsText: {
-    color: '#F3F4F6',
-    fontSize: 12,
-    lineHeight: 16,
-    fontWeight: '600',
-  },
-  settingsItemText: {
-    marginTop: 6,
-    color: '#F3F4F6',
-    fontSize: 12,
-    lineHeight: 16,
   },
 });
 
