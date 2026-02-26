@@ -2,10 +2,12 @@
   "name": "@mamoplayer/pro",
   "version": "1.0.0",
   "main": "dist/index.js",
+  "react-native": "src/index.tsx",
   "types": "dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
+      "react-native": "./src/index.tsx",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
     }

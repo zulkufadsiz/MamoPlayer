@@ -1550,6 +1550,46 @@ describe('ProMamoPlayer', () => {
     expect(getByTestId('pro-settings-pip-button')).toBeTruthy();
   });
 
+  it('updates ott timeline progress fill from playback position and duration', () => {
+    const { getByTestId } = render(
+      <ProMamoPlayer
+        source={{ uri: 'https://example.com/ott-progress-ratio.mp4' }}
+        layoutVariant="ott"
+      />,
+    );
+
+    expect(StyleSheet.flatten(getByTestId('pro-transport-progress-fill').props.style).width).toBe(
+      '0%',
+    );
+
+    act(() => {
+      emitPlayback({ type: 'time_update', duration: 200, position: 50 });
+    });
+
+    expect(StyleSheet.flatten(getByTestId('pro-transport-progress-fill').props.style).width).toBe(
+      '25%',
+    );
+  });
+
+  it('seeks backward and forward from ott transport controls', () => {
+    const { getByTestId } = render(
+      <ProMamoPlayer
+        source={{ uri: 'https://example.com/ott-seek-controls.mp4' }}
+        layoutVariant="ott"
+      />,
+    );
+
+    act(() => {
+      emitPlayback({ type: 'time_update', duration: 45, position: 40 });
+    });
+
+    fireEvent.press(getByTestId('pro-transport-seek-back-10'));
+    fireEvent.press(getByTestId('pro-transport-seek-forward-10'));
+
+    expect(mockSeek).toHaveBeenNthCalledWith(1, 30);
+    expect(mockSeek).toHaveBeenNthCalledWith(2, 45);
+  });
+
   it('renders only enabled settings sections in the overlay', () => {
     const { getByTestId, queryByText, getByText } = render(
       <ProMamoPlayer

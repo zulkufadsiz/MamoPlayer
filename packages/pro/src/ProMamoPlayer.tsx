@@ -496,7 +496,10 @@ const ProMamoPlayerOverlays: React.FC<ProMamoPlayerOverlaysProps> = ({
               style={styles.transportButton}
               testID="pro-transport-seek-back-10"
             >
-              <Text style={styles.transportButtonText}>-10s</Text>
+              <View style={styles.transportButtonContent}>
+                {renderOverlayIcon(undefined, '↺', isOttLayout ? 20 : 18, overlayIconColor)}
+                <Text style={styles.transportButtonLabel}>10s</Text>
+              </View>
             </Pressable>
             <Pressable
               accessibilityRole="button"
@@ -506,7 +509,15 @@ const ProMamoPlayerOverlays: React.FC<ProMamoPlayerOverlaysProps> = ({
               style={styles.transportPrimaryButton}
               testID="pro-transport-play-toggle"
             >
-              <Text style={styles.transportButtonText}>{isPlaying ? 'Pause' : 'Play'}</Text>
+              <View style={styles.transportButtonContent}>
+                {renderOverlayIcon(
+                  isPlaying ? icons?.Pause : icons?.Play,
+                  isPlaying ? '⏸' : '▶',
+                  isOttLayout ? 22 : 20,
+                  overlayIconColor,
+                )}
+                <Text style={styles.transportButtonLabel}>{isPlaying ? 'Pause' : 'Play'}</Text>
+              </View>
             </Pressable>
             {showSettingsButton ? (
               <Pressable
@@ -517,7 +528,10 @@ const ProMamoPlayerOverlays: React.FC<ProMamoPlayerOverlaysProps> = ({
                 style={styles.transportButton}
                 testID="pro-transport-settings"
               >
-                <Text style={styles.transportButtonText}>Settings</Text>
+                <View style={styles.transportButtonContent}>
+                  {renderOverlayIcon(icons?.Settings, '⚙', isOttLayout ? 20 : 18, overlayIconColor)}
+                  <Text style={styles.transportButtonLabel}>Settings</Text>
+                </View>
               </Pressable>
             ) : null}
             <Pressable
@@ -530,9 +544,17 @@ const ProMamoPlayerOverlays: React.FC<ProMamoPlayerOverlaysProps> = ({
               style={styles.transportButton}
               testID="pro-transport-fullscreen"
             >
-              <Text style={styles.transportButtonText}>
-                {isFullscreen ? 'Minimize' : 'Fullscreen'}
-              </Text>
+              <View style={styles.transportButtonContent}>
+                {renderOverlayIcon(
+                  isFullscreen ? icons?.ExitFullscreen : icons?.Fullscreen,
+                  isFullscreen ? '⤡' : '⤢',
+                  isOttLayout ? 20 : 18,
+                  overlayIconColor,
+                )}
+                <Text style={styles.transportButtonLabel}>
+                  {isFullscreen ? 'Minimize' : 'Fullscreen'}
+                </Text>
+              </View>
             </Pressable>
             <Pressable
               accessibilityRole="button"
@@ -542,12 +564,16 @@ const ProMamoPlayerOverlays: React.FC<ProMamoPlayerOverlaysProps> = ({
               style={styles.transportButton}
               testID="pro-transport-seek-forward-10"
             >
-              <Text style={styles.transportButtonText}>+10s</Text>
+              <View style={styles.transportButtonContent}>
+                {renderOverlayIcon(undefined, '↻', isOttLayout ? 20 : 18, overlayIconColor)}
+                <Text style={styles.transportButtonLabel}>10s</Text>
+              </View>
             </Pressable>
           </View>
 
-          <View style={styles.ottProgressTrack}>
+          <View style={styles.ottProgressTrack} testID="pro-transport-progress-track">
             <View
+              testID="pro-transport-progress-fill"
               style={[
                 styles.ottProgressFill,
                 {
@@ -584,6 +610,7 @@ const ProMamoPlayerOverlays: React.FC<ProMamoPlayerOverlaysProps> = ({
               style={styles.pipButton}
               testID="pro-pip-button"
             >
+              {renderOverlayIcon(icons?.PictureInPicture, '▣', 16, overlayIconColor)}
               <Text style={styles.pipButtonText}>PiP</Text>
             </Pressable>
           ) : null}
@@ -694,7 +721,10 @@ const ProMamoPlayerOverlays: React.FC<ProMamoPlayerOverlaysProps> = ({
                   style={styles.settingsOptionRow}
                   testID="pro-settings-pip-button"
                 >
-                  <Text style={styles.settingsOptionLabel}>Picture in Picture</Text>
+                  <View style={styles.settingsOptionLeading}>
+                    {renderOverlayIcon(icons?.PictureInPicture, '▣', 16, overlayIconColor)}
+                    <Text style={styles.settingsOptionLabel}>Picture in Picture</Text>
+                  </View>
                 </Pressable>
               ) : null}
             </View>
@@ -2011,9 +2041,15 @@ const stylesFactory = (theme: PlayerThemeConfig, layoutVariant: PlayerLayoutVari
       flexDirection: 'row',
       alignItems: 'center',
       gap: isOttLayout ? 10 : 8,
+      backgroundColor: panelOverlayColor,
+      borderWidth: 1,
+      borderColor: panelBorderColor,
+      borderRadius: isOttLayout ? largeRadius : mediumRadius,
+      paddingHorizontal: isOttLayout ? 10 : 8,
+      paddingVertical: isOttLayout ? 8 : 6,
     },
     settingsButton: {
-      backgroundColor: 'rgba(0, 0, 0, 0.65)',
+      backgroundColor: panelOverlayColor,
       borderRadius: isOttLayout ? largeRadius : mediumRadius,
       borderWidth: 1,
       borderColor: panelBorderColor,
@@ -2031,6 +2067,12 @@ const stylesFactory = (theme: PlayerThemeConfig, layoutVariant: PlayerLayoutVari
       right: 12,
       zIndex: 2,
       gap: 10,
+      backgroundColor: panelOverlayColor,
+      borderWidth: 1,
+      borderColor: panelBorderColor,
+      borderRadius: isOttLayout ? largeRadius : mediumRadius,
+      paddingHorizontal: isOttLayout ? 14 : 10,
+      paddingVertical: isOttLayout ? 12 : 8,
     },
     transportControlsRow: {
       flexDirection: 'row',
@@ -2048,6 +2090,7 @@ const stylesFactory = (theme: PlayerThemeConfig, layoutVariant: PlayerLayoutVari
       borderColor: panelBorderColor,
       alignItems: 'center',
       justifyContent: 'center',
+      flex: 1,
     },
     transportPrimaryButton: {
       minHeight: isOttLayout ? 58 : 46,
@@ -2059,11 +2102,23 @@ const stylesFactory = (theme: PlayerThemeConfig, layoutVariant: PlayerLayoutVari
       borderColor: panelBorderColor,
       alignItems: 'center',
       justifyContent: 'center',
+      flex: 1.1,
     },
     transportButtonText: {
       color: primaryTextColor,
       fontSize: isOttLayout ? textMediumSize + 2 : textMediumSize,
       fontWeight: '700',
+    },
+    transportButtonContent: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: isOttLayout ? 4 : 2,
+    },
+    transportButtonLabel: {
+      color: primaryTextColor,
+      fontSize: isOttLayout ? textSmallSize : Math.max(10, textSmallSize - 1),
+      fontWeight: '700',
+      letterSpacing: 0.2,
     },
     ottProgressTrack: {
       height: isOttLayout ? 8 : 5,
@@ -2085,16 +2140,20 @@ const stylesFactory = (theme: PlayerThemeConfig, layoutVariant: PlayerLayoutVari
     },
     pipButton: {
       backgroundColor: buttonBackgroundColor,
-      borderRadius: mediumRadius,
-      paddingHorizontal: 12,
-      paddingVertical: 8,
+      borderRadius: isOttLayout ? largeRadius : mediumRadius,
+      paddingHorizontal: isOttLayout ? 14 : 12,
+      minHeight: isOttLayout ? 50 : 40,
+      borderWidth: 1,
+      borderColor: panelBorderColor,
       alignItems: 'center',
       justifyContent: 'center',
+      flexDirection: 'row',
+      gap: 6,
     },
     pipButtonText: {
       color: primaryTextColor,
-      fontSize: textSmallSize,
-      fontWeight: '600',
+      fontSize: isOttLayout ? textMediumSize : textSmallSize,
+      fontWeight: '700',
     },
     settingsOverlayRoot: {
       ...StyleSheet.absoluteFillObject,
@@ -2169,6 +2228,12 @@ const stylesFactory = (theme: PlayerThemeConfig, layoutVariant: PlayerLayoutVari
       color: secondaryTextColor,
       fontSize: isOttLayout ? textLargeSize : textSmallSize,
       fontWeight: '500',
+      flexShrink: 1,
+    },
+    settingsOptionLeading: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
       flexShrink: 1,
     },
     settingsOptionLabelSelected: {
