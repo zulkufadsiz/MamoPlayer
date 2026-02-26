@@ -11,6 +11,7 @@ Use `CoreDemoScreen` in a non-Expo React Native app like this.
 - Source selection buttons for MP4, HLS, and an invalid URL test
 - A player area using `MamoPlayer` with native controls
 - Simple playback controls (play, pause, seek ±10s)
+- A `PlaybackOptions` icon row (seek back/forward, settings, fullscreen, PiP)
 - Live playback state (`position`, `duration`) and latest event JSON
 - Inline error message when playback fails
 
@@ -40,6 +41,7 @@ If your native app name is different, replace `'MamoPlayer'` with your actual ap
 - MP4 and HLS playback (`Play MP4`, `Play HLS`)
 - Playback events logging via `onPlaybackEvent` (console + on-screen JSON)
 - Seeking with `-10s` / `+10s` buttons
+- `PlaybackOptions` integration via `onPressOption` for typed option actions
 - Error handling using `Play Invalid Source` and event-based error display
 
 ### Quick screen layout (ASCII)
@@ -48,7 +50,7 @@ If your native app name is different, replace `'MamoPlayer'` with your actual ap
 MamoPlayer Core Demo
 ├─ Source Selection: [Play MP4] [Play HLS] [Play Invalid Source]
 ├─ Player Area (16:9)
-├─ Player Controls: Position / Duration, [Play] [Pause] [-10s] [+10s]
+├─ Player Controls: Position / Duration, [Play] [Pause] [-10s] [+10s], [PlaybackOptions Row]
 └─ Latest Playback Event: JSON + optional Error message
 ```
 

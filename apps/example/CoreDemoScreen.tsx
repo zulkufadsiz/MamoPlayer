@@ -1,10 +1,16 @@
-import { MamoPlayer, type PlaybackEvent } from '@mamoplayer/core';
 import {
-  type ComponentProps,
-  type ComponentType,
-  type RefAttributes,
-  useRef,
-  useState,
+    MamoPlayer,
+    PlaybackOptions,
+    type PlaybackEvent,
+    type PlaybackOption,
+    type PlaybackOptionId,
+} from '@mamoplayer/core';
+import {
+    useRef,
+    useState,
+    type ComponentProps,
+    type ComponentType,
+    type RefAttributes,
 } from 'react';
 import { Button, Platform, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { VideoRef } from 'react-native-video';
@@ -26,6 +32,14 @@ const CoreDemoScreen = () => {
   const [subtitlesActive, setSubtitlesActive] = useState(false);
   const videoRef = useRef<VideoRef | null>(null);
   const supportsSubtitles = SUBTITLE_SUPPORTED_PLATFORMS.has(Platform.OS);
+
+  const playbackOptions: PlaybackOption[] = [
+    { id: 'seek-back', icon: <Text style={styles.optionIcon}>↺10</Text>, label: 'Back' },
+    { id: 'seek-forward', icon: <Text style={styles.optionIcon}>↻10</Text>, label: 'Forward' },
+    { id: 'settings', icon: <Text style={styles.optionIcon}>⚙️</Text>, label: 'Settings' },
+    { id: 'fullscreen', icon: <Text style={styles.optionIcon}>⛶</Text>, label: 'Full' },
+    { id: 'pip', icon: <Text style={styles.optionIcon}>▣</Text>, label: 'PiP' },
+  ];
 
   const handlePlaybackEvent = (event: PlaybackEvent) => {
     console.log('PlaybackEvent:', event);
@@ -94,6 +108,24 @@ const CoreDemoScreen = () => {
     videoRef.current?.seek(position - 10);
   };
 
+  const handlePressPlaybackOption = (id: PlaybackOptionId) => {
+    switch (id) {
+      case 'seek-back':
+        handleSeekBackward();
+        break;
+      case 'seek-forward':
+        handleSeekForward();
+        break;
+      case 'settings':
+      case 'fullscreen':
+      case 'pip':
+        console.log('Playback option pressed:', id);
+        break;
+      default:
+        break;
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.contentContainer}>
@@ -157,6 +189,7 @@ const CoreDemoScreen = () => {
               <Button title="+10s" onPress={handleSeekForward} />
             </View>
           </View>
+          <PlaybackOptions options={playbackOptions} onPressOption={handlePressPlaybackOption} />
         </View>
 
         <View style={styles.section}>
@@ -213,6 +246,10 @@ const styles = StyleSheet.create({
   },
   noteText: {
     fontSize: 12,
+  },
+  optionIcon: {
+    fontSize: 16,
+    color: '#FFFFFF',
   },
 });
 
