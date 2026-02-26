@@ -101,9 +101,9 @@ const settingsOverlay = {
 
 const demoTracks: TracksConfig = {
   qualities: [
-    { id: 'auto', label: 'Auto', uri: 'https://master.m3u8', isDefault: true },
-    { id: '720p', label: '720p', uri: 'https://720p.m3u8' },
-    { id: '1080p', label: '1080p', uri: 'https://1080p.m3u8' },
+    { id: 'auto', label: 'Auto', uri: HLS_SOURCE_URI, isDefault: true },
+    { id: '720p', label: '720p', uri: HLS_SOURCE_URI },
+    { id: '1080p', label: '1080p', uri: HLS_SOURCE_URI },
   ],
   audioTracks: [
     { id: 'audio-en', language: 'en', label: 'English' },

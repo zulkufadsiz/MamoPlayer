@@ -1,6 +1,6 @@
 import { MamoPlayer, type MamoPlayerProps, type PlaybackEvent } from '@mamoplayer/core';
 import React, { useRef } from 'react';
-import { Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, Easing, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { VideoRef } from 'react-native-video';
 import { AdStateMachine } from './ads/AdState';
 import { loadAds, releaseAds, subscribeToAdsEvents } from './ima/nativeBridge';
@@ -742,6 +742,7 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
   const ProCompatibleMamoPlayer = MamoPlayer as unknown as React.ComponentType<
     Record<string, unknown>
   >;
+  const { style: playerStyle, ...playerProps } = rest;
 
   const resolvedSettings = {
     enabled: settingsOverlay?.enabled ?? true,
@@ -768,9 +769,9 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
   const initialMainSource = React.useMemo(
     () =>
       initialQualityVariant?.uri
-        ? resolveSourceWithQualityUri(rest.source, initialQualityVariant.uri)
-        : rest.source,
-    [initialQualityVariant?.uri, rest.source],
+        ? resolveSourceWithQualityUri(playerProps.source, initialQualityVariant.uri)
+        : playerProps.source,
+    [initialQualityVariant?.uri, playerProps.source],
   );
   const mainSourceRef = React.useRef(initialMainSource);
   const pendingSessionEndEventRef = React.useRef<PlaybackEvent | null>(null);
@@ -1857,10 +1858,12 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
 
   return (
     <ThemeProvider theme={theme} themeName={themeName}>
-      <View style={styles.playerContainer}>
+      <View style={[styles.playerContainer, playerStyle]}>
         <ProCompatibleMamoPlayer
           ref={playerRef}
-          {...rest}
+          {...playerProps}
+          useTextureView={playerProps.useTextureView ?? Platform.OS === 'android'}
+          style={StyleSheet.absoluteFillObject}
           source={activeSource}
           autoPlay={effectiveAutoPlay}
           textTracks={textTracks as MamoPlayerProps['textTracks']}
@@ -1899,7 +1902,7 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
           selectQualityOption={selectQualityOption}
           selectSubtitleOption={selectSubtitleOption}
           selectAudioOption={selectAudioOption}
-          showTransportControls={layoutVariant === 'ott'}
+          showTransportControls
           isPlaying={
             resolvedPausedState === undefined ? isInlinePlaybackActive : !resolvedPausedState
           }
@@ -1922,6 +1925,7 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
 const styles = StyleSheet.create({
   playerContainer: {
     position: 'relative',
+    overflow: 'hidden',
   },
 });
 
