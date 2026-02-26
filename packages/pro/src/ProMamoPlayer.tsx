@@ -1,12 +1,12 @@
 import {
     MamoPlayer,
     PlaybackOptions,
-  type SettingsOverlayConfig,
     Timeline,
     type MamoPlayerProps,
     type PlaybackEvent,
     type PlaybackOption,
     type PlaybackOptionId,
+    type SettingsOverlayConfig,
 } from '@mamoplayer/core';
 import React, { useRef } from 'react';
 import { Animated, Easing, Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -717,30 +717,6 @@ const ProMamoPlayerOverlays: React.FC<ProMamoPlayerOverlaysProps> = ({
                       </Pressable>
                     );
                   })}
-                  {section.key === 'subtitles' ? (
-                    <Pressable
-                      accessibilityRole="button"
-                      accessibilityLabel={`${section.title} ${settingsLabelForOff}`}
-                      accessibilityHint="Turns subtitles off"
-                      onPress={() => handleSectionOptionPress('subtitles', 'off')}
-                      style={styles.settingsOptionRow}
-                      testID="pro-settings-option-subtitles-off"
-                    >
-                      <Text
-                        style={[
-                          styles.settingsOptionLabel,
-                          section.selectedOptionId === 'off'
-                            ? styles.settingsOptionLabelSelected
-                            : null,
-                        ]}
-                      >
-                        {settingsLabelForOff}
-                      </Text>
-                      {section.selectedOptionId === 'off' ? (
-                        <Text style={styles.settingsOptionSelectedLabel}>Current</Text>
-                      ) : null}
-                    </Pressable>
-                  ) : null}
                 </View>
               ))}
               {isOttLayout && showPipButton ? (
@@ -893,15 +869,18 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
       });
     }
 
-    if (shouldShowSubtitleSettings && tracks?.subtitleTracks?.length) {
+    if (shouldShowSubtitleSettings && tracks?.subtitleTracks) {
       sections.push({
         key: 'subtitles',
         title: 'Subtitles',
-        options: tracks.subtitleTracks.map((subtitleTrack) => ({
-          id: subtitleTrack.id,
-          label: subtitleTrack.label,
-        })),
-        selectedOptionId: currentSubtitleTrackId,
+        options: [
+          ...tracks.subtitleTracks.map((subtitleTrack) => ({
+            id: subtitleTrack.id,
+            label: subtitleTrack.label,
+          })),
+          { id: 'off', label: 'Off' },
+        ],
+        selectedOptionId: currentSubtitleTrackId ?? 'off',
       });
     }
 
