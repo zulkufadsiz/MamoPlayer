@@ -1,4 +1,4 @@
-import { MamoPlayer, type MamoPlayerProps, type PlaybackEvent } from '@mamoplayer/core';
+import { MamoPlayer, Timeline, type MamoPlayerProps, type PlaybackEvent } from '@mamoplayer/core';
 import React, { useRef } from 'react';
 import { Animated, Easing, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { VideoRef } from 'react-native-video';
@@ -332,7 +332,9 @@ interface ProMamoPlayerOverlaysProps {
   showTransportControls: boolean;
   isPlaying: boolean;
   isFullscreen: boolean;
-  progressRatio: number;
+  timelineDuration: number;
+  timelinePosition: number;
+  onTimelineSeek: (time: number) => void;
   onTogglePlayback: () => void;
   onSeekBackTenSeconds: () => void;
   onSeekForwardTenSeconds: () => void;
@@ -388,7 +390,9 @@ const ProMamoPlayerOverlays: React.FC<ProMamoPlayerOverlaysProps> = ({
   showTransportControls,
   isPlaying,
   isFullscreen,
-  progressRatio,
+  timelineDuration,
+  timelinePosition,
+  onTimelineSeek,
   onTogglePlayback,
   onSeekBackTenSeconds,
   onSeekForwardTenSeconds,
@@ -572,14 +576,10 @@ const ProMamoPlayerOverlays: React.FC<ProMamoPlayerOverlaysProps> = ({
           </View>
 
           <View style={styles.ottProgressTrack} testID="pro-transport-progress-track">
-            <View
-              testID="pro-transport-progress-fill"
-              style={[
-                styles.ottProgressFill,
-                {
-                  width: `${Math.max(0, Math.min(progressRatio, 1)) * 100}%`,
-                },
-              ]}
+            <Timeline
+              duration={timelineDuration}
+              position={timelinePosition}
+              onSeek={onTimelineSeek}
             />
           </View>
         </View>
@@ -956,13 +956,14 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
     setIsFullscreen(nextFullscreenState);
   }, [isFullscreen]);
 
-  const ottProgressRatio = React.useMemo(() => {
-    if (mediaDuration <= 0) {
-      return 0;
-    }
-
-    return currentPosition / mediaDuration;
-  }, [currentPosition, mediaDuration]);
+  const handleTimelineSeek = React.useCallback(
+    (time: number) => {
+      const safeDuration = mediaDuration > 0 ? mediaDuration : Number.MAX_SAFE_INTEGER;
+      const nextPosition = Math.max(0, Math.min(time, safeDuration));
+      playerRef.current?.seek(nextPosition);
+    },
+    [mediaDuration],
+  );
   const emitPipEvent = React.useCallback(
     (event: PipEvent) => {
       setPipState(event.state);
@@ -1937,7 +1938,9 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
             resolvedPausedState === undefined ? isInlinePlaybackActive : !resolvedPausedState
           }
           isFullscreen={isFullscreen}
-          progressRatio={ottProgressRatio}
+          timelineDuration={mediaDuration}
+          timelinePosition={currentPosition}
+          onTimelineSeek={handleTimelineSeek}
           onTogglePlayback={handleTogglePlayback}
           onSeekBackTenSeconds={handleSeekBackTenSeconds}
           onSeekForwardTenSeconds={handleSeekForwardTenSeconds}
@@ -2123,15 +2126,7 @@ const stylesFactory = (theme: PlayerThemeConfig, layoutVariant: PlayerLayoutVari
     ottProgressTrack: {
       height: isOttLayout ? 8 : 5,
       borderRadius: isOttLayout ? 999 : 8,
-      overflow: 'hidden',
-      backgroundColor: panelOverlayColor,
-      borderWidth: 1,
-      borderColor: panelBorderColor,
-    },
-    ottProgressFill: {
-      height: '100%',
-      borderRadius: isOttLayout ? 999 : 8,
-      backgroundColor: accentColor,
+      justifyContent: 'center',
     },
     settingsButtonText: {
       color: primaryTextColor,
