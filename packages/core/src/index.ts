@@ -1,4 +1,5 @@
-export { Timeline, type TimelineProps } from './components/Timeline';
+export { Timeline } from './components/Timeline';
+export type { TimelineProps } from './components/Timeline';
 export {
     MamoPlayerCore as MamoPlayer,
     MamoPlayerCore,

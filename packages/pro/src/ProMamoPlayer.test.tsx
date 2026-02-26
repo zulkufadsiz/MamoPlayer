@@ -39,6 +39,13 @@ let latestNativeAdsHandler:
 let latestNativePipHandler:
   | ((eventName: 'mamo_pip_active' | 'mamo_pip_exiting', payload?: unknown) => void)
   | undefined;
+let latestTimelineProps:
+  | {
+      duration?: number;
+      position?: number;
+      onSeek?: (time: number) => void;
+    }
+  | undefined;
 const mockSeek = jest.fn();
 const mockLoadAds = jest.fn(async (_adTagUrl: string) => {});
 const mockReleaseAds = jest.fn(async () => {});
@@ -139,9 +146,26 @@ jest.mock('@mamoplayer/core', () => {
 
   MamoPlayerMock.displayName = 'MamoPlayerMock';
 
+  const TimelineMock = ({ duration, position, onSeek }: {
+    duration?: number;
+    position?: number;
+    onSeek?: (time: number) => void;
+  }) => {
+    latestTimelineProps = {
+      duration,
+      position,
+      onSeek,
+    };
+
+    return <View testID="mamoplayer-core-timeline" />;
+  };
+
+  TimelineMock.displayName = 'TimelineMock';
+
   return {
     __esModule: true,
     MamoPlayer: MamoPlayerMock,
+    Timeline: TimelineMock,
   };
 });
 
@@ -168,6 +192,7 @@ describe('ProMamoPlayer', () => {
     latestVideoProps = undefined;
     latestNativeAdsHandler = undefined;
     latestNativePipHandler = undefined;
+    latestTimelineProps = undefined;
     jest.clearAllMocks();
     jest.useRealTimers();
     mockLoadAds.mockResolvedValue(undefined);
@@ -1550,7 +1575,7 @@ describe('ProMamoPlayer', () => {
     expect(getByTestId('pro-settings-pip-button')).toBeTruthy();
   });
 
-  it('updates ott timeline progress fill from playback position and duration', () => {
+  it('passes playback position and duration into core timeline', () => {
     const { getByTestId } = render(
       <ProMamoPlayer
         source={{ uri: 'https://example.com/ott-progress-ratio.mp4' }}
@@ -1558,17 +1583,16 @@ describe('ProMamoPlayer', () => {
       />,
     );
 
-    expect(StyleSheet.flatten(getByTestId('pro-transport-progress-fill').props.style).width).toBe(
-      '0%',
-    );
+    expect(getByTestId('mamoplayer-core-timeline')).toBeTruthy();
+    expect(latestTimelineProps?.duration).toBe(0);
+    expect(latestTimelineProps?.position).toBe(0);
 
     act(() => {
       emitPlayback({ type: 'time_update', duration: 200, position: 50 });
     });
 
-    expect(StyleSheet.flatten(getByTestId('pro-transport-progress-fill').props.style).width).toBe(
-      '25%',
-    );
+    expect(latestTimelineProps?.duration).toBe(200);
+    expect(latestTimelineProps?.position).toBe(50);
   });
 
   it('seeks backward and forward from ott transport controls', () => {
