@@ -74,7 +74,7 @@ const mockSubscribeToPipEvents = jest.fn(
 
 jest.mock('@mamoplayer/core', () => {
   const React = require('react');
-  const { View } = require('react-native');
+  const { Pressable, Text, View } = require('react-native');
 
   const MamoPlayerMock = React.forwardRef(
     (
@@ -171,9 +171,44 @@ jest.mock('@mamoplayer/core', () => {
 
   TimelineMock.displayName = 'TimelineMock';
 
+  const PlaybackOptionsMock = ({
+    options,
+    onPressOption,
+  }: {
+    options: Array<{ id: string; label?: string }>;
+    onPressOption: (id: string) => void;
+  }) => {
+    const optionTestIds: Record<string, string> = {
+      'seek-back': 'pro-transport-seek-back-10',
+      'seek-forward': 'pro-transport-seek-forward-10',
+      settings: 'pro-transport-settings',
+      fullscreen: 'pro-transport-fullscreen',
+      pip: 'pro-transport-pip',
+    };
+
+    return (
+      <View testID="mamoplayer-core-playback-options">
+        {options.map(option => (
+          <Pressable
+            key={option.id}
+            testID={optionTestIds[option.id]}
+            accessibilityRole="button"
+            accessibilityLabel={option.label ?? option.id}
+            onPress={() => onPressOption(option.id)}
+          >
+            <Text>{option.label ?? option.id}</Text>
+          </Pressable>
+        ))}
+      </View>
+    );
+  };
+
+  PlaybackOptionsMock.displayName = 'PlaybackOptionsMock';
+
   return {
     __esModule: true,
     MamoPlayer: MamoPlayerMock,
+    PlaybackOptions: PlaybackOptionsMock,
     Timeline: TimelineMock,
   };
 });

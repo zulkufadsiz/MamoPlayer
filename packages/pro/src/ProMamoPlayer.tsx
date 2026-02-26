@@ -1,4 +1,12 @@
-import { MamoPlayer, Timeline, type MamoPlayerProps, type PlaybackEvent } from '@mamoplayer/core';
+import {
+    MamoPlayer,
+    PlaybackOptions,
+    Timeline,
+    type MamoPlayerProps,
+    type PlaybackEvent,
+    type PlaybackOption,
+    type PlaybackOptionId,
+} from '@mamoplayer/core';
 import React, { useRef } from 'react';
 import { Animated, Easing, Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { VideoRef } from 'react-native-video';
@@ -318,6 +326,7 @@ interface ProMamoPlayerOverlaysProps {
   skipSecondsRemaining: number;
   handleSkipAd: () => void;
   showPipButton: boolean;
+  pipEnabled: boolean;
   pipState: PipState;
   requestPip: () => void;
   showSettingsButton: boolean;
@@ -380,6 +389,7 @@ const ProMamoPlayerOverlays: React.FC<ProMamoPlayerOverlaysProps> = ({
   skipSecondsRemaining,
   handleSkipAd,
   showPipButton,
+  pipEnabled,
   pipState,
   requestPip,
   showSettingsButton,
@@ -479,6 +489,69 @@ const ProMamoPlayerOverlays: React.FC<ProMamoPlayerOverlaysProps> = ({
     [closeSettings, selectAudioOption, selectQualityOption, selectSubtitleOption],
   );
 
+  const proOptions = React.useMemo<PlaybackOption[]>(
+    () => [
+      {
+        id: 'seek-back',
+        icon: renderOverlayIcon(undefined, '↺', isOttLayout ? 20 : 18, overlayIconColor),
+        label: '10s',
+      },
+      {
+        id: 'seek-forward',
+        icon: renderOverlayIcon(undefined, '↻', isOttLayout ? 20 : 18, overlayIconColor),
+        label: '10s',
+      },
+      {
+        id: 'settings',
+        icon: renderOverlayIcon(icons?.Settings, '⚙', isOttLayout ? 20 : 18, overlayIconColor),
+        label: 'Settings',
+      },
+      {
+        id: 'fullscreen',
+        icon: renderOverlayIcon(
+          isFullscreen ? icons?.ExitFullscreen : icons?.Fullscreen,
+          isFullscreen ? '⤡' : '⤢',
+          isOttLayout ? 20 : 18,
+          overlayIconColor,
+        ),
+        label: isFullscreen ? 'Minimize' : 'Fullscreen',
+      },
+      {
+        id: 'pip',
+        icon: renderOverlayIcon(icons?.PictureInPicture, '▣', isOttLayout ? 20 : 18, overlayIconColor),
+        label: 'PiP',
+      },
+    ],
+    [icons, isFullscreen, isOttLayout, overlayIconColor],
+  );
+
+  const handleProOptionPress = React.useCallback(
+    (id: PlaybackOptionId) => {
+      switch (id) {
+        case 'seek-back':
+          onSeekBackTenSeconds();
+          break;
+        case 'seek-forward':
+          onSeekForwardTenSeconds();
+          break;
+        case 'settings':
+          openSettings();
+          break;
+        case 'fullscreen':
+          onToggleFullscreen();
+          break;
+        case 'pip':
+          if (pipEnabled) {
+            requestPip();
+          }
+          break;
+        default:
+          break;
+      }
+    },
+    [onSeekBackTenSeconds, onSeekForwardTenSeconds, onToggleFullscreen, openSettings, pipEnabled, requestPip],
+  );
+
   return (
     <>
       {showAdOverlay ? (
@@ -503,19 +576,6 @@ const ProMamoPlayerOverlays: React.FC<ProMamoPlayerOverlaysProps> = ({
           <View style={styles.transportControlsRow}>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Seek backward 10 seconds"
-              accessibilityHint="Rewinds by ten seconds"
-              onPress={onSeekBackTenSeconds}
-              style={styles.transportButton}
-              testID="pro-transport-seek-back-10"
-            >
-              <View style={styles.transportButtonContent}>
-                {renderOverlayIcon(undefined, '↺', isOttLayout ? 20 : 18, overlayIconColor)}
-                <Text style={styles.transportButtonLabel}>10s</Text>
-              </View>
-            </Pressable>
-            <Pressable
-              accessibilityRole="button"
               accessibilityLabel={isPlaying ? 'Pause' : 'Play'}
               accessibilityHint={isPlaying ? 'Pauses playback' : 'Resumes playback'}
               onPress={onTogglePlayback}
@@ -532,56 +592,9 @@ const ProMamoPlayerOverlays: React.FC<ProMamoPlayerOverlaysProps> = ({
                 <Text style={styles.transportButtonLabel}>{isPlaying ? 'Pause' : 'Play'}</Text>
               </View>
             </Pressable>
-            {showSettingsButton ? (
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Open settings overlay"
-                accessibilityHint="Opens quality, subtitles and audio settings"
-                onPress={openSettings}
-                style={styles.transportButton}
-                testID="pro-transport-settings"
-              >
-                <View style={styles.transportButtonContent}>
-                  {renderOverlayIcon(icons?.Settings, '⚙', isOttLayout ? 20 : 18, overlayIconColor)}
-                  <Text style={styles.transportButtonLabel}>Settings</Text>
-                </View>
-              </Pressable>
-            ) : null}
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
-              accessibilityHint={
-                isFullscreen ? 'Returns to inline mode' : 'Expands to fullscreen mode'
-              }
-              onPress={onToggleFullscreen}
-              style={styles.transportButton}
-              testID="pro-transport-fullscreen"
-            >
-              <View style={styles.transportButtonContent}>
-                {renderOverlayIcon(
-                  isFullscreen ? icons?.ExitFullscreen : icons?.Fullscreen,
-                  isFullscreen ? '⤡' : '⤢',
-                  isOttLayout ? 20 : 18,
-                  overlayIconColor,
-                )}
-                <Text style={styles.transportButtonLabel}>
-                  {isFullscreen ? 'Minimize' : 'Fullscreen'}
-                </Text>
-              </View>
-            </Pressable>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Seek forward 10 seconds"
-              accessibilityHint="Advances by ten seconds"
-              onPress={onSeekForwardTenSeconds}
-              style={styles.transportButton}
-              testID="pro-transport-seek-forward-10"
-            >
-              <View style={styles.transportButtonContent}>
-                {renderOverlayIcon(undefined, '↻', isOttLayout ? 20 : 18, overlayIconColor)}
-                <Text style={styles.transportButtonLabel}>10s</Text>
-              </View>
-            </Pressable>
+            <View style={styles.transportOptions}>
+              <PlaybackOptions options={proOptions} onPressOption={handleProOptionPress} />
+            </View>
           </View>
 
           <View style={styles.ottProgressTrack} testID="pro-transport-progress-track">
@@ -1998,6 +2011,7 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
           skipSecondsRemaining={skipSecondsRemaining}
           handleSkipAd={handleSkipAd}
           showPipButton={pip?.enabled === true}
+          pipEnabled={pip?.enabled === true}
           pipState={pipState}
           requestPip={requestPip}
           showSettingsButton={hasSettingsSections}
@@ -2163,6 +2177,9 @@ const stylesFactory = (theme: PlayerThemeConfig, layoutVariant: PlayerLayoutVari
       justifyContent: 'space-between',
       alignItems: 'center',
       gap: 8,
+    },
+    transportOptions: {
+      flex: 4,
     },
     transportButton: {
       minHeight: isOttLayout ? 56 : 44,
