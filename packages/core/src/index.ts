@@ -15,5 +15,6 @@ export type {
     PlaybackEventType,
     PlaybackTimePayload
 } from './types/playback';
+export type { SettingsOverlayConfig } from './types/settings';
 
 export { default } from './MamoPlayer';

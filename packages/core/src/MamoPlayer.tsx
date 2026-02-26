@@ -16,6 +16,7 @@ import {
 } from './components/PlaybackOptions';
 import { Timeline } from './components/Timeline';
 import { type PlaybackEvent } from './types/playback';
+import { type SettingsOverlayConfig } from './types/settings';
 
 export type MamoPlayerSource = NonNullable<ReactVideoProps['source']>;
 
@@ -26,6 +27,7 @@ export interface MamoPlayerCoreProps extends Omit<
   source: MamoPlayerSource;
   autoPlay?: boolean;
   paused?: boolean;
+  settingsOverlay?: SettingsOverlayConfig;
   onPlaybackEvent?: (event: PlaybackEvent) => void;
 }
 
@@ -37,7 +39,7 @@ const coreOptions: PlaybackOption[] = [
 ];
 
 export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
-  ({ source, autoPlay = true, paused, onPlaybackEvent, ...rest }, ref) => {
+  ({ source, autoPlay = true, paused, settingsOverlay, onPlaybackEvent, ...rest }, ref) => {
     const [duration, setDuration] = React.useState<number>(0);
     const [position, setPosition] = React.useState<number>(0);
     const [buffered, setBuffered] = React.useState<number | undefined>(undefined);
@@ -50,6 +52,16 @@ export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
     const isScrubbingRef = React.useRef(false);
     const isBufferingRef = React.useRef(false);
     const videoRef = React.useRef<VideoRef | null>(null);
+
+    const resolvedSettings = {
+      enabled: settingsOverlay?.enabled ?? true,
+      showPlaybackSpeed: settingsOverlay?.showPlaybackSpeed ?? true,
+      showMute: settingsOverlay?.showMute ?? true,
+    };
+
+    const controlOptions = resolvedSettings.enabled
+      ? coreOptions
+      : coreOptions.filter(option => option.id !== 'settings');
 
     React.useImperativeHandle(ref, () => videoRef.current as VideoRef);
 
@@ -195,7 +207,9 @@ export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
             break;
           }
           case 'settings':
-            setShowSettings(prev => !prev);
+            if (resolvedSettings.enabled) {
+              setShowSettings(prev => !prev);
+            }
             break;
           case 'fullscreen': {
             setIsFullscreen(prev => {
@@ -213,7 +227,7 @@ export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
             break;
         }
       },
-      [emit],
+      [emit, resolvedSettings.enabled],
     );
 
     return (
@@ -238,11 +252,15 @@ export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
           onScrubEnd={handleScrubEnd}
         />
         <View style={styles.controlsContainer}>
-          <PlaybackOptions options={coreOptions} onPressOption={handlePressOption} />
+          <PlaybackOptions options={controlOptions} onPressOption={handlePressOption} />
         </View>
-        {showSettings ? (
+        {showSettings && resolvedSettings.enabled ? (
           <View style={styles.settingsOverlay}>
             <Text style={styles.settingsText}>Settings</Text>
+            {resolvedSettings.showPlaybackSpeed ? (
+              <Text style={styles.settingsItemText}>Playback speed</Text>
+            ) : null}
+            {resolvedSettings.showMute ? <Text style={styles.settingsItemText}>Mute</Text> : null}
           </View>
         ) : null}
       </View>
@@ -268,6 +286,13 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   settingsText: {
+    color: '#F3F4F6',
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: '600',
+  },
+  settingsItemText: {
+    marginTop: 6,
     color: '#F3F4F6',
     fontSize: 12,
     lineHeight: 16,

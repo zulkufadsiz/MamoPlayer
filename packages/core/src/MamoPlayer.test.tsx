@@ -9,6 +9,7 @@ let latestTimelineProps: {
   onScrubEnd?: (time: number) => void;
 } | null = null;
 let latestPlaybackOptionsProps: {
+  options?: Array<{ id: 'seek-back' | 'seek-forward' | 'settings' | 'fullscreen' | 'pip' }>;
   onPressOption?: (id: 'seek-back' | 'seek-forward' | 'settings' | 'fullscreen' | 'pip') => void;
 } | null = null;
 
@@ -32,6 +33,7 @@ jest.mock('./components/PlaybackOptions', () => {
   const { View } = require('react-native');
 
   const PlaybackOptionsMock = (props: {
+    options?: Array<{ id: 'seek-back' | 'seek-forward' | 'settings' | 'fullscreen' | 'pip' }>;
     onPressOption?: (id: 'seek-back' | 'seek-forward' | 'settings' | 'fullscreen' | 'pip') => void;
   }) => {
     latestPlaybackOptionsProps = props;
@@ -290,5 +292,54 @@ describe('MamoPlayerCore', () => {
       .map(event => event.position);
 
     expect(seekEvents).toEqual(expect.arrayContaining([40, 50]));
+  });
+
+  it('shows playback speed and mute in settings overlay by default', () => {
+    const { getByText } = render(
+      <MamoPlayerCore source={{ uri: 'https://example.com/video.mp4' }} />,
+    );
+
+    act(() => {
+      latestPlaybackOptionsProps?.onPressOption?.('settings');
+    });
+
+    expect(getByText('Settings')).toBeTruthy();
+    expect(getByText('Playback speed')).toBeTruthy();
+    expect(getByText('Mute')).toBeTruthy();
+  });
+
+  it('hides settings control and overlay when settingsOverlay.enabled is false', () => {
+    const { queryByText } = render(
+      <MamoPlayerCore
+        source={{ uri: 'https://example.com/video.mp4' }}
+        settingsOverlay={{ enabled: false }}
+      />,
+    );
+
+    const optionIds = latestPlaybackOptionsProps?.options?.map(option => option.id) ?? [];
+    expect(optionIds).not.toContain('settings');
+
+    act(() => {
+      latestPlaybackOptionsProps?.onPressOption?.('settings');
+    });
+
+    expect(queryByText('Settings')).toBeNull();
+  });
+
+  it('shows only enabled core settings sections', () => {
+    const { getByText, queryByText } = render(
+      <MamoPlayerCore
+        source={{ uri: 'https://example.com/video.mp4' }}
+        settingsOverlay={{ showPlaybackSpeed: false, showMute: true }}
+      />,
+    );
+
+    act(() => {
+      latestPlaybackOptionsProps?.onPressOption?.('settings');
+    });
+
+    expect(getByText('Settings')).toBeTruthy();
+    expect(queryByText('Playback speed')).toBeNull();
+    expect(getByText('Mute')).toBeTruthy();
   });
 });
