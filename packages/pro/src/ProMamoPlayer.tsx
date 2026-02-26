@@ -1,9 +1,10 @@
 import { MamoPlayer, Timeline, type MamoPlayerProps, type PlaybackEvent } from '@mamoplayer/core';
 import React, { useRef } from 'react';
-import { Animated, Easing, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, Easing, Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { VideoRef } from 'react-native-video';
 import { AdStateMachine } from './ads/AdState';
 import { loadAds, releaseAds, subscribeToAdsEvents } from './ima/nativeBridge';
+import { getThumbnailForTime } from './internal/thumbnails';
 import { validateLicenseKey } from './licensing/license';
 import { subscribeToPipEvents } from './pip/nativeBridge';
 import { ThemeProvider, usePlayerTheme } from './theme/ThemeContext';
@@ -16,7 +17,7 @@ import type { PipConfig, PipEvent, PipState } from './types/pip';
 import type { PlaybackRestrictions } from './types/restrictions';
 import type { SettingsOverlayConfig } from './types/settings';
 import type { PlayerThemeConfig, ThemeName } from './types/theme';
-import type { ThumbnailsConfig } from './types/thumbnails';
+import type { ThumbnailFrame, ThumbnailsConfig } from './types/thumbnails';
 import type { TracksConfig, VideoQualityId } from './types/tracks';
 import type { WatermarkConfig } from './types/watermark';
 
@@ -334,7 +335,11 @@ interface ProMamoPlayerOverlaysProps {
   isFullscreen: boolean;
   timelineDuration: number;
   timelinePosition: number;
-  onTimelineSeek: (time: number) => void;
+  timelineBuffered?: number;
+  timelineThumbnailUri?: string | null;
+  onTimelineScrubStart: () => void;
+  onTimelineScrub: (time: number) => void;
+  onTimelineScrubEnd: (time: number) => void;
   onTogglePlayback: () => void;
   onSeekBackTenSeconds: () => void;
   onSeekForwardTenSeconds: () => void;
@@ -392,7 +397,11 @@ const ProMamoPlayerOverlays: React.FC<ProMamoPlayerOverlaysProps> = ({
   isFullscreen,
   timelineDuration,
   timelinePosition,
-  onTimelineSeek,
+  timelineBuffered,
+  timelineThumbnailUri,
+  onTimelineScrubStart,
+  onTimelineScrub,
+  onTimelineScrubEnd,
   onTogglePlayback,
   onSeekBackTenSeconds,
   onSeekForwardTenSeconds,
@@ -576,10 +585,23 @@ const ProMamoPlayerOverlays: React.FC<ProMamoPlayerOverlaysProps> = ({
           </View>
 
           <View style={styles.ottProgressTrack} testID="pro-transport-progress-track">
+            {timelineThumbnailUri ? (
+              <View style={styles.timelineThumbnailContainer}>
+                <Image
+                  source={{ uri: timelineThumbnailUri }}
+                  style={styles.timelineThumbnail}
+                  resizeMode="cover"
+                  testID="pro-scrub-thumbnail"
+                />
+              </View>
+            ) : null}
             <Timeline
               duration={timelineDuration}
               position={timelinePosition}
-              onSeek={onTimelineSeek}
+              buffered={timelineBuffered}
+              onScrubStart={onTimelineScrubStart}
+              onSeek={onTimelineScrub}
+              onScrubEnd={onTimelineScrubEnd}
             />
           </View>
         </View>
@@ -756,6 +778,7 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
   ima,
   analytics,
   tracks,
+  thumbnails,
   restrictions,
   watermark,
   theme,
@@ -838,6 +861,11 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
   );
   const [mediaDuration, setMediaDuration] = React.useState(0);
   const [currentPosition, setCurrentPosition] = React.useState(0);
+  const [bufferedPosition, setBufferedPosition] = React.useState<number | undefined>(undefined);
+  const [isTimelineScrubbing, setIsTimelineScrubbing] = React.useState(false);
+  const [scrubThumbnailFrame, setScrubThumbnailFrame] = React.useState<ThumbnailFrame | null>(
+    null,
+  );
   const [isFullscreen, setIsFullscreen] = React.useState(false);
 
   const settingsSections = React.useMemo<OverlaySection[]>(() => {
@@ -956,10 +984,42 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
     setIsFullscreen(nextFullscreenState);
   }, [isFullscreen]);
 
-  const handleTimelineSeek = React.useCallback(
+  const resolveScrubThumbnailFrame = React.useCallback(
+    (time: number): ThumbnailFrame | null => {
+      return getThumbnailForTime(thumbnails, time);
+    },
+    [thumbnails],
+  );
+
+  const handleTimelineScrubStart = React.useCallback(() => {
+    setIsTimelineScrubbing(true);
+
+    if (!thumbnails) {
+      setScrubThumbnailFrame(null);
+      return;
+    }
+
+    setScrubThumbnailFrame(resolveScrubThumbnailFrame(positionRef.current));
+  }, [resolveScrubThumbnailFrame, thumbnails]);
+
+  const handleTimelineScrub = React.useCallback(
+    (time: number) => {
+      if (!isTimelineScrubbing || !thumbnails) {
+        return;
+      }
+
+      setScrubThumbnailFrame(resolveScrubThumbnailFrame(time));
+    },
+    [isTimelineScrubbing, resolveScrubThumbnailFrame, thumbnails],
+  );
+
+  const handleTimelineScrubEnd = React.useCallback(
     (time: number) => {
       const safeDuration = mediaDuration > 0 ? mediaDuration : Number.MAX_SAFE_INTEGER;
       const nextPosition = Math.max(0, Math.min(time, safeDuration));
+
+      setIsTimelineScrubbing(false);
+      setScrubThumbnailFrame(null);
       playerRef.current?.seek(nextPosition);
     },
     [mediaDuration],
@@ -1516,6 +1576,23 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
 
   const handlePlaybackEvent = React.useCallback(
     (playbackEvent: PlaybackEvent) => {
+      const playbackEventWithBuffer = playbackEvent as PlaybackEvent & {
+        buffered?: number;
+        playableDuration?: number;
+      };
+      const bufferedCandidate =
+        typeof playbackEventWithBuffer.buffered === 'number' &&
+        Number.isFinite(playbackEventWithBuffer.buffered)
+          ? playbackEventWithBuffer.buffered
+          : typeof playbackEventWithBuffer.playableDuration === 'number' &&
+              Number.isFinite(playbackEventWithBuffer.playableDuration)
+            ? playbackEventWithBuffer.playableDuration
+            : undefined;
+
+      if (typeof bufferedCandidate === 'number') {
+        setBufferedPosition(bufferedCandidate);
+      }
+
       setCurrentPosition(playbackEvent.position);
 
       if (typeof playbackEvent.duration === 'number' && playbackEvent.duration > 0) {
@@ -1940,7 +2017,11 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
           isFullscreen={isFullscreen}
           timelineDuration={mediaDuration}
           timelinePosition={currentPosition}
-          onTimelineSeek={handleTimelineSeek}
+          timelineBuffered={bufferedPosition}
+          timelineThumbnailUri={isTimelineScrubbing ? scrubThumbnailFrame?.uri ?? null : null}
+          onTimelineScrubStart={handleTimelineScrubStart}
+          onTimelineScrub={handleTimelineScrub}
+          onTimelineScrubEnd={handleTimelineScrubEnd}
           onTogglePlayback={handleTogglePlayback}
           onSeekBackTenSeconds={handleSeekBackTenSeconds}
           onSeekForwardTenSeconds={handleSeekForwardTenSeconds}
@@ -2124,9 +2205,20 @@ const stylesFactory = (theme: PlayerThemeConfig, layoutVariant: PlayerLayoutVari
       letterSpacing: 0.2,
     },
     ottProgressTrack: {
-      height: isOttLayout ? 8 : 5,
-      borderRadius: isOttLayout ? 999 : 8,
+      width: '100%',
       justifyContent: 'center',
+      gap: isOttLayout ? 8 : 6,
+    },
+    timelineThumbnailContainer: {
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    timelineThumbnail: {
+      width: isOttLayout ? 136 : 120,
+      height: isOttLayout ? 76 : 68,
+      borderRadius: mediumRadius,
+      borderWidth: 1,
+      borderColor: panelBorderColor,
     },
     settingsButtonText: {
       color: primaryTextColor,
