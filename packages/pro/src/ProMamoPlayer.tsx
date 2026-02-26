@@ -1,6 +1,7 @@
 import {
     MamoPlayer,
     PlaybackOptions,
+  type SettingsOverlayConfig,
     Timeline,
     type MamoPlayerProps,
     type PlaybackEvent,
@@ -23,7 +24,6 @@ import type { IMAConfig } from './types/ima';
 import type { PlayerLayoutVariant } from './types/layout';
 import type { PipConfig, PipEvent, PipState } from './types/pip';
 import type { PlaybackRestrictions } from './types/restrictions';
-import type { SettingsOverlayConfig } from './types/settings';
 import type { PlayerThemeConfig, ThemeName } from './types/theme';
 import type { ThumbnailFrame, ThumbnailsConfig } from './types/thumbnails';
 import type { TracksConfig, VideoQualityId } from './types/tracks';
