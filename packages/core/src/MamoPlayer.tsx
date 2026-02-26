@@ -1,4 +1,5 @@
 import React from 'react';
+import { StyleSheet, View } from 'react-native';
 import Video, {
   type OnBufferData,
   type OnLoadData,
@@ -8,6 +9,7 @@ import Video, {
   type ReactVideoProps,
   type VideoRef,
 } from 'react-native-video';
+import { Timeline } from './components/Timeline';
 import { type PlaybackEvent } from './types/playback';
 
 export type MamoPlayerSource = NonNullable<ReactVideoProps['source']>;
@@ -24,13 +26,18 @@ export interface MamoPlayerCoreProps extends Omit<
 
 export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
   ({ source, autoPlay = true, paused, onPlaybackEvent, ...rest }, ref) => {
-    const [, setDuration] = React.useState<number>(0);
-    const [, setPosition] = React.useState<number>(0);
+    const [duration, setDuration] = React.useState<number>(0);
+    const [position, setPosition] = React.useState<number>(0);
+    const [buffered, setBuffered] = React.useState<number | undefined>(undefined);
     const [isPlaying, setIsPlaying] = React.useState<boolean>(false);
     const [, setIsBuffering] = React.useState<boolean>(false);
     const durationRef = React.useRef(0);
     const positionRef = React.useRef(0);
+    const isScrubbingRef = React.useRef(false);
     const isBufferingRef = React.useRef(false);
+    const videoRef = React.useRef<VideoRef | null>(null);
+
+    React.useImperativeHandle(ref, () => videoRef.current as VideoRef);
 
     const emit = React.useCallback(
       (
@@ -69,9 +76,16 @@ export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
     const handleProgress = React.useCallback(
       (data: OnProgressData) => {
         const nextPosition = Number.isFinite(data.currentTime) ? data.currentTime : 0;
+        const nextBuffered =
+          typeof data.playableDuration === 'number' && Number.isFinite(data.playableDuration)
+            ? data.playableDuration
+            : undefined;
 
         positionRef.current = nextPosition;
-        setPosition(nextPosition);
+        if (!isScrubbingRef.current) {
+          setPosition(nextPosition);
+        }
+        setBuffered(nextBuffered);
 
         emit({ type: 'time_update', position: nextPosition });
       },
@@ -135,23 +149,49 @@ export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
 
     const resolvedPaused = paused ?? !isPlaying;
 
+    const handleScrubStart = React.useCallback(() => {
+      isScrubbingRef.current = true;
+    }, []);
+
+    const handleScrubEnd = React.useCallback((nextTime: number) => {
+      isScrubbingRef.current = false;
+      positionRef.current = nextTime;
+      setPosition(nextTime);
+      videoRef.current?.seek(nextTime);
+    }, []);
+
     return (
-      <Video
-        ref={ref}
-        {...rest}
-        source={source as ReactVideoProps['source']}
-        paused={resolvedPaused}
-        onLoad={handleLoad}
-        onProgress={handleProgress}
-        onEnd={handleEnd}
-        onError={handleError}
-        onSeek={handleSeek}
-        onBuffer={handleBuffer}
-      />
+      <View style={styles.container}>
+        <Video
+          ref={videoRef}
+          {...rest}
+          source={source as ReactVideoProps['source']}
+          paused={resolvedPaused}
+          onLoad={handleLoad}
+          onProgress={handleProgress}
+          onEnd={handleEnd}
+          onError={handleError}
+          onSeek={handleSeek}
+          onBuffer={handleBuffer}
+        />
+        <Timeline
+          duration={duration}
+          position={position}
+          buffered={buffered}
+          onScrubStart={handleScrubStart}
+          onScrubEnd={handleScrubEnd}
+        />
+      </View>
     );
   },
 );
 
 MamoPlayerCore.displayName = 'MamoPlayerCore';
+
+const styles = StyleSheet.create({
+  container: {
+    width: '100%',
+  },
+});
 
 export default MamoPlayerCore;
