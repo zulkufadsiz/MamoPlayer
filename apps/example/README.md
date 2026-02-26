@@ -19,7 +19,7 @@ Use `CoreDemoScreen` in a non-Expo React Native app like this.
 If this example app is your main app entry, point `App.tsx` to `CoreDemoScreen`:
 
 ```tsx
-import CoreDemoScreen from './CoreDemoScreen';
+import CoreDemoScreen from './apps/example/CoreDemoScreen';
 
 export default CoreDemoScreen;
 ```
@@ -60,21 +60,56 @@ Add a screenshot at `apps/example/assets/core-demo.png`, then uncomment the line
 <!-- ![MamoPlayer Core Demo](./assets/core-demo.png) -->
 ```
 
-## 1) `App.tsx`
+## ProMamoPlayer Demo
+
+`ProDemoScreen` is the integration testbed for `@mamoplayer/pro` behaviors in this example app.
+
+### Run the example app
+
+From the repo root:
+
+```bash
+npm install
+npm run start:example
+```
+
+Android:
+
+```bash
+npm run start:example:android
+```
+
+### Navigate to the Pro demo screen
+
+This example does not include a route/menu switch by default; `App.tsx` decides which demo screen is mounted.
+To open the Pro demo, point `App.tsx` to `ProDemoScreen`:
 
 ```tsx
-import CoreDemoScreen from './CoreDemoScreen';
+import ProDemoScreen from './apps/example/ProDemoScreen';
 
-export default CoreDemoScreen;
+export default ProDemoScreen;
 ```
 
-## 2) `index.js`
+Quick switch between Core and Pro in `App.tsx`:
 
-```js
-import { AppRegistry } from 'react-native';
-import App from './App';
+```tsx
+// Core
+import DemoScreen from './apps/example/CoreDemoScreen';
 
-AppRegistry.registerComponent('MamoPlayer', () => App);
+// Pro
+// import DemoScreen from './apps/example/ProDemoScreen';
+
+export default DemoScreen;
 ```
 
-If your app name is different, replace `'MamoPlayer'` with your actual native app name.
+### What this screen tests
+
+- ProMamoPlayer basic playback
+- Analytics logging
+- Simulated ads (pre/mid/post)
+- Watermark
+- Theming + layout variants
+- Settings overlay (quality/audio/subtitles)
+- Thumbnails on scrub
+- PiP toggle
+- Error scenarios
