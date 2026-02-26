@@ -46,7 +46,7 @@ export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
     const [buffered, setBuffered] = React.useState<number | undefined>(undefined);
     const [isPlaying, setIsPlaying] = React.useState<boolean>(false);
     const [isFullscreen, setIsFullscreen] = React.useState<boolean>(false);
-    const [showSettings, setShowSettings] = React.useState<boolean>(false);
+    const [isSettingsOpen, setIsSettingsOpen] = React.useState<boolean>(false);
     const [playbackRate, setPlaybackRate] = React.useState<number>(1);
     const [muted, setMuted] = React.useState<boolean>(false);
     const [, setIsBuffering] = React.useState<boolean>(false);
@@ -212,7 +212,7 @@ export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
           }
           case 'settings':
             if (resolvedSettings.enabled) {
-              setShowSettings(prev => !prev);
+              setIsSettingsOpen(true);
             }
             break;
           case 'fullscreen': {
@@ -260,7 +260,7 @@ export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
         <View style={styles.controlsContainer}>
           <PlaybackOptions options={controlOptions} onPressOption={handlePressOption} />
         </View>
-        {showSettings && resolvedSettings.enabled && hasVisibleSettingsSections ? (
+        {isSettingsOpen && resolvedSettings.enabled && hasVisibleSettingsSections ? (
           <SettingsOverlay
             showPlaybackSpeed={resolvedSettings.showPlaybackSpeed}
             showMute={resolvedSettings.showMute}
@@ -268,7 +268,7 @@ export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
             muted={muted}
             onSelectPlaybackRate={setPlaybackRate}
             onToggleMuted={() => setMuted(prev => !prev)}
-            onClose={() => setShowSettings(false)}
+            onClose={() => setIsSettingsOpen(false)}
           />
         ) : null}
       </View>
