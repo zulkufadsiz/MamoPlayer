@@ -43,7 +43,10 @@ let latestTimelineProps:
   | {
       duration?: number;
       position?: number;
+      buffered?: number;
       onSeek?: (time: number) => void;
+      onScrubStart?: () => void;
+      onScrubEnd?: (time: number) => void;
     }
   | undefined;
 const mockSeek = jest.fn();
@@ -146,15 +149,21 @@ jest.mock('@mamoplayer/core', () => {
 
   MamoPlayerMock.displayName = 'MamoPlayerMock';
 
-  const TimelineMock = ({ duration, position, onSeek }: {
+  const TimelineMock = ({ duration, position, buffered, onSeek, onScrubStart, onScrubEnd }: {
     duration?: number;
     position?: number;
+    buffered?: number;
     onSeek?: (time: number) => void;
+    onScrubStart?: () => void;
+    onScrubEnd?: (time: number) => void;
   }) => {
     latestTimelineProps = {
       duration,
       position,
+      buffered,
       onSeek,
+      onScrubStart,
+      onScrubEnd,
     };
 
     return <View testID="mamoplayer-core-timeline" />;
@@ -1593,6 +1602,39 @@ describe('ProMamoPlayer', () => {
 
     expect(latestTimelineProps?.duration).toBe(200);
     expect(latestTimelineProps?.position).toBe(50);
+  });
+
+  it('shows scrub thumbnail while scrubbing and hides it on scrub end', () => {
+    const { queryByTestId, getByTestId } = render(
+      <ProMamoPlayer
+        source={{ uri: 'https://example.com/ott-scrub-thumbnail.mp4' }}
+        layoutVariant="ott"
+        thumbnails={{
+          frames: [
+            { time: 0, uri: 'https://example.com/thumb-0.jpg' },
+            { time: 15, uri: 'https://example.com/thumb-15.jpg' },
+            { time: 30, uri: 'https://example.com/thumb-30.jpg' },
+          ],
+        }}
+      />,
+    );
+
+    expect(getByTestId('mamoplayer-core-timeline')).toBeTruthy();
+    expect(queryByTestId('pro-scrub-thumbnail')).toBeNull();
+
+    act(() => {
+      latestTimelineProps?.onScrubStart?.();
+      latestTimelineProps?.onSeek?.(22);
+    });
+
+    expect(queryByTestId('pro-scrub-thumbnail')).toBeTruthy();
+
+    act(() => {
+      latestTimelineProps?.onScrubEnd?.(22);
+    });
+
+    expect(mockSeek).toHaveBeenCalledWith(22);
+    expect(queryByTestId('pro-scrub-thumbnail')).toBeNull();
   });
 
   it('seeks backward and forward from ott transport controls', () => {
