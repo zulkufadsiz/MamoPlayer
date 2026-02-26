@@ -5,6 +5,7 @@ export interface PlayerIconSet {
   Pause?: React.ComponentType<any>;
   Fullscreen?: React.ComponentType<any>;
   ExitFullscreen?: React.ComponentType<any>;
+  PictureInPicture?: React.ComponentType<any>;
   VolumeOn?: React.ComponentType<any>;
   VolumeOff?: React.ComponentType<any>;
   Settings?: React.ComponentType<any>;
