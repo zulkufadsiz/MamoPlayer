@@ -1,13 +1,23 @@
+import MaterialIcons from '@react-native-vector-icons/material-icons';
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 const SPEED_OPTIONS = [0.5, 1, 1.25, 1.5, 2] as const;
+
+const getSpeedLabel = (rate: number): string => {
+  if (rate === 1) {
+    return 'Normal';
+  }
+
+  return `${rate}x`;
+};
 
 export interface SettingsOverlayProps {
   showPlaybackSpeed: boolean;
   showMute: boolean;
   playbackRate: number;
   muted: boolean;
+  isFullscreen?: boolean;
   onSelectPlaybackRate: (rate: number) => void;
   onToggleMuted: () => void;
   onClose: () => void;
@@ -18,12 +28,51 @@ export const SettingsOverlay: React.FC<SettingsOverlayProps> = ({
   showMute,
   playbackRate,
   muted,
+  isFullscreen = false,
   onSelectPlaybackRate,
   onToggleMuted,
   onClose,
 }) => {
+  const [activeMenu, setActiveMenu] = React.useState<'root' | 'playback-speed' | 'mute'>('root');
+
+  const menuTitle = React.useMemo(() => {
+    if (activeMenu === 'playback-speed') {
+      return 'Playback speed';
+    }
+
+    if (activeMenu === 'mute') {
+      return 'Mute';
+    }
+
+    return 'Settings';
+  }, [activeMenu]);
+
+  const handleSelectMuted = React.useCallback((nextMuted: boolean) => {
+    if (nextMuted !== muted) {
+      onToggleMuted();
+      return;
+    }
+
+    onToggleMuted();
+  }, [muted, onToggleMuted]);
+
+  const goToRoot = React.useCallback(() => {
+    setActiveMenu('root');
+  }, []);
+
+  const goToPlaybackSpeed = React.useCallback(() => {
+    setActiveMenu('playback-speed');
+  }, []);
+
+  const goToMute = React.useCallback(() => {
+    setActiveMenu('mute');
+  }, []);
+
   return (
-    <View style={styles.overlayContainer} testID="settings-overlay">
+    <View
+      style={[styles.overlayContainer, isFullscreen && styles.overlayContainerFullscreen]}
+      testID="settings-overlay"
+    >
       <Pressable
         testID="settings-overlay-backdrop"
         style={styles.backdrop}
@@ -31,59 +80,156 @@ export const SettingsOverlay: React.FC<SettingsOverlayProps> = ({
         accessibilityRole="button"
         accessibilityLabel="Close settings"
       />
-      <View style={styles.panel}>
+      <View style={[styles.panel, isFullscreen && styles.panelFullscreen]}>
         <View style={styles.headerRow}>
-          <Text style={styles.title}>Settings</Text>
+          {activeMenu !== 'root' ? (
+            <Pressable
+              onPress={goToRoot}
+              accessibilityRole="button"
+              accessibilityLabel="Back to settings menu"
+              style={({ pressed }) => [styles.iconButton, pressed && styles.buttonPressed]}
+              testID="settings-menu-back"
+            >
+              <MaterialIcons name="chevron-left" color="#E5E7EB" size={28} />
+            </Pressable>
+          ) : (
+            <View style={styles.iconButtonPlaceholder} />
+          )}
+
+          <Text style={styles.title}>{menuTitle}</Text>
+
           <Pressable
             onPress={onClose}
             accessibilityRole="button"
             accessibilityLabel="Close"
-            style={({ pressed }) => [styles.closeButton, pressed && styles.buttonPressed]}
+            style={({ pressed }) => [styles.iconButton, pressed && styles.buttonPressed]}
           >
-            <Text style={styles.closeButtonText}>Close</Text>
+            <MaterialIcons name="close" color="#E5E7EB" size={20} />
           </Pressable>
         </View>
 
-        {showPlaybackSpeed ? (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Playback Speed</Text>
-            <View style={styles.speedRow}>
-              {SPEED_OPTIONS.map(rate => {
-                const selected = playbackRate === rate;
-                return (
-                  <Pressable
-                    key={rate}
-                    style={({ pressed }) => [
-                      styles.speedButton,
-                      selected && styles.speedButtonSelected,
-                      pressed && styles.buttonPressed,
-                    ]}
-                    onPress={() => onSelectPlaybackRate(rate)}
-                    accessibilityRole="button"
-                    accessibilityLabel={`${rate}x`}
-                    accessibilityState={{ selected }}
-                  >
-                    <Text style={[styles.speedText, selected && styles.speedTextSelected]}>{rate}x</Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-          </View>
+        {activeMenu === 'root' ? (
+          <ScrollView
+            style={styles.menuList}
+            contentContainerStyle={styles.menuListContent}
+            showsVerticalScrollIndicator={false}
+            bounces={false}
+          >
+            {showPlaybackSpeed ? (
+              <Pressable
+                onPress={goToPlaybackSpeed}
+                style={({ pressed }) => [styles.menuItem, pressed && styles.buttonPressed]}
+                accessibilityRole="button"
+                accessibilityLabel="Open playback speed settings"
+                testID="settings-menu-playback-speed"
+              >
+                <Text style={styles.menuItemTitle}>Playback Speed</Text>
+                <View style={styles.menuItemRight}>
+                  <Text style={styles.menuItemValue}>{getSpeedLabel(playbackRate)}</Text>
+                  <MaterialIcons name="chevron-right" color="#9CA3AF" size={20} />
+                </View>
+              </Pressable>
+            ) : null}
+
+            {showMute ? (
+              <Pressable
+                onPress={goToMute}
+                style={({ pressed }) => [styles.menuItem, pressed && styles.buttonPressed]}
+                accessibilityRole="button"
+                accessibilityLabel="Open mute settings"
+                testID="settings-menu-mute"
+              >
+                <Text style={styles.menuItemTitle}>Mute</Text>
+                <View style={styles.menuItemRight}>
+                  <Text style={styles.menuItemValue}>{muted ? 'Muted' : 'Unmuted'}</Text>
+                  <MaterialIcons name="chevron-right" color="#9CA3AF" size={20} />
+                </View>
+              </Pressable>
+            ) : null}
+          </ScrollView>
         ) : null}
 
-        {showMute ? (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Mute</Text>
+        {activeMenu === 'playback-speed' ? (
+          <ScrollView
+            style={styles.menuList}
+            contentContainerStyle={styles.menuListContent}
+            showsVerticalScrollIndicator={false}
+            bounces={false}
+          >
+            {SPEED_OPTIONS.map(rate => {
+              const selected = playbackRate === rate;
+              return (
+                <Pressable
+                  key={rate}
+                  onPress={() => onSelectPlaybackRate(rate)}
+                  style={({ pressed }) => [
+                    styles.menuItem,
+                    selected && styles.menuItemSelected,
+                    pressed && styles.buttonPressed,
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${rate}x`}
+                  accessibilityState={{ selected }}
+                >
+                  <Text style={[styles.menuItemTitle, selected && styles.menuItemTitleSelected]}>
+                    {getSpeedLabel(rate)}
+                  </Text>
+                  {selected ? (
+                    <MaterialIcons name="check" color="#F3F4F6" size={24} />
+                  ) : (
+                    <View style={styles.checkPlaceholder} />
+                  )}
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        ) : null}
+
+        {activeMenu === 'mute' ? (
+          <ScrollView
+            style={styles.menuList}
+            contentContainerStyle={styles.menuListContent}
+            showsVerticalScrollIndicator={false}
+            bounces={false}
+          >
             <Pressable
-              onPress={onToggleMuted}
-              style={({ pressed }) => [styles.toggleButton, pressed && styles.buttonPressed]}
-              accessibilityRole="checkbox"
-              accessibilityLabel="Muted"
-              accessibilityState={{ checked: muted }}
+              onPress={() => handleSelectMuted(false)}
+              style={({ pressed }) => [
+                styles.menuItem,
+                !muted && styles.menuItemSelected,
+                pressed && styles.buttonPressed,
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel="Unmuted"
+              accessibilityState={{ selected: !muted }}
             >
-              <Text style={styles.toggleText}>{muted ? 'Muted' : 'Unmuted'}</Text>
+              <Text style={[styles.menuItemTitle, !muted && styles.menuItemTitleSelected]}>Unmuted</Text>
+              {!muted ? (
+                <MaterialIcons name="check" color="#F3F4F6" size={24} />
+              ) : (
+                <View style={styles.checkPlaceholder} />
+              )}
             </Pressable>
-          </View>
+
+            <Pressable
+              onPress={() => handleSelectMuted(true)}
+              style={({ pressed }) => [
+                styles.menuItem,
+                muted && styles.menuItemSelected,
+                pressed && styles.buttonPressed,
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel="Muted"
+              accessibilityState={{ selected: muted }}
+            >
+              <Text style={[styles.menuItemTitle, muted && styles.menuItemTitleSelected]}>Muted</Text>
+              {muted ? (
+                <MaterialIcons name="check" color="#F3F4F6" size={24} />
+              ) : (
+                <View style={styles.checkPlaceholder} />
+              )}
+            </Pressable>
+          </ScrollView>
         ) : null}
       </View>
     </View>
@@ -93,88 +239,108 @@ export const SettingsOverlay: React.FC<SettingsOverlayProps> = ({
 const styles = StyleSheet.create({
   overlayContainer: {
     ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'flex-end',
+    paddingRight: 16,
+    zIndex: 100,
+    elevation: 100,
+  },
+  overlayContainerFullscreen: {
+    alignItems: 'center',
+    paddingRight: 0,
     justifyContent: 'flex-end',
+    paddingBottom: 20,
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
   panel: {
-    marginHorizontal: 12,
-    marginBottom: 12,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    backgroundColor: 'rgba(17, 24, 39, 0.95)',
+    width: 320,
+    maxWidth: '84%',
+    maxHeight: '78%',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingTop: 10,
+    paddingBottom: 8,
+    backgroundColor: 'rgba(17, 24, 39, 0.98)',
+    zIndex: 101,
+    elevation: 101,
+  },
+  panelFullscreen: {
+    width: '44%',
+    maxWidth: 460,
+    minWidth: 360,
+    maxHeight: '72%',
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 10,
   },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    minHeight: 36,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: 'rgba(148, 163, 184, 0.35)',
+    paddingBottom: 8,
   },
   title: {
-    color: '#F3F4F6',
-    fontSize: 12,
-    lineHeight: 16,
-    fontWeight: '600',
+    flex: 1,
+    textAlign: 'center',
+    color: '#E5E7EB',
+    fontSize: 15,
+    lineHeight: 20,
+    fontWeight: '700',
   },
-  closeButton: {
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+  iconButton: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  closeButtonText: {
-    color: '#F3F4F6',
-    fontSize: 12,
-    lineHeight: 16,
+  iconButtonPlaceholder: {
+    width: 34,
+    height: 34,
   },
-  section: {
-    marginTop: 10,
+  menuList: {
+    marginTop: 4,
   },
-  sectionTitle: {
-    color: '#F3F4F6',
-    fontSize: 12,
-    lineHeight: 16,
-    fontWeight: '600',
+  menuListContent: {
+    paddingBottom: 4,
   },
-  speedRow: {
-    marginTop: 8,
+  menuItem: {
+    paddingHorizontal: 0,
+    paddingVertical: 13,
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: 'rgba(148, 163, 184, 0.3)',
   },
-  speedButton: {
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(243, 244, 246, 0.4)',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+  menuItemSelected: {},
+  menuItemTitle: {
+    color: '#E5E7EB',
+    fontSize: 14,
+    lineHeight: 20,
   },
-  speedButtonSelected: {
-    borderColor: '#F3F4F6',
-    backgroundColor: 'rgba(243, 244, 246, 0.2)',
-  },
-  speedText: {
-    color: '#F3F4F6',
-    fontSize: 12,
-    lineHeight: 16,
-  },
-  speedTextSelected: {
+  menuItemTitleSelected: {
     fontWeight: '600',
   },
-  toggleButton: {
-    marginTop: 8,
-    alignSelf: 'flex-start',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(243, 244, 246, 0.4)',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+  menuItemRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
-  toggleText: {
-    color: '#F3F4F6',
-    fontSize: 12,
-    lineHeight: 16,
+  menuItemValue: {
+    color: '#9CA3AF',
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  checkPlaceholder: {
+    width: 24,
+    height: 24,
   },
   buttonPressed: {
     opacity: 0.75,

@@ -9,8 +9,14 @@ let latestTimelineProps: {
   onScrubEnd?: (time: number) => void;
 } | null = null;
 let latestPlaybackOptionsProps: {
-  options?: Array<{ id: 'seek-back' | 'seek-forward' | 'settings' | 'fullscreen' | 'pip' }>;
-  onPressOption?: (id: 'seek-back' | 'seek-forward' | 'settings' | 'fullscreen' | 'pip') => void;
+  onSeekBack?: () => void;
+  onTogglePlayPause?: () => void;
+  onSeekForward?: () => void;
+  onToggleFullscreen?: () => void;
+  onToggleSettingsMenu?: () => void;
+  showFullscreenButton?: boolean;
+  showSettingsMenuButton?: boolean;
+  showTransportButtons?: boolean;
 } | null = null;
 
 jest.mock('./components/Timeline', () => {
@@ -30,14 +36,36 @@ jest.mock('./components/Timeline', () => {
 
 jest.mock('./components/PlaybackOptions', () => {
   const React = require('react');
-  const { View } = require('react-native');
+  const { Pressable, View } = require('react-native');
 
   const PlaybackOptionsMock = (props: {
-    options?: Array<{ id: 'seek-back' | 'seek-forward' | 'settings' | 'fullscreen' | 'pip' }>;
-    onPressOption?: (id: 'seek-back' | 'seek-forward' | 'settings' | 'fullscreen' | 'pip') => void;
+    onSeekBack?: () => void;
+    onTogglePlayPause?: () => void;
+    onSeekForward?: () => void;
+    onToggleFullscreen?: () => void;
+    onToggleSettingsMenu?: () => void;
+    showFullscreenButton?: boolean;
+    showSettingsMenuButton?: boolean;
+    showTransportButtons?: boolean;
   }) => {
     latestPlaybackOptionsProps = props;
-    return <View testID="playback-options-mock" />;
+    return (
+      <View testID="playback-options-mock">
+        {props.showTransportButtons !== false ? (
+          <>
+            <Pressable testID="mock-seek-back-button" onPress={props.onSeekBack} />
+            <Pressable testID="core-play-pause-button" onPress={props.onTogglePlayPause} />
+            <Pressable testID="mock-seek-forward-button" onPress={props.onSeekForward} />
+          </>
+        ) : null}
+        {props.showFullscreenButton && props.onToggleFullscreen ? (
+          <Pressable testID="core-toggle-fullscreen-button" onPress={props.onToggleFullscreen} />
+        ) : null}
+        {props.showSettingsMenuButton && props.onToggleSettingsMenu ? (
+          <Pressable testID="core-settings-menu-button" onPress={props.onToggleSettingsMenu} />
+        ) : null}
+      </View>
+    );
   };
 
   return {
@@ -279,12 +307,12 @@ describe('MamoPlayerCore', () => {
     const initialVideoInstance = latestVideoInstance;
 
     act(() => {
-      latestPlaybackOptionsProps?.onPressOption?.('seek-back');
-      latestPlaybackOptionsProps?.onPressOption?.('seek-forward');
-      latestPlaybackOptionsProps?.onPressOption?.('settings');
-      latestPlaybackOptionsProps?.onPressOption?.('fullscreen');
-      latestPlaybackOptionsProps?.onPressOption?.('fullscreen');
-      latestPlaybackOptionsProps?.onPressOption?.('settings');
+      latestPlaybackOptionsProps?.onSeekBack?.();
+      latestPlaybackOptionsProps?.onSeekForward?.();
+      latestPlaybackOptionsProps?.onToggleSettingsMenu?.();
+      latestPlaybackOptionsProps?.onToggleFullscreen?.();
+      latestPlaybackOptionsProps?.onToggleFullscreen?.();
+      latestPlaybackOptionsProps?.onToggleSettingsMenu?.();
     });
 
     expect(initialVideoInstance?.seek).toHaveBeenCalledWith(40);
@@ -301,12 +329,12 @@ describe('MamoPlayerCore', () => {
   });
 
   it('shows playback speed and mute in settings overlay by default', () => {
-    const { getByText } = render(
+    const { getByTestId, getByText } = render(
       <MamoPlayerCore source={{ uri: 'https://example.com/video.mp4' }} />,
     );
 
     act(() => {
-      latestPlaybackOptionsProps?.onPressOption?.('settings');
+      fireEvent.press(getByTestId('core-settings-menu-button'));
     });
 
     expect(getByText('Settings')).toBeTruthy();
@@ -315,25 +343,20 @@ describe('MamoPlayerCore', () => {
   });
 
   it('hides settings control and overlay when settingsOverlay.enabled is false', () => {
-    const { queryByText } = render(
+    const { queryByTestId, queryByText } = render(
       <MamoPlayerCore
         source={{ uri: 'https://example.com/video.mp4' }}
         settingsOverlay={{ enabled: false }}
       />,
     );
 
-    const optionIds = latestPlaybackOptionsProps?.options?.map(option => option.id) ?? [];
-    expect(optionIds).not.toContain('settings');
-
-    act(() => {
-      latestPlaybackOptionsProps?.onPressOption?.('settings');
-    });
+    expect(queryByTestId('core-settings-menu-button')).toBeNull();
 
     expect(queryByText('Settings')).toBeNull();
   });
 
   it('shows only enabled core settings sections', () => {
-    const { getByText, queryByText } = render(
+    const { getByTestId, getByText, queryByText } = render(
       <MamoPlayerCore
         source={{ uri: 'https://example.com/video.mp4' }}
         settingsOverlay={{ showPlaybackSpeed: false, showMute: true }}
@@ -341,7 +364,7 @@ describe('MamoPlayerCore', () => {
     );
 
     act(() => {
-      latestPlaybackOptionsProps?.onPressOption?.('settings');
+      fireEvent.press(getByTestId('core-settings-menu-button'));
     });
 
     expect(getByText('Settings')).toBeTruthy();
@@ -350,13 +373,15 @@ describe('MamoPlayerCore', () => {
   });
 
   it('updates playback rate when selecting speed in settings overlay', () => {
-    const { getByLabelText } = render(
+    const { getByLabelText, getByTestId } = render(
       <MamoPlayerCore source={{ uri: 'https://example.com/video.mp4' }} />,
     );
 
     act(() => {
-      latestPlaybackOptionsProps?.onPressOption?.('settings');
+      fireEvent.press(getByTestId('core-settings-menu-button'));
     });
+
+    fireEvent.press(getByTestId('settings-menu-playback-speed'));
 
     fireEvent.press(getByLabelText('1.5x'));
 
@@ -364,13 +389,15 @@ describe('MamoPlayerCore', () => {
   });
 
   it('toggles mute state from settings overlay', () => {
-    const { getByLabelText } = render(
+    const { getByLabelText, getByTestId } = render(
       <MamoPlayerCore source={{ uri: 'https://example.com/video.mp4' }} />,
     );
 
     act(() => {
-      latestPlaybackOptionsProps?.onPressOption?.('settings');
+      fireEvent.press(getByTestId('core-settings-menu-button'));
     });
+
+    fireEvent.press(getByTestId('settings-menu-mute'));
 
     fireEvent.press(getByLabelText('Muted'));
     expect(latestVideoProps?.muted).toBe(true);
@@ -385,7 +412,7 @@ describe('MamoPlayerCore', () => {
     );
 
     act(() => {
-      latestPlaybackOptionsProps?.onPressOption?.('settings');
+      fireEvent.press(getByTestId('core-settings-menu-button'));
     });
 
     expect(queryByText('Settings')).toBeTruthy();
@@ -393,7 +420,7 @@ describe('MamoPlayerCore', () => {
     expect(queryByText('Settings')).toBeNull();
 
     act(() => {
-      latestPlaybackOptionsProps?.onPressOption?.('settings');
+      fireEvent.press(getByTestId('core-settings-menu-button'));
     });
 
     expect(queryByText('Settings')).toBeTruthy();
@@ -421,6 +448,29 @@ describe('MamoPlayerCore', () => {
         type: 'play',
         reason: 'user',
       }),
+    );
+
+    act(() => {
+      fireEvent.press(getByTestId('core-play-pause-button'));
+    });
+
+    expect(latestVideoProps?.paused).toBe(true);
+    expect(onPlaybackEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'pause',
+        reason: 'user',
+      }),
+    );
+  });
+
+  it('toggles playback from center controls when paused prop is provided', () => {
+    const onPlaybackEvent = jest.fn();
+    const { getByTestId } = render(
+      <MamoPlayerCore
+        source={{ uri: 'https://example.com/video.mp4' }}
+        paused={false}
+        onPlaybackEvent={onPlaybackEvent}
+      />,
     );
 
     act(() => {

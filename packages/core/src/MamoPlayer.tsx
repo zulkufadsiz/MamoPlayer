@@ -50,6 +50,7 @@ export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
     const [playbackRate, setPlaybackRate] = React.useState<number>(1);
     const [muted, setMuted] = React.useState<boolean>(false);
     const [controlsVisible, setControlsVisible] = React.useState<boolean>(true);
+    const [pausedOverride, setPausedOverride] = React.useState<boolean | null>(null);
     const [, setIsBuffering] = React.useState<boolean>(false);
     const durationRef = React.useRef(0);
     const positionRef = React.useRef(0);
@@ -121,6 +122,7 @@ export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
 
     const handleEnd = React.useCallback(() => {
       setIsPlaying(false);
+      setPausedOverride(true);
       emit({ type: 'ended' });
     }, [emit]);
 
@@ -174,8 +176,12 @@ export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
       [emit],
     );
 
-    const resolvedPaused = paused ?? !isPlaying;
+    const resolvedPaused = pausedOverride ?? paused ?? !isPlaying;
     const hasVisibleSettingsSections = resolvedSettings.showPlaybackSpeed || resolvedSettings.showMute;
+
+    React.useEffect(() => {
+      setPausedOverride(null);
+    }, [paused]);
 
     const clearAutoHideTimer = React.useCallback(() => {
       if (autoHideTimerRef.current) {
@@ -233,15 +239,18 @@ export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
     }, [scheduleControlsAutoHide]);
 
     const handleTogglePlayback = React.useCallback(() => {
-      setIsPlaying(prev => {
-        const nextPlaying = !prev;
-        emit({ type: nextPlaying ? 'play' : 'pause', reason: 'user' });
-        return nextPlaying;
-      });
+      const nextPaused = !resolvedPaused;
+      setIsPlaying(!nextPaused);
+
+      if (paused !== undefined) {
+        setPausedOverride(nextPaused);
+      }
+
+      emit({ type: nextPaused ? 'pause' : 'play', reason: 'user' });
 
       showControls();
       scheduleControlsAutoHide();
-    }, [emit, scheduleControlsAutoHide, showControls]);
+    }, [emit, paused, resolvedPaused, scheduleControlsAutoHide, showControls]);
 
     const handleSurfacePress = React.useCallback(() => {
       if (!controlsVisible) {
@@ -311,13 +320,15 @@ export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
           onSeek={handleSeek}
           onBuffer={handleBuffer}
         />
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Show playback controls"
-          onPress={handleSurfacePress}
-          style={styles.surfaceTouchArea}
-          testID="core-player-surface"
-        />
+        {!controlsVisible ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Show playback controls"
+            onPress={handleSurfacePress}
+            style={styles.surfaceTouchArea}
+            testID="core-player-surface"
+          />
+        ) : null}
         {controlsVisible ? (
           <View style={styles.controlsOverlay} testID="core-controls-overlay">
             <View style={styles.topRightControls}>
@@ -370,6 +381,7 @@ export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
             showMute={resolvedSettings.showMute}
             playbackRate={playbackRate}
             muted={muted}
+            isFullscreen={isFullscreen}
             onSelectPlaybackRate={setPlaybackRate}
             onToggleMuted={() => setMuted(prev => !prev)}
             onClose={() => setIsSettingsOpen(false)}
