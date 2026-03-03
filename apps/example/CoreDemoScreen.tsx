@@ -2,8 +2,6 @@ import {
     MamoPlayer,
     PlaybackOptions,
     type PlaybackEvent,
-    type PlaybackOption,
-    type PlaybackOptionId,
 } from '@mamoplayer/core';
 import {
     useRef,
@@ -32,14 +30,6 @@ const CoreDemoScreen = () => {
   const [subtitlesActive, setSubtitlesActive] = useState(false);
   const videoRef = useRef<VideoRef | null>(null);
   const supportsSubtitles = SUBTITLE_SUPPORTED_PLATFORMS.has(Platform.OS);
-
-  const playbackOptions: PlaybackOption[] = [
-    { id: 'seek-back', icon: <Text style={styles.optionIcon}>↺10</Text>, label: 'Back' },
-    { id: 'seek-forward', icon: <Text style={styles.optionIcon}>↻10</Text>, label: 'Forward' },
-    { id: 'settings', icon: <Text style={styles.optionIcon}>⚙️</Text>, label: 'Settings' },
-    { id: 'fullscreen', icon: <Text style={styles.optionIcon}>⛶</Text>, label: 'Full' },
-    { id: 'pip', icon: <Text style={styles.optionIcon}>▣</Text>, label: 'PiP' },
-  ];
 
   const handlePlaybackEvent = (event: PlaybackEvent) => {
     console.log('PlaybackEvent:', event);
@@ -108,22 +98,8 @@ const CoreDemoScreen = () => {
     videoRef.current?.seek(position - 10);
   };
 
-  const handlePressPlaybackOption = (id: PlaybackOptionId) => {
-    switch (id) {
-      case 'seek-back':
-        handleSeekBackward();
-        break;
-      case 'seek-forward':
-        handleSeekForward();
-        break;
-      case 'settings':
-      case 'fullscreen':
-      case 'pip':
-        console.log('Playback option pressed:', id);
-        break;
-      default:
-        break;
-    }
+  const handleToggleFullscreen = () => {
+    videoRef.current?.presentFullscreenPlayer?.();
   };
 
   return (
@@ -163,7 +139,6 @@ const CoreDemoScreen = () => {
             source={source}
             paused={paused}
             autoPlay
-            controls
             onPlaybackEvent={handlePlaybackEvent}
             style={styles.player}
           />
@@ -189,7 +164,13 @@ const CoreDemoScreen = () => {
               <Button title="+10s" onPress={handleSeekForward} />
             </View>
           </View>
-          <PlaybackOptions options={playbackOptions} onPressOption={handlePressPlaybackOption} />
+          <PlaybackOptions
+            isPlaying={!paused}
+            onSeekBack={handleSeekBackward}
+            onTogglePlayPause={() => setPaused((value) => !value)}
+            onSeekForward={handleSeekForward}
+            onToggleFullscreen={handleToggleFullscreen}
+          />
         </View>
 
         <View style={styles.section}>
@@ -246,10 +227,6 @@ const styles = StyleSheet.create({
   },
   noteText: {
     fontSize: 12,
-  },
-  optionIcon: {
-    fontSize: 16,
-    color: '#FFFFFF',
   },
 });
 

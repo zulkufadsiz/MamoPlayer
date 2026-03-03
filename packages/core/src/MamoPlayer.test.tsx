@@ -89,6 +89,7 @@ describe('MamoPlayerCore', () => {
     latestVideoInstance = null;
     latestTimelineProps = null;
     latestPlaybackOptionsProps = null;
+    jest.useRealTimers();
     jest.clearAllMocks();
   });
 
@@ -164,6 +165,11 @@ describe('MamoPlayerCore', () => {
 
     setup({ autoPlay: true, paused: true });
     expect(latestVideoProps?.paused).toBe(true);
+  });
+
+  it('keeps native video controls disabled', () => {
+    setup();
+    expect(latestVideoProps?.controls).toBe(false);
   });
 
   it('forwards ref to underlying video instance', () => {
@@ -394,4 +400,40 @@ describe('MamoPlayerCore', () => {
     fireEvent.press(getByTestId('settings-overlay-backdrop'));
     expect(queryByText('Settings')).toBeNull();
   });
+
+  it('toggles playback from the play pause button', () => {
+    const onPlaybackEvent = jest.fn();
+    const { getByTestId } = render(
+      <MamoPlayerCore
+        source={{ uri: 'https://example.com/video.mp4' }}
+        autoPlay={false}
+        onPlaybackEvent={onPlaybackEvent}
+      />,
+    );
+
+    act(() => {
+      fireEvent.press(getByTestId('core-play-pause-button'));
+    });
+
+    expect(latestVideoProps?.paused).toBe(false);
+    expect(onPlaybackEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'play',
+        reason: 'user',
+      }),
+    );
+
+    act(() => {
+      fireEvent.press(getByTestId('core-play-pause-button'));
+    });
+
+    expect(latestVideoProps?.paused).toBe(true);
+    expect(onPlaybackEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'pause',
+        reason: 'user',
+      }),
+    );
+  });
+
 });
