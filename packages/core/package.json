@@ -20,6 +20,10 @@
     "react-native": ">=0.72",
     "react-native-video": ">=6"
   },
+  "dependencies": {
+    "@react-native-vector-icons/material-icons": "^12.4.1",
+    "@types/react-native-vector-icons": "^6.4.18"
+  },
   "devDependencies": {
     "@babel/core": "^7.26.10",
     "@react-native/babel-preset": "^0.81.6",

@@ -4,8 +4,6 @@ import {
     Timeline,
     type MamoPlayerProps,
     type PlaybackEvent,
-    type PlaybackOption,
-    type PlaybackOptionId,
     type SettingsOverlayConfig,
 } from '@mamoplayer/core';
 import React, { useRef } from 'react';
@@ -326,7 +324,6 @@ interface ProMamoPlayerOverlaysProps {
   skipSecondsRemaining: number;
   handleSkipAd: () => void;
   showPipButton: boolean;
-  pipEnabled: boolean;
   pipState: PipState;
   requestPip: () => void;
   showSettingsButton: boolean;
@@ -341,7 +338,6 @@ interface ProMamoPlayerOverlaysProps {
   selectAudioOption?: (audioTrackId: string) => void;
   showTransportControls: boolean;
   isPlaying: boolean;
-  isFullscreen: boolean;
   timelineDuration: number;
   timelinePosition: number;
   timelineBuffered?: number;
@@ -352,7 +348,6 @@ interface ProMamoPlayerOverlaysProps {
   onTogglePlayback: () => void;
   onSeekBackTenSeconds: () => void;
   onSeekForwardTenSeconds: () => void;
-  onToggleFullscreen: () => void;
   layoutVariant: PlayerLayoutVariant;
   icons?: PlayerIconSet;
   watermark?: WatermarkConfig;
@@ -389,7 +384,6 @@ const ProMamoPlayerOverlays: React.FC<ProMamoPlayerOverlaysProps> = ({
   skipSecondsRemaining,
   handleSkipAd,
   showPipButton,
-  pipEnabled,
   pipState,
   requestPip,
   showSettingsButton,
@@ -404,7 +398,6 @@ const ProMamoPlayerOverlays: React.FC<ProMamoPlayerOverlaysProps> = ({
   selectAudioOption,
   showTransportControls,
   isPlaying,
-  isFullscreen,
   timelineDuration,
   timelinePosition,
   timelineBuffered,
@@ -415,7 +408,6 @@ const ProMamoPlayerOverlays: React.FC<ProMamoPlayerOverlaysProps> = ({
   onTogglePlayback,
   onSeekBackTenSeconds,
   onSeekForwardTenSeconds,
-  onToggleFullscreen,
   layoutVariant,
   icons,
   watermark,
@@ -489,69 +481,6 @@ const ProMamoPlayerOverlays: React.FC<ProMamoPlayerOverlaysProps> = ({
     [closeSettings, selectAudioOption, selectQualityOption, selectSubtitleOption],
   );
 
-  const proOptions = React.useMemo<PlaybackOption[]>(
-    () => [
-      {
-        id: 'seek-back',
-        icon: renderOverlayIcon(undefined, '↺', isOttLayout ? 20 : 18, overlayIconColor),
-        label: '10s',
-      },
-      {
-        id: 'seek-forward',
-        icon: renderOverlayIcon(undefined, '↻', isOttLayout ? 20 : 18, overlayIconColor),
-        label: '10s',
-      },
-      {
-        id: 'settings',
-        icon: renderOverlayIcon(icons?.Settings, '⚙', isOttLayout ? 20 : 18, overlayIconColor),
-        label: 'Settings',
-      },
-      {
-        id: 'fullscreen',
-        icon: renderOverlayIcon(
-          isFullscreen ? icons?.ExitFullscreen : icons?.Fullscreen,
-          isFullscreen ? '⤡' : '⤢',
-          isOttLayout ? 20 : 18,
-          overlayIconColor,
-        ),
-        label: isFullscreen ? 'Minimize' : 'Fullscreen',
-      },
-      {
-        id: 'pip',
-        icon: renderOverlayIcon(icons?.PictureInPicture, '▣', isOttLayout ? 20 : 18, overlayIconColor),
-        label: 'PiP',
-      },
-    ],
-    [icons, isFullscreen, isOttLayout, overlayIconColor],
-  );
-
-  const handleProOptionPress = React.useCallback(
-    (id: PlaybackOptionId) => {
-      switch (id) {
-        case 'seek-back':
-          onSeekBackTenSeconds();
-          break;
-        case 'seek-forward':
-          onSeekForwardTenSeconds();
-          break;
-        case 'settings':
-          openSettings();
-          break;
-        case 'fullscreen':
-          onToggleFullscreen();
-          break;
-        case 'pip':
-          if (pipEnabled) {
-            requestPip();
-          }
-          break;
-        default:
-          break;
-      }
-    },
-    [onSeekBackTenSeconds, onSeekForwardTenSeconds, onToggleFullscreen, openSettings, pipEnabled, requestPip],
-  );
-
   return (
     <>
       {showAdOverlay ? (
@@ -593,7 +522,12 @@ const ProMamoPlayerOverlays: React.FC<ProMamoPlayerOverlaysProps> = ({
               </View>
             </Pressable>
             <View style={styles.transportOptions}>
-              <PlaybackOptions options={proOptions} onPressOption={handleProOptionPress} />
+              <PlaybackOptions
+                isPlaying={isPlaying}
+                onSeekBack={onSeekBackTenSeconds}
+                onTogglePlayPause={onTogglePlayback}
+                onSeekForward={onSeekForwardTenSeconds}
+              />
             </View>
           </View>
 
@@ -855,7 +789,6 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
   const [scrubThumbnailFrame, setScrubThumbnailFrame] = React.useState<ThumbnailFrame | null>(
     null,
   );
-  const [isFullscreen, setIsFullscreen] = React.useState(false);
 
   const settingsSections = React.useMemo<OverlaySection[]>(() => {
     const sections: OverlaySection[] = [];
@@ -955,26 +888,6 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
     const nextPosition = Math.min(targetDuration, positionRef.current + 10);
     playerRef.current?.seek(nextPosition);
   }, [mediaDuration]);
-
-  const handleToggleFullscreen = React.useCallback(() => {
-    const nextFullscreenState = !isFullscreen;
-    const fullscreenRef = playerRef.current as
-      | (VideoRef & {
-          presentFullscreenPlayer?: () => void;
-          dismissFullscreenPlayer?: () => void;
-          setFullScreen?: (fullScreen: boolean) => void;
-        })
-      | null;
-
-    if (nextFullscreenState) {
-      fullscreenRef?.presentFullscreenPlayer?.();
-    } else {
-      fullscreenRef?.dismissFullscreenPlayer?.();
-    }
-
-    fullscreenRef?.setFullScreen?.(nextFullscreenState);
-    setIsFullscreen(nextFullscreenState);
-  }, [isFullscreen]);
 
   const resolveScrubThumbnailFrame = React.useCallback(
     (time: number): ThumbnailFrame | null => {
@@ -1990,7 +1903,6 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
           skipSecondsRemaining={skipSecondsRemaining}
           handleSkipAd={handleSkipAd}
           showPipButton={pip?.enabled === true}
-          pipEnabled={pip?.enabled === true}
           pipState={pipState}
           requestPip={requestPip}
           showSettingsButton={hasSettingsSections}
@@ -2007,7 +1919,6 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
           isPlaying={
             resolvedPausedState === undefined ? isInlinePlaybackActive : !resolvedPausedState
           }
-          isFullscreen={isFullscreen}
           timelineDuration={mediaDuration}
           timelinePosition={currentPosition}
           timelineBuffered={bufferedPosition}
@@ -2018,7 +1929,6 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
           onTogglePlayback={handleTogglePlayback}
           onSeekBackTenSeconds={handleSeekBackTenSeconds}
           onSeekForwardTenSeconds={handleSeekForwardTenSeconds}
-          onToggleFullscreen={handleToggleFullscreen}
           layoutVariant={layoutVariant}
           icons={icons}
           watermark={watermark}
