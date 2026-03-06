@@ -280,8 +280,8 @@ const styles = StyleSheet.create({
     elevation: 100,
   },
   overlayContainerFullscreen: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: 'stretch',
+    justifyContent: 'flex-start',
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
@@ -302,8 +302,9 @@ const styles = StyleSheet.create({
     elevation: 101,
   },
   panelFullscreen: {
-    alignSelf: 'center',
-    marginRight: 0,
+    alignSelf: 'flex-end',
+    marginRight: 18,
+    marginTop: 28,
     width: '44%',
     maxWidth: 460,
     minWidth: 360,
