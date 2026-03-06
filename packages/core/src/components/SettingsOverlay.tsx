@@ -1,6 +1,6 @@
 import MaterialIcons from '@react-native-vector-icons/material-icons';
 import React from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Animated, Easing, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 const SPEED_OPTIONS = [0.5, 1, 1.25, 1.5, 2] as const;
 
@@ -34,6 +34,27 @@ export const SettingsOverlay: React.FC<SettingsOverlayProps> = ({
   onClose,
 }) => {
   const [activeMenu, setActiveMenu] = React.useState<'root' | 'playback-speed' | 'mute'>('root');
+  const entrance = React.useRef(new Animated.Value(0)).current;
+  const isClosingRef = React.useRef(false);
+
+  const animateTo = React.useCallback((toValue: number, onDone?: () => void) => {
+    Animated.timing(entrance, {
+      toValue,
+      duration: 220,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start(({ finished }) => {
+      if (!finished) {
+        return;
+      }
+
+      onDone?.();
+    });
+  }, [entrance]);
+
+  React.useEffect(() => {
+    animateTo(1);
+  }, [animateTo]);
 
   const menuTitle = React.useMemo(() => {
     if (activeMenu === 'playback-speed') {
@@ -68,6 +89,30 @@ export const SettingsOverlay: React.FC<SettingsOverlayProps> = ({
     setActiveMenu('mute');
   }, []);
 
+  const requestClose = React.useCallback(() => {
+    if (isClosingRef.current) {
+      return;
+    }
+
+    isClosingRef.current = true;
+    animateTo(0, onClose);
+  }, [animateTo, onClose]);
+
+  const panelAnimatedStyle = React.useMemo(
+    () => ({
+      opacity: entrance,
+      transform: [
+        {
+          translateY: entrance.interpolate({
+            inputRange: [0, 1],
+            outputRange: [48, 0],
+          }),
+        },
+      ],
+    }),
+    [entrance],
+  );
+
   return (
     <View
       style={[styles.overlayContainer, isFullscreen && styles.overlayContainerFullscreen]}
@@ -76,11 +121,11 @@ export const SettingsOverlay: React.FC<SettingsOverlayProps> = ({
       <Pressable
         testID="settings-overlay-backdrop"
         style={styles.backdrop}
-        onPress={onClose}
+        onPress={requestClose}
         accessibilityRole="button"
         accessibilityLabel="Close settings"
       />
-      <View style={[styles.panel, isFullscreen && styles.panelFullscreen]}>
+      <Animated.View style={[styles.panel, isFullscreen && styles.panelFullscreen, panelAnimatedStyle]}>
         <View style={styles.headerRow}>
           {activeMenu !== 'root' ? (
             <Pressable
@@ -99,7 +144,7 @@ export const SettingsOverlay: React.FC<SettingsOverlayProps> = ({
           <Text style={styles.title}>{menuTitle}</Text>
 
           <Pressable
-            onPress={onClose}
+            onPress={requestClose}
             accessibilityRole="button"
             accessibilityLabel="Close"
             style={({ pressed }) => [styles.iconButton, pressed && styles.buttonPressed]}
@@ -109,12 +154,7 @@ export const SettingsOverlay: React.FC<SettingsOverlayProps> = ({
         </View>
 
         {activeMenu === 'root' ? (
-          <ScrollView
-            style={styles.menuList}
-            contentContainerStyle={styles.menuListContent}
-            showsVerticalScrollIndicator={false}
-            bounces={false}
-          >
+          <View style={styles.menuList}>
             {showPlaybackSpeed ? (
               <Pressable
                 onPress={goToPlaybackSpeed}
@@ -146,7 +186,7 @@ export const SettingsOverlay: React.FC<SettingsOverlayProps> = ({
                 </View>
               </Pressable>
             ) : null}
-          </ScrollView>
+          </View>
         ) : null}
 
         {activeMenu === 'playback-speed' ? (
@@ -186,12 +226,7 @@ export const SettingsOverlay: React.FC<SettingsOverlayProps> = ({
         ) : null}
 
         {activeMenu === 'mute' ? (
-          <ScrollView
-            style={styles.menuList}
-            contentContainerStyle={styles.menuListContent}
-            showsVerticalScrollIndicator={false}
-            bounces={false}
-          >
+          <View style={styles.menuList}>
             <Pressable
               onPress={() => handleSelectMuted(false)}
               style={({ pressed }) => [
@@ -229,9 +264,9 @@ export const SettingsOverlay: React.FC<SettingsOverlayProps> = ({
                 <View style={styles.checkPlaceholder} />
               )}
             </Pressable>
-          </ScrollView>
+          </View>
         ) : null}
-      </View>
+      </Animated.View>
     </View>
   );
 };
@@ -240,34 +275,35 @@ const styles = StyleSheet.create({
   overlayContainer: {
     ...StyleSheet.absoluteFillObject,
     justifyContent: 'center',
-    alignItems: 'flex-end',
-    paddingRight: 16,
+    alignItems: 'center',
     zIndex: 100,
     elevation: 100,
   },
   overlayContainerFullscreen: {
     alignItems: 'center',
-    paddingRight: 0,
-    justifyContent: 'flex-end',
-    paddingBottom: 20,
+    justifyContent: 'center',
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
   panel: {
+    alignSelf: 'flex-end',
+    marginRight: 16,
     width: 320,
     maxWidth: '84%',
     maxHeight: '78%',
     borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingTop: 10,
-    paddingBottom: 8,
+    paddingHorizontal: 12,
+    paddingTop: 8,
+    paddingBottom: 6,
     backgroundColor: 'rgba(17, 24, 39, 0.98)',
     zIndex: 101,
     elevation: 101,
   },
   panelFullscreen: {
+    alignSelf: 'center',
+    marginRight: 0,
     width: '44%',
     maxWidth: 460,
     minWidth: 360,

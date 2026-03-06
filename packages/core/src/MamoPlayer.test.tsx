@@ -296,7 +296,7 @@ describe('MamoPlayerCore', () => {
     expect(initialVideoInstance?.seek).toHaveBeenCalledWith(42);
   });
 
-  it('handles playback option actions for seek, settings, and fullscreen', () => {
+  it('handles playback option actions for seek, settings, and in-app fullscreen', () => {
     const { onPlaybackEvent } = setup();
 
     act(() => {
@@ -317,8 +317,8 @@ describe('MamoPlayerCore', () => {
 
     expect(initialVideoInstance?.seek).toHaveBeenCalledWith(40);
     expect(initialVideoInstance?.seek).toHaveBeenCalledWith(50);
-    expect(initialVideoInstance?.presentFullscreenPlayer).toHaveBeenCalledTimes(1);
-    expect(initialVideoInstance?.dismissFullscreenPlayer).toHaveBeenCalledTimes(1);
+    expect(initialVideoInstance?.presentFullscreenPlayer).not.toHaveBeenCalled();
+    expect(initialVideoInstance?.dismissFullscreenPlayer).not.toHaveBeenCalled();
 
     const seekEvents = onPlaybackEvent.mock.calls
       .map(([event]) => event)

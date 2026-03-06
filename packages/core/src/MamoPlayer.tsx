@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import Video, {
   type OnBufferData,
   type OnLoadData,
@@ -291,19 +291,14 @@ export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
     }, [hasVisibleSettingsSections, resolvedSettings.enabled, scheduleControlsAutoHide, showControls]);
 
     const handleToggleFullscreen = React.useCallback(() => {
-      if (isFullscreen) {
-        videoRef.current?.dismissFullscreenPlayer?.();
-      } else {
-        videoRef.current?.presentFullscreenPlayer?.();
-      }
-
       setIsFullscreen(prev => !prev);
+      setIsSettingsOpen(false);
       showControls();
       scheduleControlsAutoHide();
-    }, [isFullscreen, scheduleControlsAutoHide, showControls]);
+    }, [scheduleControlsAutoHide, showControls]);
 
-    return (
-      <View style={[styles.container, style]}>
+    const renderPlayer = () => (
+      <>
         <Video
           ref={videoRef}
           {...rest}
@@ -329,11 +324,12 @@ export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
             testID="core-player-surface"
           />
         ) : null}
-        {controlsVisible ? (
-          <View style={styles.controlsOverlay} testID="core-controls-overlay">
-            <View style={styles.topRightControls}>
+        {controlsVisible && !isSettingsOpen ? (
+          <View style={[styles.controlsOverlay, isFullscreen && styles.controlsOverlayFullscreen]} testID="core-controls-overlay">
+            <View style={[styles.topRightControls, isFullscreen && styles.topRightControlsFullscreen]}>
               <PlaybackOptions
                 isPlaying={!resolvedPaused}
+                isFullscreen={isFullscreen}
                 onSeekBack={handleSeekBackward}
                 onTogglePlayPause={handleTogglePlayback}
                 onSeekForward={handleSeekForward}
@@ -349,6 +345,7 @@ export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
             <View style={styles.centerControlsContainer}>
               <PlaybackOptions
                 isPlaying={!resolvedPaused}
+                isFullscreen={isFullscreen}
                 onSeekBack={handleSeekBackward}
                 onTogglePlayPause={handleTogglePlayback}
                 onSeekForward={handleSeekForward}
@@ -387,7 +384,28 @@ export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
             onClose={() => setIsSettingsOpen(false)}
           />
         ) : null}
-      </View>
+      </>
+    );
+
+    return (
+      <>
+        {!isFullscreen ? (
+          <View style={[styles.container, style]}>
+            {renderPlayer()}
+          </View>
+        ) : null}
+        <Modal
+          visible={isFullscreen}
+          animationType="fade"
+          transparent={false}
+          onRequestClose={handleToggleFullscreen}
+          statusBarTranslucent
+        >
+          <View style={styles.fullscreenContainer}>
+            {renderPlayer()}
+          </View>
+        </Modal>
+      </>
     );
   },
 );
@@ -397,6 +415,11 @@ MamoPlayerCore.displayName = 'MamoPlayerCore';
 const styles = StyleSheet.create({
   container: {
     width: '100%',
+    backgroundColor: '#000000',
+    position: 'relative',
+  },
+  fullscreenContainer: {
+    flex: 1,
     backgroundColor: '#000000',
     position: 'relative',
   },
@@ -419,11 +442,17 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.55)',
     justifyContent: 'space-between',
   },
+  controlsOverlayFullscreen: {
+    paddingBottom: 26,
+  },
   topRightControls: {
     position: 'absolute',
     top: 12,
     right: 12,
     zIndex: 2,
+  },
+  topRightControlsFullscreen: {
+    top: 40,
   },
   centerControlsContainer: {
     flex: 1,

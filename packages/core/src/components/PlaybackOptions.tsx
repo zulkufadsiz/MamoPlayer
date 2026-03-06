@@ -5,6 +5,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 export interface PlaybackOptionsProps {
   isPlaying: boolean;
+  isFullscreen?: boolean;
   onSeekBack: () => void;
   onTogglePlayPause: () => void;
   onSeekForward: () => void;
@@ -18,6 +19,7 @@ export interface PlaybackOptionsProps {
 
 export const PlaybackOptions: React.FC<PlaybackOptionsProps> = ({
   isPlaying,
+  isFullscreen = false,
   onSeekBack,
   onTogglePlayPause,
   onSeekForward,
@@ -35,11 +37,11 @@ export const PlaybackOptions: React.FC<PlaybackOptionsProps> = ({
           style={({ pressed }) => [styles.optionButton, compact && styles.optionButtonCompact, pressed && styles.optionButtonPressed]}
           onPress={onToggleFullscreen}
           accessibilityRole="button"
-          accessibilityLabel="Toggle fullscreen"
+          accessibilityLabel={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
           testID="core-toggle-fullscreen-button"
         >
           <MaterialIcons
-            name="crop-free"
+            name={isFullscreen ? 'fullscreen-exit' : 'crop-free'}
             color="white"
             size={compact ? 20 : 24}
             style={[styles.fullscreenIcon, compact && styles.fullscreenIconCompact]}
