@@ -55,6 +55,7 @@ let latestVideoProps:
         | { type: 'disabled' }
         | { type: 'index'; value: number }
         | { type: 'title'; value: string };
+      onFullscreenChange?: (isFullscreen: boolean) => void;
       defaultAudioTrackId?: string | null;
       currentAudioTrackId?: string;
       onAudioTrackChange?: (audioTrackId: string) => void;
@@ -127,6 +128,7 @@ jest.mock('@mamoplayer/core', () => {
         subtitleTracks,
         textTracks,
         selectedTextTrack,
+        onFullscreenChange,
         defaultAudioTrackId,
         currentAudioTrackId,
         onAudioTrackChange,
@@ -171,6 +173,7 @@ jest.mock('@mamoplayer/core', () => {
           | { type: 'disabled' }
           | { type: 'index'; value: number }
           | { type: 'title'; value: string };
+        onFullscreenChange?: (isFullscreen: boolean) => void;
         defaultAudioTrackId?: string | null;
         currentAudioTrackId?: string;
         onAudioTrackChange?: (audioTrackId: string) => void;
@@ -211,6 +214,7 @@ jest.mock('@mamoplayer/core', () => {
         subtitleTracks,
         textTracks,
         selectedTextTrack,
+        onFullscreenChange,
         defaultAudioTrackId,
         currentAudioTrackId,
         onAudioTrackChange,
@@ -931,6 +935,52 @@ describe('ProMamoPlayer', () => {
     expect(latestVideoProps?.autoPlay).toBe(true);
   });
 
+  it('restores selected quality source when skipping preroll ad', () => {
+    const adSource = { uri: 'https://example.com/ad-skip.mp4', type: 'video/mp4' as const };
+
+    const { getByText } = render(
+      <ProMamoPlayer
+        source={{ uri: 'https://example.com/main-with-quality-and-ad.mp4' }}
+        tracks={{
+          qualities: [
+            { id: 'auto', label: 'Auto', uri: 'https://example.com/main-auto-ad.m3u8' },
+            { id: '720p', label: '720p', uri: 'https://example.com/main-720-ad.m3u8' },
+          ],
+        }}
+        ads={{
+          adBreaks: [
+            {
+              type: 'preroll',
+              source: adSource,
+            },
+          ],
+          skipButtonEnabled: true,
+          skipAfterSeconds: 0,
+        }}
+      />,
+    );
+
+    act(() => {
+      latestVideoProps?.onQualityChange?.('720p');
+    });
+
+    expect(latestVideoProps?.source).toEqual(
+      expect.objectContaining({ uri: 'https://example.com/main-720-ad.m3u8' }),
+    );
+
+    act(() => {
+      emitPlayback({ type: 'ready', duration: 120, position: 0 });
+    });
+
+    expect(latestVideoProps?.source).toEqual(adSource);
+
+    fireEvent.press(getByText('Skip ad'));
+
+    expect(latestVideoProps?.source).toEqual(
+      expect.objectContaining({ uri: 'https://example.com/main-720-ad.m3u8' }),
+    );
+  });
+
   it('emits ad_start analytics when preroll begins on ready', () => {
     const onEvent = jest.fn();
     const sessionId = 'session-preroll-start';
@@ -1568,6 +1618,87 @@ describe('ProMamoPlayer', () => {
 
     expect(latestVideoProps?.currentSubtitleTrackId).toBe('off');
     expect(latestVideoProps?.selectedTextTrack).toEqual({ type: 'disabled' });
+  });
+
+  it('keeps subtitle selection stable when toggling fullscreen', () => {
+    render(
+      <ProMamoPlayer
+        source={{ uri: 'https://example.com/subtitles-fullscreen-stable.mp4' }}
+        tracks={{
+          subtitleTracks: [
+            {
+              id: 'en',
+              language: 'en',
+              label: 'English',
+              uri: 'https://example.com/subtitles-fullscreen-en.vtt',
+            },
+            {
+              id: 'fr',
+              language: 'fr',
+              label: 'French',
+              uri: 'https://example.com/subtitles-fullscreen-fr.vtt',
+            },
+          ],
+          defaultSubtitleTrackId: 'en',
+        }}
+      />,
+    );
+
+    act(() => {
+      latestVideoProps?.onSubtitleTrackChange?.('fr');
+    });
+
+    expect(latestVideoProps?.currentSubtitleTrackId).toBe('fr');
+    expect(latestVideoProps?.selectedTextTrack).toEqual({ type: 'title', value: 'French' });
+
+    act(() => {
+      latestVideoProps?.onFullscreenChange?.(true);
+    });
+
+    expect(latestVideoProps?.currentSubtitleTrackId).toBe('fr');
+    expect(latestVideoProps?.selectedTextTrack).toEqual({ type: 'disabled' });
+
+    act(() => {
+      latestVideoProps?.onFullscreenChange?.(false);
+    });
+
+    expect(latestVideoProps?.currentSubtitleTrackId).toBe('fr');
+    expect(latestVideoProps?.selectedTextTrack).toEqual({ type: 'title', value: 'French' });
+  });
+
+  it('restores playback position after entering and exiting fullscreen', () => {
+    render(
+      <ProMamoPlayer
+        source={{ uri: 'https://example.com/fullscreen-restore-position.mp4' }}
+        tracks={{
+          subtitleTracks: [
+            {
+              id: 'en',
+              language: 'en',
+              label: 'English',
+              uri: 'https://example.com/fullscreen-restore-position-en.vtt',
+            },
+          ],
+          defaultSubtitleTrackId: 'en',
+        }}
+      />,
+    );
+
+    act(() => {
+      emitPlayback({ type: 'time_update', duration: 200, position: 37 });
+      latestVideoProps?.onFullscreenChange?.(true);
+      emitPlayback({ type: 'ready', duration: 200, position: 0 });
+    });
+
+    expect(mockSeek).toHaveBeenCalledWith(37);
+
+    act(() => {
+      emitPlayback({ type: 'time_update', duration: 200, position: 52 });
+      latestVideoProps?.onFullscreenChange?.(false);
+      emitPlayback({ type: 'ready', duration: 200, position: 0 });
+    });
+
+    expect(mockSeek).toHaveBeenLastCalledWith(52);
   });
 
   it('hides quality, audio and subtitle settings when settingsOverlay.enabled is false', () => {

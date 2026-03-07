@@ -910,6 +910,7 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
   const mainSourceRef = React.useRef(initialMainSource);
   const pendingSessionEndEventRef = React.useRef<PlaybackEvent | null>(null);
   const pendingQualitySeekPositionRef = React.useRef<number | null>(null);
+  const pendingFullscreenSeekPositionRef = React.useRef<number | null>(null);
   const adSourceMapRef = React.useRef<Map<string, AdBreak>>(new Map());
   const adMainContentStartPositionRef = React.useRef<number | null>(null);
   const [isAdMode, setIsAdMode] = React.useState(false);
@@ -1624,7 +1625,7 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
       playbackEvent?: PlaybackEvent,
     ) => {
       adRef.current.markAdStarted(adBreak);
-      mainSourceRef.current = rest.source;
+      mainSourceRef.current = activeSource;
       setActiveSource(adSource as MamoPlayerProps['source']);
       setIsAdMode(true);
       setAdStartedAt(Date.now());
@@ -1640,7 +1641,7 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
         mainContentPositionAtAdStart,
       });
     },
-    [analytics, rest.source],
+    [activeSource, analytics],
   );
 
   React.useEffect(() => {
@@ -1715,6 +1716,18 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
     [analytics],
   );
 
+  const restorePendingSeekPosition = React.useCallback(() => {
+    const positionToRestore =
+      pendingQualitySeekPositionRef.current ?? pendingFullscreenSeekPositionRef.current;
+
+    pendingQualitySeekPositionRef.current = null;
+    pendingFullscreenSeekPositionRef.current = null;
+
+    if (typeof positionToRestore === 'number' && positionToRestore > 0) {
+      playerRef.current?.seek(positionToRestore);
+    }
+  }, []);
+
   const handlePlaybackEvent = React.useCallback(
     (playbackEvent: PlaybackEvent) => {
       const playbackEventWithBuffer = playbackEvent as PlaybackEvent & {
@@ -1753,13 +1766,12 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
 
         if (playbackEvent.type === 'ready') {
           if (
-            pendingQualitySeekPositionRef.current !== null &&
+            (pendingQualitySeekPositionRef.current !== null ||
+              pendingFullscreenSeekPositionRef.current !== null) &&
             !isNativeAdPlaying &&
             !isMainContentPausedByNativeAd
           ) {
-            const positionToRestore = pendingQualitySeekPositionRef.current;
-            pendingQualitySeekPositionRef.current = null;
-            playerRef.current?.seek(positionToRestore);
+            restorePendingSeekPosition();
           }
 
           quartileStateRef.current = createQuartileState();
@@ -1953,10 +1965,11 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
       }
 
       if (playbackEvent.type === 'ready') {
-        if (pendingQualitySeekPositionRef.current !== null) {
-          const positionToRestore = pendingQualitySeekPositionRef.current;
-          pendingQualitySeekPositionRef.current = null;
-          playerRef.current?.seek(positionToRestore);
+        if (
+          pendingQualitySeekPositionRef.current !== null ||
+          pendingFullscreenSeekPositionRef.current !== null
+        ) {
+          restorePendingSeekPosition();
         }
 
         quartileStateRef.current = createQuartileState();
@@ -2041,6 +2054,7 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
       isAdMode,
       onPlaybackEvent,
       restrictions,
+      restorePendingSeekPosition,
       resumeMainAfterAd,
       trackQuartiles,
       useNativeIMA,
@@ -2173,14 +2187,18 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
   }, [currentPosition, currentSubtitleTrackId, parsedSubtitleCues]);
   const resolvedSubtitleText = activeSubtitleCueText ?? fallbackSubtitleCueText;
   const selectedTextTrackForPlayer = React.useMemo(() => {
-    if (isCoreFullscreen && resolvedSubtitleText) {
+    if (isCoreFullscreen && currentSubtitleTrackId && currentSubtitleTrackId !== 'off') {
       return { type: 'disabled' as const };
     }
 
     return selectedTextTrack;
-  }, [isCoreFullscreen, resolvedSubtitleText, selectedTextTrack]);
+  }, [currentSubtitleTrackId, isCoreFullscreen, selectedTextTrack]);
 
   const handleCoreFullscreenChange = React.useCallback((isFullscreen: boolean) => {
+    if (positionRef.current > 0) {
+      pendingFullscreenSeekPositionRef.current = positionRef.current;
+    }
+
     setIsCoreFullscreen(isFullscreen);
   }, []);
 
