@@ -36,11 +36,12 @@ export interface MamoPlayerCoreProps extends Omit<
   autoPlay?: boolean;
   paused?: boolean;
   settingsOverlay?: SettingsOverlayConfig;
+  topRightActions?: React.ReactNode;
   onPlaybackEvent?: (event: PlaybackEvent) => void;
 }
 
 export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
-  ({ source, autoPlay = true, paused, settingsOverlay, onPlaybackEvent, style, ...rest }, ref) => {
+  ({ source, autoPlay = true, paused, settingsOverlay, topRightActions, onPlaybackEvent, style, ...rest }, ref) => {
     const [duration, setDuration] = React.useState<number>(0);
     const [position, setPosition] = React.useState<number>(0);
     const [buffered, setBuffered] = React.useState<number | undefined>(undefined);
@@ -327,6 +328,7 @@ export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
         {controlsVisible && !isSettingsOpen ? (
           <View style={[styles.controlsOverlay, isFullscreen && styles.controlsOverlayFullscreen]} testID="core-controls-overlay">
             <View style={[styles.topRightControls, isFullscreen && styles.topRightControlsFullscreen]}>
+              {topRightActions ? <View style={styles.topRightActionsContainer}>{topRightActions}</View> : null}
               <PlaybackOptions
                 isPlaying={!resolvedPaused}
                 isFullscreen={isFullscreen}
@@ -450,9 +452,16 @@ const styles = StyleSheet.create({
     top: 12,
     right: 12,
     zIndex: 2,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   topRightControlsFullscreen: {
     top: 40,
+  },
+  topRightActionsContainer: {
+    marginRight: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   centerControlsContainer: {
     flex: 1,

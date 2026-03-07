@@ -4,6 +4,7 @@ import {
   type PlaybackEvent,
   type SettingsOverlayConfig
 } from '@mamoplayer/core';
+import MaterialIcons from '@react-native-vector-icons/material-icons';
 import React, { useRef } from 'react';
 import { Animated, Easing, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { VideoRef } from 'react-native-video';
@@ -664,7 +665,11 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
   const ProCompatibleMamoPlayer = MamoPlayerCore as unknown as React.ComponentType<
     Record<string, unknown>
   >;
-  const { style: playerStyle, ...playerProps } = rest;
+  const {
+    style: playerStyle,
+    topRightActions: consumerTopRightActions,
+    ...playerProps
+  } = rest as typeof rest & { topRightActions?: React.ReactNode };
 
   const resolvedSettings = {
     enabled: settingsOverlay?.enabled ?? true,
@@ -1846,6 +1851,17 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
           onPlaybackEvent={handlePlaybackEvent}
           onPictureInPictureStatusChanged={handlePictureInPictureStatusChanged}
           paused={resolvedPausedState}
+          topRightActions={consumerTopRightActions || (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Enter picture in picture"
+            onPress={requestPip}
+            //style={styles.pipButton}
+          >
+           <MaterialIcons name="picture-in-picture" size={24} color="#FFFFFF" />
+          </Pressable>
+        )}
+        
         />
         {/* Modern OTT layout: enable with layoutVariant="ott" and themeName="ott". */}
         <ProMamoPlayerOverlays
