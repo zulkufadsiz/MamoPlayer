@@ -2249,6 +2249,23 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
     [],
   );
 
+  const getQualityLabel = React.useCallback(
+    (qualityId?: VideoQualityId) => {
+      if (!qualityId) {
+        return 'Auto';
+      }
+
+      const selectedQuality = tracks?.qualities?.find((quality) => quality.id === qualityId);
+
+      if (selectedQuality?.label) {
+        return selectedQuality.label;
+      }
+
+      return qualityId;
+    },
+    [tracks?.qualities],
+  );
+
   const getSubtitleLabels = React.useCallback(
     (subtitleTrack?: { label: string; language?: string }, subtitleTrackId?: string | 'off') => {
       if (subtitleTrackId === 'off') {
@@ -2267,6 +2284,32 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
     },
     [],
   );
+
+  const proQualityExtraMenuItem = React.useMemo(() => {
+    if (!shouldShowQualitySettings || !tracks?.qualities?.length) {
+      return undefined;
+    }
+
+    return {
+      key: 'quality',
+      title: 'Quality',
+      value: getQualityLabel(currentQualityId),
+      options: tracks.qualities.map((quality) => ({
+        id: quality.id,
+        label: quality.label,
+      })),
+      selectedOptionId: currentQualityId,
+      onSelectOption: (optionId: string) => {
+        changeQuality(optionId as VideoQualityId);
+      },
+    };
+  }, [
+    changeQuality,
+    currentQualityId,
+    getQualityLabel,
+    shouldShowQualitySettings,
+    tracks?.qualities,
+  ]);
 
   const proSubtitleExtraMenuItem = React.useMemo(() => {
     if (!shouldShowSubtitleSettings || !tracks?.subtitleTracks?.length) {
@@ -2328,7 +2371,11 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
   const coreSettingsOverlayConfig = React.useMemo<SettingsOverlayConfig | undefined>(() => {
     const consumerExtraItems = settingsOverlay?.extraItems;
     const consumerExtraMenuItems = settingsOverlay?.extraMenuItems ?? [];
-    const proExtraMenuItems = [proSubtitleExtraMenuItem, proAudioExtraMenuItem].filter(
+    const proExtraMenuItems = [
+      proQualityExtraMenuItem,
+      proSubtitleExtraMenuItem,
+      proAudioExtraMenuItem,
+    ].filter(
       (menuItem): menuItem is NonNullable<typeof menuItem> => Boolean(menuItem),
     );
     const mergedExtraMenuItems = [...consumerExtraMenuItems, ...proExtraMenuItems];
@@ -2338,7 +2385,12 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
       extraItems: consumerExtraItems,
       extraMenuItems: mergedExtraMenuItems,
     };
-  }, [proAudioExtraMenuItem, proSubtitleExtraMenuItem, settingsOverlay]);
+  }, [
+    proAudioExtraMenuItem,
+    proQualityExtraMenuItem,
+    proSubtitleExtraMenuItem,
+    settingsOverlay,
+  ]);
 
   return (
     <ThemeProvider theme={theme} themeName={themeName}>
@@ -2389,6 +2441,14 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
                   <MaterialIcons name="picture-in-picture" size={24} color="#FFFFFF" />
                 </Pressable>
               ) : null}
+               <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Enter HD mode"
+                  onPress={requestPip}
+                  testID="pro-topright-hd-button"
+                >
+                  <MaterialIcons name="hd" size={24} color="#FFFFFF" />
+                </Pressable>
             </View>
           }
         

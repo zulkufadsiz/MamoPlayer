@@ -32,19 +32,19 @@ export const PlaybackOptions: React.FC<PlaybackOptionsProps> = ({
 }) => {
   return (
     <View style={[styles.container, compact && styles.containerCompact]}>
-      {showFullscreenButton && onToggleFullscreen ? (
+      {showSettingsMenuButton && onToggleSettingsMenu ? (
         <Pressable
           style={({ pressed }) => [styles.optionButton, compact && styles.optionButtonCompact, pressed && styles.optionButtonPressed]}
-          onPress={onToggleFullscreen}
+          onPress={onToggleSettingsMenu}
           accessibilityRole="button"
-          accessibilityLabel={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
-          testID="core-toggle-fullscreen-button"
+          accessibilityLabel="Open settings menu"
+          testID="core-settings-menu-button"
         >
           <MaterialIcons
-            name={isFullscreen ? 'fullscreen-exit' : 'crop-free'}
+            name="settings"
             color="white"
-            size={compact ? 20 : 24}
-            style={[styles.fullscreenIcon, compact && styles.fullscreenIconCompact]}
+            size={compact ? 20 : 44}
+            style={[styles.actionIcon, compact && styles.actionIconCompact]}
           />
         </Pressable>
       ) : null}
@@ -87,20 +87,19 @@ export const PlaybackOptions: React.FC<PlaybackOptionsProps> = ({
           </Pressable>
         </>
       ) : null}
-
-      {showSettingsMenuButton && onToggleSettingsMenu ? (
+      {showFullscreenButton && onToggleFullscreen ? (
         <Pressable
           style={({ pressed }) => [styles.optionButton, compact && styles.optionButtonCompact, pressed && styles.optionButtonPressed]}
-          onPress={onToggleSettingsMenu}
+          onPress={onToggleFullscreen}
           accessibilityRole="button"
-          accessibilityLabel="Open settings menu"
-          testID="core-settings-menu-button"
+          accessibilityLabel={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
+          testID="core-toggle-fullscreen-button"
         >
           <MaterialIcons
-            name="settings"
+            name={isFullscreen ? 'fullscreen-exit' : 'crop-free'}
             color="white"
-            size={compact ? 20 : 44}
-            style={[styles.actionIcon, compact && styles.actionIconCompact]}
+            size={compact ? 20 : 24}
+            style={[styles.fullscreenIcon, compact && styles.fullscreenIconCompact]}
           />
         </Pressable>
       ) : null}

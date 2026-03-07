@@ -499,6 +499,45 @@ describe('ProMamoPlayer', () => {
     expect(latestVideoProps?.currentSubtitleTrackId).toBe('tr-sub');
   });
 
+  it('adds quality menu item to core settings overlay and applies quality selection', () => {
+    render(
+      <ProMamoPlayer
+        source={{ uri: 'https://example.com/video-with-qualities.mp4' }}
+        tracks={{
+          qualities: [
+            { id: 'auto', label: 'Auto', uri: 'https://example.com/video-auto.m3u8' },
+            { id: '720p', label: '720p', uri: 'https://example.com/video-720p.m3u8' },
+          ],
+          defaultQualityId: 'auto',
+        }}
+      />,
+    );
+
+    const qualityMenuItem = latestVideoProps?.settingsOverlay?.extraMenuItems?.find(
+      (extraMenuItem) => extraMenuItem.key === 'quality',
+    );
+
+    expect(qualityMenuItem).toEqual(
+      expect.objectContaining({
+        title: 'Quality',
+        value: 'Auto',
+        selectedOptionId: 'auto',
+      }),
+    );
+    expect(qualityMenuItem?.options).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: 'auto', label: 'Auto' }),
+        expect.objectContaining({ id: '720p', label: '720p' }),
+      ]),
+    );
+
+    act(() => {
+      qualityMenuItem?.onSelectOption('720p');
+    });
+
+    expect(latestVideoProps?.currentQualityId).toBe('720p');
+  });
+
   it('emits PiP events and forwards picture-in-picture status callback', () => {
     const onPipEvent = jest.fn();
     const onPictureInPictureStatusChanged = jest.fn();
