@@ -5,6 +5,8 @@ interface BridgeMocks {
   nativeModule: {
     addListener: jest.Mock<void, [string]>;
     removeListeners: jest.Mock<void, [number]>;
+    requestPictureInPicture: jest.Mock<void, []>;
+    enterPictureInPicture: jest.Mock<void, []>;
   };
   eventEmitterCtor: jest.Mock;
   addListener: jest.Mock;
@@ -28,6 +30,8 @@ const setupBridge = (withModule = true): BridgeMocks => {
   const nativeModule = {
     addListener: jest.fn(),
     removeListeners: jest.fn(),
+    requestPictureInPicture: jest.fn(),
+    enterPictureInPicture: jest.fn(),
   };
 
   const eventEmitterCtor = jest.fn(() => ({
@@ -87,6 +91,34 @@ describe('pip nativeBridge', () => {
     removeSpies.forEach((remove) => {
       expect(remove).toHaveBeenCalledTimes(1);
     });
+  });
+
+  it('requests PiP via requestPictureInPicture when available', () => {
+    const { bridge, nativeModule } = setupBridge();
+
+    bridge.requestPictureInPicture();
+
+    expect(nativeModule.requestPictureInPicture).toHaveBeenCalledTimes(1);
+    expect(nativeModule.enterPictureInPicture).not.toHaveBeenCalled();
+  });
+
+  it('falls back to enterPictureInPicture when requestPictureInPicture is unavailable', () => {
+    const { bridge, nativeModule } = setupBridge();
+    delete (nativeModule as { requestPictureInPicture?: unknown }).requestPictureInPicture;
+
+    bridge.requestPictureInPicture();
+
+    expect(nativeModule.enterPictureInPicture).toHaveBeenCalledTimes(1);
+  });
+
+  it('throws a clear error when PiP entry methods are unavailable', () => {
+    const { bridge, nativeModule } = setupBridge();
+    delete (nativeModule as { requestPictureInPicture?: unknown }).requestPictureInPicture;
+    delete (nativeModule as { enterPictureInPicture?: unknown }).enterPictureInPicture;
+
+    expect(() => bridge.requestPictureInPicture()).toThrow(
+      'MamoPipModule does not expose requestPictureInPicture or enterPictureInPicture.',
+    );
   });
 
   it('throws a clear error when MamoPipModule is unavailable', () => {

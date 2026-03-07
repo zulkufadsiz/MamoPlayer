@@ -12,7 +12,7 @@ import { AdStateMachine } from './ads/AdState';
 import { loadAds, releaseAds, subscribeToAdsEvents } from './ima/nativeBridge';
 import { getThumbnailForTime } from './internal/thumbnails';
 import { validateLicenseKey } from './licensing/license';
-import { subscribeToPipEvents } from './pip/nativeBridge';
+import { requestPictureInPicture, subscribeToPipEvents } from './pip/nativeBridge';
 import { ThemeProvider, usePlayerTheme } from './theme/ThemeContext';
 import type { AdBreak, AdsConfig } from './types/ads';
 import type { AnalyticsConfig, AnalyticsEvent } from './types/analytics';
@@ -894,14 +894,44 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
     [onPipEvent],
   );
   const requestPip = React.useCallback(() => {
+    if (pip?.enabled === false) {
+      return;
+    }
+
     emitPipEvent({
       state: 'entering',
     });
 
-    console.log('PiP requested');
-    // TODO: Invoke native PiP entry request once native bridge API is available.
-    // TODO: Hook this to the underlying player's PiP APIs and error handling callbacks.
-  }, [emitPipEvent]);
+    let lastPipError: unknown;
+
+    if (typeof playerRef.current?.enterPictureInPicture === 'function') {
+      try {
+        playerRef.current.enterPictureInPicture();
+        return;
+      } catch (error) {
+        lastPipError = error;
+      }
+    }
+
+    try {
+      requestPictureInPicture();
+      return;
+    } catch (error) {
+      lastPipError = error;
+    }
+
+    if (lastPipError) {
+      const reason =
+        lastPipError instanceof Error
+          ? lastPipError.message
+          : 'Unable to enter picture in picture.';
+      console.warn(`[MamoPlayer Pro] ${reason}`);
+      emitPipEvent({
+        state: 'inactive',
+        reason,
+      });
+    }
+  }, [emitPipEvent, pip?.enabled]);
   const handleNativePipStateChange = React.useCallback(
     (state: Extract<PipState, 'active' | 'exiting'>) => {
       emitPipEvent({ state });
@@ -1851,16 +1881,21 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
           onPlaybackEvent={handlePlaybackEvent}
           onPictureInPictureStatusChanged={handlePictureInPictureStatusChanged}
           paused={resolvedPausedState}
-          topRightActions={consumerTopRightActions || (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Enter picture in picture"
-            onPress={requestPip}
-            //style={styles.pipButton}
-          >
-           <MaterialIcons name="picture-in-picture" size={24} color="#FFFFFF" />
-          </Pressable>
-        )}
+          topRightActions={
+            <View style={styles.topRightActionsContainer}>
+              {consumerTopRightActions ? consumerTopRightActions : null}
+              {pip?.enabled === true ? (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Enter picture in picture"
+                  onPress={requestPip}
+                  testID="pro-topright-pip-button"
+                >
+                  <MaterialIcons name="picture-in-picture" size={24} color="#FFFFFF" />
+                </Pressable>
+              ) : null}
+            </View>
+          }
         
         />
         {/* Modern OTT layout: enable with layoutVariant="ott" and themeName="ott". */}
@@ -1911,6 +1946,11 @@ const styles = StyleSheet.create({
   playerContainer: {
     position: 'relative',
     overflow: 'hidden',
+  },
+  topRightActionsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
   },
 });
 

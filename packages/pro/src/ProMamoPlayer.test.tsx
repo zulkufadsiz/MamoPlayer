@@ -51,6 +51,8 @@ let latestTimelineProps:
     }
   | undefined;
 const mockSeek = jest.fn();
+const mockEnterPictureInPicture = jest.fn();
+const mockRequestPictureInPicture = jest.fn();
 const mockLoadAds = jest.fn(async (_adTagUrl: string) => {});
 const mockReleaseAds = jest.fn(async () => {});
 const mockUnsubscribeAdsEvents = jest.fn();
@@ -72,6 +74,7 @@ const mockSubscribeToPipEvents = jest.fn(
     return mockUnsubscribePipEvents;
   },
 );
+let shouldExposeEnterPictureInPicture = true;
 
 jest.mock('@mamoplayer/core', () => {
   const React = require('react');
@@ -122,11 +125,25 @@ jest.mock('@mamoplayer/core', () => {
         currentSubtitleTrackId?: string | 'off';
         onSubtitleTrackChange?: (subtitleTrackId: string | 'off') => void;
       },
-      ref: React.Ref<{ seek: (position: number) => void }>,
+      ref: React.Ref<{
+        seek: (position: number) => void;
+        enterPictureInPicture?: () => void;
+      }>,
     ) => {
-      React.useImperativeHandle(ref, () => ({
-        seek: (position: number) => mockSeek(position),
-      }));
+      React.useImperativeHandle(ref, () => {
+        const instance: {
+          seek: (position: number) => void;
+          enterPictureInPicture?: () => void;
+        } = {
+          seek: (position: number) => mockSeek(position),
+        };
+
+        if (shouldExposeEnterPictureInPicture) {
+          instance.enterPictureInPicture = () => mockEnterPictureInPicture();
+        }
+
+        return instance;
+      });
 
       latestOnPlaybackEvent = onPlaybackEvent;
       latestVideoProps = {
@@ -230,6 +247,7 @@ jest.mock('./ima/nativeBridge', () => ({
 }));
 
 jest.mock('./pip/nativeBridge', () => ({
+  requestPictureInPicture: () => mockRequestPictureInPicture(),
   subscribeToPipEvents: (
     handler: (eventName: 'mamo_pip_active' | 'mamo_pip_exiting', payload?: unknown) => void,
   ) => mockSubscribeToPipEvents(handler),
@@ -247,6 +265,9 @@ describe('ProMamoPlayer', () => {
     mockLoadAds.mockResolvedValue(undefined);
     mockReleaseAds.mockResolvedValue(undefined);
     mockSeek.mockReset();
+    mockEnterPictureInPicture.mockReset();
+    mockRequestPictureInPicture.mockReset();
+    shouldExposeEnterPictureInPicture = true;
   });
 
   const emitPlayback = (event: Partial<PlaybackEvent> & Pick<PlaybackEvent, 'type'>) => {
@@ -390,9 +411,8 @@ describe('ProMamoPlayer', () => {
     expect(queryByTestId('pro-pip-button')).not.toBeNull();
   });
 
-  it('requests PiP by emitting entering state and logging placeholder message', () => {
+  it('requests PiP by emitting entering state and invoking native PiP entry', () => {
     const onPipEvent = jest.fn();
-    const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation(() => undefined);
     const { getByTestId } = render(
       <ProMamoPlayer
         source={{ uri: 'https://example.com/video.mp4' }}
@@ -404,9 +424,27 @@ describe('ProMamoPlayer', () => {
     fireEvent.press(getByTestId('pro-pip-button'));
 
     expect(onPipEvent).toHaveBeenCalledWith({ state: 'entering' });
-    expect(consoleLogSpy).toHaveBeenCalledWith('PiP requested');
+    expect(mockEnterPictureInPicture).toHaveBeenCalledTimes(1);
+    expect(mockRequestPictureInPicture).not.toHaveBeenCalled();
+  });
 
-    consoleLogSpy.mockRestore();
+  it('falls back to PiP native bridge request when player ref PiP entry is unavailable', () => {
+    shouldExposeEnterPictureInPicture = false;
+
+    const onPipEvent = jest.fn();
+    const { getByTestId } = render(
+      <ProMamoPlayer
+        source={{ uri: 'https://example.com/video.mp4' }}
+        pip={{ enabled: true }}
+        onPipEvent={onPipEvent}
+      />,
+    );
+
+    fireEvent.press(getByTestId('pro-pip-button'));
+
+    expect(onPipEvent).toHaveBeenCalledWith({ state: 'entering' });
+    expect(mockEnterPictureInPicture).not.toHaveBeenCalled();
+    expect(mockRequestPictureInPicture).toHaveBeenCalledTimes(1);
   });
 
   it('maps native PiP events to active and exiting states', () => {
