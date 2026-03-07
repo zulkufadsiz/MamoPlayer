@@ -49,13 +49,6 @@ type OverlayOption = {
   label: string;
 };
 
-type OverlaySection = {
-  key: 'quality' | 'subtitles' | 'audio';
-  title: 'Quality' | 'Subtitles' | 'Audio';
-  options: OverlayOption[];
-  selectedOptionId?: string;
-};
-
 type Quartile = 25 | 50 | 75 | 100;
 
 const QUARTILES: Quartile[] = [25, 50, 75, 100];
@@ -459,7 +452,7 @@ const resolveSourceWithQualityUri = (
   return { uri: qualityUri } as MamoPlayerProps['source'];
 };
 
-interface ProMamoPlayerOverlaysProps {
+interface ProMamoPlayerQualityOverlayProps {
   showAdOverlay: boolean;
   skipButtonEnabled: boolean;
   isSkipDisabled: boolean;
@@ -472,24 +465,9 @@ interface ProMamoPlayerOverlaysProps {
   isSettingsOpen: boolean;
   openSettings: () => void;
   closeSettings: () => void;
-  settingsSections: OverlaySection[];
-  settingsHeaderTitle: string;
-  settingsLabelForOff: string;
+  qualityOptions: OverlayOption[];
+  selectedQualityOptionId?: string;
   selectQualityOption?: (qualityId: string) => void;
-  selectSubtitleOption?: (subtitleTrackId: string | 'off') => void;
-  selectAudioOption?: (audioTrackId: string) => void;
-  showTransportControls: boolean;
-  isPlaying: boolean;
-  timelineDuration: number;
-  timelinePosition: number;
-  timelineBuffered?: number;
-  timelineThumbnailUri?: string | null;
-  onTimelineScrubStart: () => void;
-  onTimelineScrub: (time: number) => void;
-  onTimelineScrubEnd: (time: number) => void;
-  onTogglePlayback: () => void;
-  onSeekBackTenSeconds: () => void;
-  onSeekForwardTenSeconds: () => void;
   layoutVariant: PlayerLayoutVariant;
   icons?: PlayerIconSet;
   watermark?: WatermarkConfig;
@@ -521,7 +499,7 @@ const renderOverlayIcon = (
   );
 };
 
-const ProMamoPlayerOverlays: React.FC<ProMamoPlayerOverlaysProps> = ({
+const ProMamoPlayerQualityOverlay: React.FC<ProMamoPlayerQualityOverlayProps> = ({
   showAdOverlay,
   skipButtonEnabled,
   isSkipDisabled,
@@ -534,24 +512,9 @@ const ProMamoPlayerOverlays: React.FC<ProMamoPlayerOverlaysProps> = ({
   isSettingsOpen,
   openSettings,
   closeSettings,
-  settingsSections,
-  settingsHeaderTitle,
-  settingsLabelForOff,
+  qualityOptions,
+  selectedQualityOptionId,
   selectQualityOption,
-  selectSubtitleOption,
-  selectAudioOption,
-  showTransportControls,
-  isPlaying,
-  timelineDuration,
-  timelinePosition,
-  timelineBuffered,
-  timelineThumbnailUri,
-  onTimelineScrubStart,
-  onTimelineScrub,
-  onTimelineScrubEnd,
-  onTogglePlayback,
-  onSeekBackTenSeconds,
-  onSeekForwardTenSeconds,
   layoutVariant,
   icons,
   watermark,
@@ -604,27 +567,21 @@ const ProMamoPlayerOverlays: React.FC<ProMamoPlayerOverlaysProps> = ({
   const overlayIconColor = React.useMemo(() => {
     const { colors } = getThemePrimitives(playerTheme);
 
-    return colors.primaryText ?? colors.textPrimary ?? colors.secondaryText ?? '#FFFFFF';
+    return colors.primaryText ?? colors.textPrimary ?? colors.secondaryText ?? '#E5E7EB';
   }, [playerTheme]);
   const styles = React.useMemo(
     () => stylesFactory(playerTheme, layoutVariant),
     [layoutVariant, playerTheme],
   );
-  const handleSectionOptionPress = React.useCallback(
-    (sectionKey: OverlaySection['key'], optionId: string) => {
-      if (sectionKey === 'quality') {
-        selectQualityOption?.(optionId);
-      } else if (sectionKey === 'audio') {
-        selectAudioOption?.(optionId);
-      } else if (sectionKey === 'subtitles') {
-        selectSubtitleOption?.(optionId);
-      }
+  const handleQualityOptionPress = React.useCallback(
+    (optionId: string) => {
+      selectQualityOption?.(optionId);
 
       if (CLOSE_SETTINGS_ON_SELECTION) {
         closeSettings();
       }
     },
-    [closeSettings, selectAudioOption, selectQualityOption, selectSubtitleOption],
+    [closeSettings, selectQualityOption],
   );
 
   return (
@@ -653,7 +610,7 @@ const ProMamoPlayerOverlays: React.FC<ProMamoPlayerOverlaysProps> = ({
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Open settings overlay"
-              accessibilityHint="Opens quality, subtitles and audio settings"
+              accessibilityHint="Opens quality settings"
               onPress={openSettings}
               style={styles.settingsButton}
               testID="pro-settings-button"
@@ -687,8 +644,8 @@ const ProMamoPlayerOverlays: React.FC<ProMamoPlayerOverlaysProps> = ({
         >
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Close settings overlay background"
-            accessibilityHint="Closes the settings overlay"
+            accessibilityLabel="Close quality settings overlay background"
+            accessibilityHint="Closes the quality settings overlay"
             onPress={closeSettings}
             style={styles.settingsOverlayBackdrop}
             testID="pro-settings-overlay-backdrop"
@@ -696,11 +653,11 @@ const ProMamoPlayerOverlays: React.FC<ProMamoPlayerOverlaysProps> = ({
 
           <Animated.View style={[styles.settingsPanel, settingsPanelAnimatedStyle]}>
             <View style={styles.settingsHeader}>
-              <Text style={styles.settingsTitle}>{settingsHeaderTitle}</Text>
+              <Text style={styles.settingsTitle}>Video Quality Options</Text>
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel="Close settings overlay"
-                accessibilityHint="Closes the settings overlay"
+                accessibilityLabel="Close video quality options overlay"
+                accessibilityHint="Closes the video quality options overlay"
                 onPress={closeSettings}
                 style={styles.settingsCloseButton}
                 testID="pro-settings-close-button"
@@ -720,57 +677,37 @@ const ProMamoPlayerOverlays: React.FC<ProMamoPlayerOverlaysProps> = ({
               showsVerticalScrollIndicator={false}
               testID="pro-settings-sections-scroll"
             >
-              {settingsSections.map((section) => (
-                <View key={section.key} style={styles.settingsSection}>
-                  <Text style={styles.settingsSectionTitle}>{section.title}</Text>
-                  {section.options.map((option) => {
-                    const isSelected = option.id === section.selectedOptionId;
+              <View style={styles.settingsSection}>
+                {qualityOptions.map((option) => {
+                  const isSelected = option.id === selectedQualityOptionId;
 
-                    return (
-                      <Pressable
-                        key={`${section.key}-${option.id}`}
-                        accessibilityRole="button"
-                        accessibilityLabel={`${section.title} ${option.label}`}
-                        accessibilityHint={`Select ${option.label} for ${section.title.toLowerCase()}`}
-                        onPress={() => handleSectionOptionPress(section.key, option.id)}
-                        style={styles.settingsOptionRow}
-                        testID={`pro-settings-option-${section.key}-${option.id}`}
+                  return (
+                    <Pressable
+                      key={`quality-${option.id}`}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Quality ${option.label}`}
+                      accessibilityHint={`Select ${option.label} for quality`}
+                      onPress={() => handleQualityOptionPress(option.id)}
+                      style={styles.settingsOptionRow}
+                      testID={`pro-settings-option-quality-${option.id}`}
+                    >
+                      <Text
+                        style={[
+                          styles.settingsOptionLabel,
+                          isSelected ? styles.settingsOptionLabelSelected : null,
+                        ]}
                       >
-                        <Text
-                          style={[
-                            styles.settingsOptionLabel,
-                            isSelected ? styles.settingsOptionLabelSelected : null,
-                          ]}
-                        >
-                          {option.label}
-                        </Text>
-                        {isSelected ? (
-                          <Text style={styles.settingsOptionSelectedLabel}>Current</Text>
-                        ) : null}
-                      </Pressable>
-                    );
-                  })}
-                </View>
-              ))}
-              {isOttLayout && showPipButton ? (
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={
-                    pipState === 'active'
-                      ? 'Picture in picture is active'
-                      : 'Enter picture in picture'
-                  }
-                  accessibilityHint="Moves playback into picture in picture"
-                  onPress={requestPip}
-                  style={styles.settingsOptionRow}
-                  testID="pro-settings-pip-button"
-                >
-                  <View style={styles.settingsOptionLeading}>
-                    {renderOverlayIcon(icons?.PictureInPicture, '▣', 16, overlayIconColor)}
-                    <Text style={styles.settingsOptionLabel}>Picture in Picture</Text>
-                  </View>
-                </Pressable>
-              ) : null}
+                        {option.label}
+                      </Text>
+                      {isSelected ? (
+                        <MaterialIcons name="check" size={22} color={overlayIconColor} />
+                      ) : (
+                        <View style={styles.settingsOptionCheckPlaceholder} />
+                      )}
+                    </Pressable>
+                  );
+                })}
+              </View>
             </ScrollView>
           </Animated.View>
         </View>
@@ -961,73 +898,32 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
   const [parsedSubtitleCues, setParsedSubtitleCues] = React.useState<ParsedSubtitleCue[]>([]);
   const [isCoreFullscreen, setIsCoreFullscreen] = React.useState(false);
 
-  const settingsSections = React.useMemo<OverlaySection[]>(() => {
-    const sections: OverlaySection[] = [];
-
-    if (shouldShowQualitySettings && tracks?.qualities?.length) {
-      sections.push({
-        key: 'quality',
-        title: 'Quality',
-        options: tracks.qualities.map((quality) => ({ id: quality.id, label: quality.label })),
-        selectedOptionId: currentQualityId,
-      });
+  const qualityOptions = React.useMemo<OverlayOption[]>(() => {
+    if (!shouldShowQualitySettings || !tracks?.qualities?.length) {
+      return [];
     }
 
-    if (shouldShowSubtitleSettings && tracks?.subtitleTracks) {
-      sections.push({
-        key: 'subtitles',
-        title: 'Subtitles',
-        options: [
-          ...tracks.subtitleTracks.map((subtitleTrack) => ({
-            id: subtitleTrack.id,
-            label: subtitleTrack.label,
-          })),
-          { id: 'off', label: 'Off' },
-        ],
-        selectedOptionId: currentSubtitleTrackId ?? 'off',
-      });
-    }
+    return tracks.qualities.map((quality) => ({
+      id: quality.id,
+      label: quality.label,
+    }));
+  }, [shouldShowQualitySettings, tracks?.qualities]);
 
-    if (shouldShowAudioTrackSettings && tracks?.audioTracks?.length) {
-      sections.push({
-        key: 'audio',
-        title: 'Audio',
-        options: tracks.audioTracks.map((audioTrack) => ({
-          id: audioTrack.id,
-          label: audioTrack.label,
-        })),
-        selectedOptionId: currentAudioTrackId,
-      });
-    }
-
-    return sections;
-  }, [
-    currentAudioTrackId,
-    currentQualityId,
-    currentSubtitleTrackId,
-    shouldShowAudioTrackSettings,
-    shouldShowQualitySettings,
-    shouldShowSubtitleSettings,
-    tracks?.audioTracks,
-    tracks?.qualities,
-    tracks?.subtitleTracks,
-  ]);
-
-  const hasSettingsSections = settingsSections.length > 0;
+  const hasQualityOptions = Boolean(shouldShowQualitySettings && tracks?.qualities?.length);
 
   React.useEffect(() => {
-    if (!hasSettingsSections && isSettingsOpen) {
+    if (!hasQualityOptions && isSettingsOpen) {
       setIsSettingsOpen(false);
     }
-  }, [hasSettingsSections, isSettingsOpen]);
+  }, [hasQualityOptions, isSettingsOpen]);
 
   const openSettings = React.useCallback(() => {
-    if (!hasSettingsSections) {
+    if (!hasQualityOptions) {
       return;
     }
 
     setIsSettingsOpen(true);
-  }, [hasSettingsSections]);
+  }, [hasQualityOptions]);
 
   const closeSettings = React.useCallback(() => {
     setIsSettingsOpen(false);
@@ -2441,20 +2337,22 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
                   <MaterialIcons name="picture-in-picture" size={24} color="#FFFFFF" />
                 </Pressable>
               ) : null}
-               <Pressable
+              {hasQualityOptions ? (
+                <Pressable
                   accessibilityRole="button"
-                  accessibilityLabel="Enter HD mode"
-                  onPress={requestPip}
+                  accessibilityLabel="Open quality settings overlay"
+                  onPress={openSettings}
                   testID="pro-topright-hd-button"
                 >
                   <MaterialIcons name="hd" size={24} color="#FFFFFF" />
                 </Pressable>
+              ) : null}
             </View>
           }
         
         />
         {/* Modern OTT layout: enable with layoutVariant="ott" and themeName="ott". */}
-        <ProMamoPlayerOverlays
+        <ProMamoPlayerQualityOverlay
           showAdOverlay={adRef.current.isAdPlaying === true || isNativeAdPlaying}
           skipButtonEnabled={skipButtonEnabled}
           isSkipDisabled={isSkipDisabled}
@@ -2463,30 +2361,13 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
           showPipButton={pip?.enabled === true}
           pipState={pipState}
           requestPip={requestPip}
-          showSettingsButton={hasSettingsSections}
+          showSettingsButton={hasQualityOptions}
           isSettingsOpen={isSettingsOpen}
           openSettings={openSettings}
           closeSettings={closeSettings}
-          settingsSections={settingsSections}
-          settingsHeaderTitle="Settings"
-          settingsLabelForOff="Off"
+          qualityOptions={qualityOptions}
+          selectedQualityOptionId={currentQualityId}
           selectQualityOption={selectQualityOption}
-          selectSubtitleOption={selectSubtitleOption}
-          selectAudioOption={selectAudioOption}
-          showTransportControls
-          isPlaying={
-            resolvedPausedState === undefined ? isInlinePlaybackActive : !resolvedPausedState
-          }
-          timelineDuration={mediaDuration}
-          timelinePosition={currentPosition}
-          timelineBuffered={bufferedPosition}
-          timelineThumbnailUri={isTimelineScrubbing ? scrubThumbnailFrame?.uri ?? null : null}
-          onTimelineScrubStart={handleTimelineScrubStart}
-          onTimelineScrub={handleTimelineScrub}
-          onTimelineScrubEnd={handleTimelineScrubEnd}
-          onTogglePlayback={handleTogglePlayback}
-          onSeekBackTenSeconds={handleSeekBackTenSeconds}
-          onSeekForwardTenSeconds={handleSeekForwardTenSeconds}
           layoutVariant={layoutVariant}
           icons={icons}
           watermark={watermark}
@@ -2526,6 +2407,12 @@ const stylesFactory = (theme: PlayerThemeConfig, layoutVariant: PlayerLayoutVari
   const panelOverlayColor = colors.overlay ?? colors.backgroundOverlay ?? overlayBackgroundColor;
   const panelBorderColor = colors.border ?? 'rgba(255, 255, 255, 0.15)';
   const accentColor = colors.accent ?? colors.primary ?? primaryTextColor;
+  const settingsBackdropColor = 'rgba(0, 0, 0, 0.5)';
+  const settingsPanelColor = 'rgba(17, 24, 39, 0.98)';
+  const settingsBorderColor = 'rgba(148, 163, 184, 0.3)';
+  const settingsHeaderBorderColor = 'rgba(148, 163, 184, 0.35)';
+  const settingsPrimaryTextColor = colors.primaryText ?? colors.textPrimary ?? '#E5E7EB';
+  const settingsSecondaryTextColor = colors.secondaryText ?? colors.textSecondary ?? '#9CA3AF';
   const textSmallSize =
     typeof typography.fontSizeSmall === 'number'
       ? typography.fontSizeSmall
@@ -2721,16 +2608,16 @@ const stylesFactory = (theme: PlayerThemeConfig, layoutVariant: PlayerLayoutVari
     },
     settingsOverlayBackdrop: {
       ...StyleSheet.absoluteFillObject,
-      backgroundColor: panelOverlayColor,
+      backgroundColor: settingsBackdropColor,
     },
     settingsPanel: {
-      backgroundColor: panelBackgroundColor,
+      backgroundColor: settingsPanelColor,
       borderTopLeftRadius: isOttLayout ? largeRadius : mediumRadius,
       borderTopRightRadius: isOttLayout ? largeRadius : mediumRadius,
       borderBottomLeftRadius: isOttLayout ? 0 : mediumRadius,
       borderBottomRightRadius: isOttLayout ? 0 : mediumRadius,
       borderWidth: 1,
-      borderColor: panelBorderColor,
+      borderColor: settingsBorderColor,
       borderBottomWidth: isOttLayout ? 0 : 1,
       paddingHorizontal: isOttLayout ? 20 : 16,
       paddingTop: isOttLayout ? 16 : 12,
@@ -2742,20 +2629,27 @@ const stylesFactory = (theme: PlayerThemeConfig, layoutVariant: PlayerLayoutVari
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      marginBottom: isOttLayout ? 14 : 10,
+      minHeight: 36,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: settingsHeaderBorderColor,
+      paddingBottom: 8,
+      marginBottom: isOttLayout ? 10 : 8,
     },
     settingsTitle: {
-      color: primaryTextColor,
-      fontSize: isOttLayout ? tokenLargeTypography : textMediumSize,
-      fontWeight: '800',
+      color: settingsPrimaryTextColor,
+      flex: 1,
+      textAlign: 'center',
+      fontSize: 15,
+      lineHeight: 20,
+      fontWeight: '700',
     },
     settingsCloseButton: {
-      minWidth: isOttLayout ? 44 : 36,
-      minHeight: isOttLayout ? 44 : 36,
-      borderRadius: isOttLayout ? 22 : 18,
+      width: 34,
+      height: 34,
+      borderRadius: 17,
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: overlayBackgroundColor,
+      backgroundColor: 'transparent',
     },
     settingsCloseButtonText: {
       color: primaryTextColor,
@@ -2768,28 +2662,33 @@ const stylesFactory = (theme: PlayerThemeConfig, layoutVariant: PlayerLayoutVari
       flexShrink: 1,
     },
     settingsSection: {
-      gap: 8,
+      gap: 4,
     },
     settingsSectionTitle: {
-      color: primaryTextColor,
-      fontSize: isOttLayout ? tokenLargeTypography : textSmallSize,
+      color: settingsSecondaryTextColor,
+      fontSize: 13,
+      lineHeight: 18,
       fontWeight: '700',
+      marginTop: isOttLayout ? 6 : 4,
     },
     settingsOptionRow: {
-      minHeight: isOttLayout ? 58 : 42,
-      borderRadius: mediumRadius,
-      backgroundColor: panelOverlayColor,
-      borderWidth: 1,
-      borderColor: panelBorderColor,
-      paddingHorizontal: isOttLayout ? 18 : 12,
+      minHeight: isOttLayout ? 50 : 44,
+      borderRadius: 0,
+      backgroundColor: 'transparent',
+      borderWidth: 0,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: settingsBorderColor,
+      paddingHorizontal: 0,
+      paddingVertical: 12,
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
     },
     settingsOptionLabel: {
-      color: secondaryTextColor,
-      fontSize: isOttLayout ? textLargeSize : textSmallSize,
-      fontWeight: '500',
+      color: settingsPrimaryTextColor,
+      fontSize: 14,
+      lineHeight: 20,
+      fontWeight: '400',
       flexShrink: 1,
     },
     settingsOptionLeading: {
@@ -2799,8 +2698,12 @@ const stylesFactory = (theme: PlayerThemeConfig, layoutVariant: PlayerLayoutVari
       flexShrink: 1,
     },
     settingsOptionLabelSelected: {
-      color: primaryTextColor,
-      fontWeight: '700',
+      color: settingsPrimaryTextColor,
+      fontWeight: '600',
+    },
+    settingsOptionCheckPlaceholder: {
+      width: 24,
+      height: 24,
     },
     settingsOptionSelectedLabel: {
       color: accentColor,
