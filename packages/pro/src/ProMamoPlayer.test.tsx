@@ -981,6 +981,46 @@ describe('ProMamoPlayer', () => {
     );
   });
 
+  it('resumes main content from preserved position after skipping midroll ad', () => {
+    const adSource = { uri: 'https://example.com/ad-midroll-skip.mp4', type: 'video/mp4' as const };
+
+    const { getByText } = render(
+      <ProMamoPlayer
+        source={{ uri: 'https://example.com/main-midroll-skip.mp4' }}
+        ads={{
+          adBreaks: [
+            {
+              type: 'midroll',
+              time: 30,
+              source: adSource,
+            },
+          ],
+          skipButtonEnabled: true,
+          skipAfterSeconds: 0,
+        }}
+      />,
+    );
+
+    act(() => {
+      emitPlayback({ type: 'time_update', duration: 120, position: 30 });
+    });
+
+    expect(latestVideoProps?.source).toEqual(adSource);
+
+    fireEvent.press(getByText('Skip ad'));
+
+    expect(latestVideoProps?.source).toEqual(
+      expect.objectContaining({ uri: 'https://example.com/main-midroll-skip.mp4' }),
+    );
+
+    act(() => {
+      emitPlayback({ type: 'ready', duration: 120, position: 0 });
+    });
+
+    expect(mockSeek).toHaveBeenCalledWith(30);
+    expect(latestVideoProps?.autoPlay).toBe(true);
+  });
+
   it('emits ad_start analytics when preroll begins on ready', () => {
     const onEvent = jest.fn();
     const sessionId = 'session-preroll-start';

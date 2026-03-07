@@ -911,6 +911,7 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
   const pendingSessionEndEventRef = React.useRef<PlaybackEvent | null>(null);
   const pendingQualitySeekPositionRef = React.useRef<number | null>(null);
   const pendingFullscreenSeekPositionRef = React.useRef<number | null>(null);
+  const pendingAdSeekPositionRef = React.useRef<number | null>(null);
   const adSourceMapRef = React.useRef<Map<string, AdBreak>>(new Map());
   const adMainContentStartPositionRef = React.useRef<number | null>(null);
   const [isAdMode, setIsAdMode] = React.useState(false);
@@ -1572,11 +1573,18 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
   const completeAdPlayback = React.useCallback(
     (playbackEvent?: PlaybackEvent) => {
       const currentAdBreak = adRef.current.currentAdBreak;
+      const mainContentPositionToResume =
+        adMainContentStartPositionRef.current ?? positionRef.current;
 
       if (currentAdBreak) {
         adRef.current.markAdCompleted(currentAdBreak);
       }
 
+      if (mainContentPositionToResume > 0) {
+        pendingAdSeekPositionRef.current = mainContentPositionToResume;
+      }
+
+      positionRef.current = mainContentPositionToResume;
       setIsAdMode(false);
       setActiveSource(mainSourceRef.current);
       setResumeMainAfterAd(true);
@@ -1586,7 +1594,7 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
         playbackEvent,
         fallbackPosition: positionRef.current,
         adPosition: currentAdBreak?.type,
-        mainContentPositionAtAdStart: adMainContentStartPositionRef.current ?? positionRef.current,
+        mainContentPositionAtAdStart: mainContentPositionToResume,
       });
       adMainContentStartPositionRef.current = null;
     },
@@ -1718,10 +1726,13 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
 
   const restorePendingSeekPosition = React.useCallback(() => {
     const positionToRestore =
-      pendingQualitySeekPositionRef.current ?? pendingFullscreenSeekPositionRef.current;
+      pendingQualitySeekPositionRef.current ??
+      pendingFullscreenSeekPositionRef.current ??
+      pendingAdSeekPositionRef.current;
 
     pendingQualitySeekPositionRef.current = null;
     pendingFullscreenSeekPositionRef.current = null;
+    pendingAdSeekPositionRef.current = null;
 
     if (typeof positionToRestore === 'number' && positionToRestore > 0) {
       playerRef.current?.seek(positionToRestore);
@@ -1967,7 +1978,8 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
       if (playbackEvent.type === 'ready') {
         if (
           pendingQualitySeekPositionRef.current !== null ||
-          pendingFullscreenSeekPositionRef.current !== null
+          pendingFullscreenSeekPositionRef.current !== null ||
+          pendingAdSeekPositionRef.current !== null
         ) {
           restorePendingSeekPosition();
         }
