@@ -6,7 +6,7 @@ import {
 } from '@mamoplayer/core';
 import MaterialIcons from '@react-native-vector-icons/material-icons';
 import React, { useRef } from 'react';
-import { Animated, Easing, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, Easing, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { VideoRef } from 'react-native-video';
 import { AdStateMachine } from './ads/AdState';
 import { loadAds, releaseAds, subscribeToAdsEvents } from './ima/nativeBridge';
@@ -714,7 +714,12 @@ const ProMamoPlayerOverlays: React.FC<ProMamoPlayerOverlaysProps> = ({
               </Pressable>
             </View>
 
-            <View style={styles.settingsSectionsContainer}>
+            <ScrollView
+              style={styles.settingsSectionsScroll}
+              contentContainerStyle={styles.settingsSectionsContainer}
+              showsVerticalScrollIndicator={false}
+              testID="pro-settings-sections-scroll"
+            >
               {settingsSections.map((section) => (
                 <View key={section.key} style={styles.settingsSection}>
                   <Text style={styles.settingsSectionTitle}>{section.title}</Text>
@@ -766,7 +771,7 @@ const ProMamoPlayerOverlays: React.FC<ProMamoPlayerOverlaysProps> = ({
                   </View>
                 </Pressable>
               ) : null}
-            </View>
+            </ScrollView>
           </Animated.View>
         </View>
       ) : null}
@@ -2697,6 +2702,10 @@ const stylesFactory = (theme: PlayerThemeConfig, layoutVariant: PlayerLayoutVari
     },
     settingsSectionsContainer: {
       gap: isOttLayout ? 16 : 12,
+      paddingBottom: isOttLayout ? 8 : 4,
+    },
+    settingsSectionsScroll: {
+      flexShrink: 1,
     },
     settingsSection: {
       gap: 8,

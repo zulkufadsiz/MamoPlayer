@@ -397,6 +397,34 @@ describe('MamoPlayerCore', () => {
     expect(queryByText('Mute')).toBeNull();
   });
 
+  it('keeps root settings menu scrollable when extraItems increase content height', () => {
+    const manyExtraItems = (
+      <>
+        {Array.from({ length: 20 }, (_, index) => (
+          <Text key={`extra-item-${index}`}>Extra item {index + 1}</Text>
+        ))}
+      </>
+    );
+
+    const { getByTestId, getByText } = render(
+      <MamoPlayerCore
+        source={{ uri: 'https://example.com/video.mp4' }}
+        settingsOverlay={{
+          showPlaybackSpeed: false,
+          showMute: false,
+          extraItems: manyExtraItems,
+        }}
+      />,
+    );
+
+    act(() => {
+      fireEvent.press(getByTestId('core-settings-menu-button'));
+    });
+
+    expect(getByTestId('settings-menu-root-scroll')).toBeTruthy();
+    expect(getByText('Extra item 1')).toBeTruthy();
+  });
+
   it('opens and selects options from extra menu items', () => {
     const onSelectAudio = jest.fn();
     const { getByLabelText, getByTestId, getByText } = render(

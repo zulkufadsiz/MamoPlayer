@@ -180,7 +180,13 @@ export const SettingsOverlay: React.FC<SettingsOverlayProps> = ({
         </View>
 
         {activeMenu === ROOT_MENU_KEY ? (
-          <View style={styles.menuList}>
+          <ScrollView
+            style={styles.menuList}
+            contentContainerStyle={styles.menuListContent}
+            showsVerticalScrollIndicator={false}
+            bounces={false}
+            testID="settings-menu-root-scroll"
+          >
             {showPlaybackSpeed ? (
               <Pressable
                 onPress={goToPlaybackSpeed}
@@ -233,7 +239,7 @@ export const SettingsOverlay: React.FC<SettingsOverlayProps> = ({
             ))}
 
             {extraItems ? <View style={styles.extraItemsContainer}>{extraItems}</View> : null}
-          </View>
+          </ScrollView>
         ) : null}
 
         {activeMenu === PLAYBACK_SPEED_MENU_KEY ? (
