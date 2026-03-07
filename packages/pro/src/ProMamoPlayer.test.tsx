@@ -8,6 +8,7 @@ let latestOnPlaybackEvent: ((event: PlaybackEvent) => void) | undefined;
 let latestVideoProps:
   | {
       rate?: number;
+  paused?: boolean;
       source?: unknown;
       autoPlay?: boolean;
       onPictureInPictureStatusChanged?: (event: Readonly<{ isActive: boolean }>) => void;
@@ -81,6 +82,7 @@ jest.mock('@mamoplayer/core', () => {
       {
         onPlaybackEvent,
         rate,
+        paused,
         source,
         autoPlay,
         onPictureInPictureStatusChanged,
@@ -98,6 +100,7 @@ jest.mock('@mamoplayer/core', () => {
       }: {
         onPlaybackEvent?: (event: PlaybackEvent) => void;
         rate?: number;
+        paused?: boolean;
         source?: unknown;
         autoPlay?: boolean;
         onPictureInPictureStatusChanged?: (event: Readonly<{ isActive: boolean }>) => void;
@@ -128,6 +131,7 @@ jest.mock('@mamoplayer/core', () => {
       latestOnPlaybackEvent = onPlaybackEvent;
       latestVideoProps = {
         rate,
+        paused,
         source,
         autoPlay,
         onPictureInPictureStatusChanged,
@@ -207,6 +211,7 @@ jest.mock('@mamoplayer/core', () => {
 
   return {
     __esModule: true,
+    MamoPlayerCore: MamoPlayerMock,
     MamoPlayer: MamoPlayerMock,
     PlaybackOptions: PlaybackOptionsMock,
     Timeline: TimelineMock,
@@ -1617,6 +1622,24 @@ describe('ProMamoPlayer', () => {
     fireEvent.press(getByTestId('pro-transport-settings'));
 
     expect(getByTestId('pro-settings-pip-button')).toBeTruthy();
+  });
+
+  it('toggles paused state from transport button when paused prop is controlled', () => {
+    const { getByTestId } = render(
+      <ProMamoPlayer
+        source={{ uri: 'https://example.com/controlled-paused-toggle.mp4' }}
+        paused={false}
+        layoutVariant="ott"
+      />,
+    );
+
+    expect(latestVideoProps?.paused).toBe(false);
+
+    fireEvent.press(getByTestId('pro-transport-play-toggle'));
+    expect(latestVideoProps?.paused).toBe(true);
+
+    fireEvent.press(getByTestId('pro-transport-play-toggle'));
+    expect(latestVideoProps?.paused).toBe(false);
   });
 
   it('passes playback position and duration into core timeline', () => {

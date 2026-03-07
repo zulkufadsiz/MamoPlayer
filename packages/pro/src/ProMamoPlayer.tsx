@@ -1,13 +1,11 @@
 import {
-    MamoPlayer,
-    PlaybackOptions,
-    Timeline,
-    type MamoPlayerProps,
-    type PlaybackEvent,
-    type SettingsOverlayConfig,
+  MamoPlayerCore,
+  type MamoPlayerProps,
+  type PlaybackEvent,
+  type SettingsOverlayConfig
 } from '@mamoplayer/core';
 import React, { useRef } from 'react';
-import { Animated, Easing, Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, Easing, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { VideoRef } from 'react-native-video';
 import { AdStateMachine } from './ads/AdState';
 import { loadAds, releaseAds, subscribeToAdsEvents } from './ima/nativeBridge';
@@ -500,59 +498,7 @@ const ProMamoPlayerOverlays: React.FC<ProMamoPlayerOverlaysProps> = ({
           ) : null}
         </View>
       ) : null}
-      {showTransportControls ? (
-        <View style={styles.transportControlsRoot}>
-          <View style={styles.transportControlsRow}>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={isPlaying ? 'Pause' : 'Play'}
-              accessibilityHint={isPlaying ? 'Pauses playback' : 'Resumes playback'}
-              onPress={onTogglePlayback}
-              style={styles.transportPrimaryButton}
-              testID="pro-transport-play-toggle"
-            >
-              <View style={styles.transportButtonContent}>
-                {renderOverlayIcon(
-                  isPlaying ? icons?.Pause : icons?.Play,
-                  isPlaying ? '⏸' : '▶',
-                  isOttLayout ? 22 : 20,
-                  overlayIconColor,
-                )}
-                <Text style={styles.transportButtonLabel}>{isPlaying ? 'Pause' : 'Play'}</Text>
-              </View>
-            </Pressable>
-            <View style={styles.transportOptions}>
-              <PlaybackOptions
-                isPlaying={isPlaying}
-                onSeekBack={onSeekBackTenSeconds}
-                onTogglePlayPause={onTogglePlayback}
-                onSeekForward={onSeekForwardTenSeconds}
-              />
-            </View>
-          </View>
-
-          <View style={styles.ottProgressTrack} testID="pro-transport-progress-track">
-            {timelineThumbnailUri ? (
-              <View style={styles.timelineThumbnailContainer}>
-                <Image
-                  source={{ uri: timelineThumbnailUri }}
-                  style={styles.timelineThumbnail}
-                  resizeMode="cover"
-                  testID="pro-scrub-thumbnail"
-                />
-              </View>
-            ) : null}
-            <Timeline
-              duration={timelineDuration}
-              position={timelinePosition}
-              buffered={timelineBuffered}
-              onScrubStart={onTimelineScrubStart}
-              onSeek={onTimelineScrub}
-              onScrubEnd={onTimelineScrubEnd}
-            />
-          </View>
-        </View>
-      ) : null}
+      
       {!isOttLayout && (showPipButton || showSettingsButton) ? (
         <View style={styles.controlsRow}>
           {showSettingsButton ? (
@@ -715,7 +661,7 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
   onPipEvent,
   ...rest
 }) => {
-  const ProCompatibleMamoPlayer = MamoPlayer as unknown as React.ComponentType<
+  const ProCompatibleMamoPlayer = MamoPlayerCore as unknown as React.ComponentType<
     Record<string, unknown>
   >;
   const { style: playerStyle, ...playerProps } = rest;
@@ -776,6 +722,7 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
   >(initialSubtitleTrackId);
   const [pipState, setPipState] = React.useState<PipState>('inactive');
   const [isSettingsOpen, setIsSettingsOpen] = React.useState(false);
+  const [pausedOverride, setPausedOverride] = React.useState<boolean | null>(null);
   const [isInlinePlaybackPaused, setIsInlinePlaybackPaused] = React.useState<boolean | undefined>(
     undefined,
   );
@@ -862,21 +809,26 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
     setIsSettingsOpen(false);
   }, []);
 
-  const resolvedPausedState =
-    typeof rest.paused === 'boolean' ? rest.paused : isInlinePlaybackPaused;
-  const canTogglePlayback = typeof rest.paused !== 'boolean';
+  const resolvedPausedState = pausedOverride ??
+    (typeof rest.paused === 'boolean' ? rest.paused : isInlinePlaybackPaused);
+
+  React.useEffect(() => {
+    setPausedOverride(null);
+  }, [rest.paused]);
 
   const handleTogglePlayback = React.useCallback(() => {
-    if (!canTogglePlayback) {
-      return;
+    const currentlyPaused =
+      typeof resolvedPausedState === 'boolean' ? resolvedPausedState : !isInlinePlaybackActive;
+    const nextPaused = !currentlyPaused;
+
+    if (typeof rest.paused === 'boolean') {
+      setPausedOverride(nextPaused);
+    } else {
+      setIsInlinePlaybackPaused(nextPaused);
     }
 
-    setIsInlinePlaybackPaused((previousValue) => {
-      const currentlyPaused =
-        typeof previousValue === 'boolean' ? previousValue : !isInlinePlaybackActive;
-      return !currentlyPaused;
-    });
-  }, [canTogglePlayback, isInlinePlaybackActive]);
+    setIsInlinePlaybackActive(!nextPaused);
+  }, [isInlinePlaybackActive, resolvedPausedState, rest.paused]);
 
   const handleSeekBackTenSeconds = React.useCallback(() => {
     const nextPosition = Math.max(0, positionRef.current - 10);
