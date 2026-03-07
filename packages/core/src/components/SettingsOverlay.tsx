@@ -1,8 +1,13 @@
 import MaterialIcons from '@react-native-vector-icons/material-icons';
 import React from 'react';
 import { Animated, Easing, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import type { SettingsOverlayExtraMenuItem } from '../types/settings';
 
 const SPEED_OPTIONS = [0.5, 1, 1.25, 1.5, 2] as const;
+const ROOT_MENU_KEY = 'root';
+const PLAYBACK_SPEED_MENU_KEY = 'playback-speed';
+const MUTE_MENU_KEY = 'mute';
+const EXTRA_MENU_PREFIX = 'extra:';
 
 const getSpeedLabel = (rate: number): string => {
   if (rate === 1) {
@@ -15,6 +20,8 @@ const getSpeedLabel = (rate: number): string => {
 export interface SettingsOverlayProps {
   showPlaybackSpeed: boolean;
   showMute: boolean;
+  extraItems?: React.ReactNode;
+  extraMenuItems?: SettingsOverlayExtraMenuItem[];
   playbackRate: number;
   muted: boolean;
   isFullscreen?: boolean;
@@ -26,6 +33,8 @@ export interface SettingsOverlayProps {
 export const SettingsOverlay: React.FC<SettingsOverlayProps> = ({
   showPlaybackSpeed,
   showMute,
+  extraItems,
+  extraMenuItems,
   playbackRate,
   muted,
   isFullscreen = false,
@@ -33,9 +42,18 @@ export const SettingsOverlay: React.FC<SettingsOverlayProps> = ({
   onToggleMuted,
   onClose,
 }) => {
-  const [activeMenu, setActiveMenu] = React.useState<'root' | 'playback-speed' | 'mute'>('root');
+  const [activeMenu, setActiveMenu] = React.useState<string>(ROOT_MENU_KEY);
   const entrance = React.useRef(new Animated.Value(0)).current;
   const isClosingRef = React.useRef(false);
+  const resolvedExtraMenuItems = extraMenuItems ?? [];
+
+  const activeExtraMenuItem = React.useMemo(
+    () =>
+      resolvedExtraMenuItems.find(
+        (extraMenuItem) => activeMenu === `${EXTRA_MENU_PREFIX}${extraMenuItem.key}`,
+      ),
+    [activeMenu, resolvedExtraMenuItems],
+  );
 
   const animateTo = React.useCallback((toValue: number, onDone?: () => void) => {
     Animated.timing(entrance, {
@@ -57,16 +75,20 @@ export const SettingsOverlay: React.FC<SettingsOverlayProps> = ({
   }, [animateTo]);
 
   const menuTitle = React.useMemo(() => {
-    if (activeMenu === 'playback-speed') {
+    if (activeMenu === PLAYBACK_SPEED_MENU_KEY) {
       return 'Playback speed';
     }
 
-    if (activeMenu === 'mute') {
+    if (activeMenu === MUTE_MENU_KEY) {
       return 'Mute';
     }
 
+    if (activeExtraMenuItem) {
+      return activeExtraMenuItem.title;
+    }
+
     return 'Settings';
-  }, [activeMenu]);
+  }, [activeExtraMenuItem, activeMenu]);
 
   const handleSelectMuted = React.useCallback((nextMuted: boolean) => {
     if (nextMuted !== muted) {
@@ -78,15 +100,19 @@ export const SettingsOverlay: React.FC<SettingsOverlayProps> = ({
   }, [muted, onToggleMuted]);
 
   const goToRoot = React.useCallback(() => {
-    setActiveMenu('root');
+    setActiveMenu(ROOT_MENU_KEY);
   }, []);
 
   const goToPlaybackSpeed = React.useCallback(() => {
-    setActiveMenu('playback-speed');
+    setActiveMenu(PLAYBACK_SPEED_MENU_KEY);
   }, []);
 
   const goToMute = React.useCallback(() => {
-    setActiveMenu('mute');
+    setActiveMenu(MUTE_MENU_KEY);
+  }, []);
+
+  const goToExtraMenu = React.useCallback((menuKey: string) => {
+    setActiveMenu(`${EXTRA_MENU_PREFIX}${menuKey}`);
   }, []);
 
   const requestClose = React.useCallback(() => {
@@ -127,7 +153,7 @@ export const SettingsOverlay: React.FC<SettingsOverlayProps> = ({
       />
       <Animated.View style={[styles.panel, isFullscreen && styles.panelFullscreen, panelAnimatedStyle]}>
         <View style={styles.headerRow}>
-          {activeMenu !== 'root' ? (
+          {activeMenu !== ROOT_MENU_KEY ? (
             <Pressable
               onPress={goToRoot}
               accessibilityRole="button"
@@ -153,7 +179,7 @@ export const SettingsOverlay: React.FC<SettingsOverlayProps> = ({
           </Pressable>
         </View>
 
-        {activeMenu === 'root' ? (
+        {activeMenu === ROOT_MENU_KEY ? (
           <View style={styles.menuList}>
             {showPlaybackSpeed ? (
               <Pressable
@@ -186,10 +212,31 @@ export const SettingsOverlay: React.FC<SettingsOverlayProps> = ({
                 </View>
               </Pressable>
             ) : null}
+
+            {resolvedExtraMenuItems.map((extraMenuItem) => (
+              <Pressable
+                key={extraMenuItem.key}
+                onPress={() => goToExtraMenu(extraMenuItem.key)}
+                style={({ pressed }) => [styles.menuItem, pressed && styles.buttonPressed]}
+                accessibilityRole="button"
+                accessibilityLabel={`Open ${extraMenuItem.title} settings`}
+                testID={`settings-menu-extra-${extraMenuItem.key}`}
+              >
+                <Text style={styles.menuItemTitle}>{extraMenuItem.title}</Text>
+                <View style={styles.menuItemRight}>
+                  {extraMenuItem.value ? (
+                    <Text style={styles.menuItemValue}>{extraMenuItem.value}</Text>
+                  ) : null}
+                  <MaterialIcons name="chevron-right" color="#9CA3AF" size={20} />
+                </View>
+              </Pressable>
+            ))}
+
+            {extraItems ? <View style={styles.extraItemsContainer}>{extraItems}</View> : null}
           </View>
         ) : null}
 
-        {activeMenu === 'playback-speed' ? (
+        {activeMenu === PLAYBACK_SPEED_MENU_KEY ? (
           <ScrollView
             style={styles.menuList}
             contentContainerStyle={styles.menuListContent}
@@ -225,7 +272,7 @@ export const SettingsOverlay: React.FC<SettingsOverlayProps> = ({
           </ScrollView>
         ) : null}
 
-        {activeMenu === 'mute' ? (
+        {activeMenu === MUTE_MENU_KEY ? (
           <View style={styles.menuList}>
             <Pressable
               onPress={() => handleSelectMuted(false)}
@@ -265,6 +312,43 @@ export const SettingsOverlay: React.FC<SettingsOverlayProps> = ({
               )}
             </Pressable>
           </View>
+        ) : null}
+
+        {activeExtraMenuItem ? (
+          <ScrollView
+            style={styles.menuList}
+            contentContainerStyle={styles.menuListContent}
+            showsVerticalScrollIndicator={false}
+            bounces={false}
+          >
+            {activeExtraMenuItem.options.map((option) => {
+              const selected = activeExtraMenuItem.selectedOptionId === option.id;
+              return (
+                <Pressable
+                  key={option.id}
+                  onPress={() => activeExtraMenuItem.onSelectOption(option.id)}
+                  style={({ pressed }) => [
+                    styles.menuItem,
+                    selected && styles.menuItemSelected,
+                    pressed && styles.buttonPressed,
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityLabel={option.label}
+                  accessibilityState={{ selected }}
+                  testID={`settings-extra-option-${activeExtraMenuItem.key}-${option.id}`}
+                >
+                  <Text style={[styles.menuItemTitle, selected && styles.menuItemTitleSelected]}>
+                    {option.label}
+                  </Text>
+                  {selected ? (
+                    <MaterialIcons name="check" color="#F3F4F6" size={24} />
+                  ) : (
+                    <View style={styles.checkPlaceholder} />
+                  )}
+                </Pressable>
+              );
+            })}
+          </ScrollView>
         ) : null}
       </Animated.View>
     </View>
@@ -346,6 +430,9 @@ const styles = StyleSheet.create({
   },
   menuListContent: {
     paddingBottom: 4,
+  },
+  extraItemsContainer: {
+    marginTop: 8,
   },
   menuItem: {
     paddingHorizontal: 0,

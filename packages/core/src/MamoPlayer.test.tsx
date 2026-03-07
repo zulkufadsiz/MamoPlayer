@@ -1,5 +1,6 @@
 import { act, fireEvent, render } from '@testing-library/react-native';
 import React from 'react';
+import { Text } from 'react-native';
 import type { ReactVideoProps, VideoRef } from 'react-native-video';
 
 let latestVideoProps: ReactVideoProps | null = null;
@@ -370,6 +371,66 @@ describe('MamoPlayerCore', () => {
     expect(getByText('Settings')).toBeTruthy();
     expect(queryByText('Playback Speed')).toBeNull();
     expect(getByText('Mute')).toBeTruthy();
+  });
+
+  it('shows settings overlay when only extraItems are provided', () => {
+    const { getByTestId, getByText, queryByText } = render(
+      <MamoPlayerCore
+        source={{ uri: 'https://example.com/video.mp4' }}
+        settingsOverlay={{
+          showPlaybackSpeed: false,
+          showMute: false,
+          extraItems: <Text>Tracks</Text>,
+        }}
+      />,
+    );
+
+    expect(queryByText('Tracks')).toBeNull();
+
+    act(() => {
+      fireEvent.press(getByTestId('core-settings-menu-button'));
+    });
+
+    expect(getByText('Settings')).toBeTruthy();
+    expect(getByText('Tracks')).toBeTruthy();
+    expect(queryByText('Playback Speed')).toBeNull();
+    expect(queryByText('Mute')).toBeNull();
+  });
+
+  it('opens and selects options from extra menu items', () => {
+    const onSelectAudio = jest.fn();
+    const { getByLabelText, getByTestId, getByText } = render(
+      <MamoPlayerCore
+        source={{ uri: 'https://example.com/video.mp4' }}
+        settingsOverlay={{
+          showPlaybackSpeed: false,
+          showMute: false,
+          extraMenuItems: [
+            {
+              key: 'audio',
+              title: 'Audio',
+              value: 'English',
+              options: [
+                { id: 'en', label: 'English' },
+                { id: 'tr', label: 'Turkish' },
+              ],
+              selectedOptionId: 'en',
+              onSelectOption: onSelectAudio,
+            },
+          ],
+        }}
+      />,
+    );
+
+    act(() => {
+      fireEvent.press(getByTestId('core-settings-menu-button'));
+    });
+
+    fireEvent.press(getByTestId('settings-menu-extra-audio'));
+    expect(getByText('Audio')).toBeTruthy();
+
+    fireEvent.press(getByLabelText('Turkish'));
+    expect(onSelectAudio).toHaveBeenCalledWith('tr');
   });
 
   it('updates playback rate when selecting speed in settings overlay', () => {

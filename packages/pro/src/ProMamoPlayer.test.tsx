@@ -4,6 +4,17 @@ import { StyleSheet } from 'react-native';
 import { ProMamoPlayer } from './ProMamoPlayer';
 import type { PlayerThemeConfig } from './types/theme';
 
+jest.mock('@react-native-vector-icons/material-icons', () => {
+  const React = require('react');
+  const { Text } = require('react-native');
+
+  const MaterialIconsMock = ({ name }: { name?: string }) => <Text>{name ?? 'icon'}</Text>;
+
+  MaterialIconsMock.displayName = 'MaterialIconsMock';
+
+  return MaterialIconsMock;
+});
+
 let latestOnPlaybackEvent: ((event: PlaybackEvent) => void) | undefined;
 let latestVideoProps:
   | {
@@ -11,6 +22,23 @@ let latestVideoProps:
   paused?: boolean;
       source?: unknown;
       autoPlay?: boolean;
+      settingsOverlay?: {
+        enabled?: boolean;
+        showPlaybackSpeed?: boolean;
+        showMute?: boolean;
+        showQuality?: boolean;
+        showSubtitles?: boolean;
+        showAudioTracks?: boolean;
+        extraItems?: unknown;
+        extraMenuItems?: Array<{
+          key: string;
+          title: string;
+          value?: string;
+          options: Array<{ id: string; label: string }>;
+          selectedOptionId?: string;
+          onSelectOption: (optionId: string) => void;
+        }>;
+      };
       onPictureInPictureStatusChanged?: (event: Readonly<{ isActive: boolean }>) => void;
       currentQualityId?: string;
       onQualityChange?: (qualityId: string) => void;
@@ -23,7 +51,10 @@ let latestVideoProps:
         isDefault?: boolean;
       }[];
       textTracks?: { title: string; language?: string; type: 'text/vtt'; uri: string }[];
-      selectedTextTrack?: { type: 'disabled' } | { type: 'index'; value: number };
+      selectedTextTrack?:
+        | { type: 'disabled' }
+        | { type: 'index'; value: number }
+        | { type: 'title'; value: string };
       defaultAudioTrackId?: string | null;
       currentAudioTrackId?: string;
       onAudioTrackChange?: (audioTrackId: string) => void;
@@ -74,7 +105,7 @@ const mockSubscribeToPipEvents = jest.fn(
     return mockUnsubscribePipEvents;
   },
 );
-let shouldExposeEnterPictureInPicture = true;
+let mockShouldExposeEnterPictureInPicture = true;
 
 jest.mock('@mamoplayer/core', () => {
   const React = require('react');
@@ -88,6 +119,7 @@ jest.mock('@mamoplayer/core', () => {
         paused,
         source,
         autoPlay,
+        settingsOverlay,
         onPictureInPictureStatusChanged,
         currentQualityId,
         onQualityChange,
@@ -106,6 +138,23 @@ jest.mock('@mamoplayer/core', () => {
         paused?: boolean;
         source?: unknown;
         autoPlay?: boolean;
+        settingsOverlay?: {
+          enabled?: boolean;
+          showPlaybackSpeed?: boolean;
+          showMute?: boolean;
+          showQuality?: boolean;
+          showSubtitles?: boolean;
+          showAudioTracks?: boolean;
+          extraItems?: unknown;
+          extraMenuItems?: Array<{
+            key: string;
+            title: string;
+            value?: string;
+            options: Array<{ id: string; label: string }>;
+            selectedOptionId?: string;
+            onSelectOption: (optionId: string) => void;
+          }>;
+        };
         onPictureInPictureStatusChanged?: (event: Readonly<{ isActive: boolean }>) => void;
         currentQualityId?: string;
         onQualityChange?: (qualityId: string) => void;
@@ -118,7 +167,10 @@ jest.mock('@mamoplayer/core', () => {
           isDefault?: boolean;
         }[];
         textTracks?: { title: string; language?: string; type: 'text/vtt'; uri: string }[];
-        selectedTextTrack?: { type: 'disabled' } | { type: 'index'; value: number };
+        selectedTextTrack?:
+          | { type: 'disabled' }
+          | { type: 'index'; value: number }
+          | { type: 'title'; value: string };
         defaultAudioTrackId?: string | null;
         currentAudioTrackId?: string;
         onAudioTrackChange?: (audioTrackId: string) => void;
@@ -138,7 +190,7 @@ jest.mock('@mamoplayer/core', () => {
           seek: (position: number) => mockSeek(position),
         };
 
-        if (shouldExposeEnterPictureInPicture) {
+        if (mockShouldExposeEnterPictureInPicture) {
           instance.enterPictureInPicture = () => mockEnterPictureInPicture();
         }
 
@@ -151,6 +203,7 @@ jest.mock('@mamoplayer/core', () => {
         paused,
         source,
         autoPlay,
+        settingsOverlay,
         onPictureInPictureStatusChanged,
         currentQualityId,
         onQualityChange,
@@ -267,7 +320,7 @@ describe('ProMamoPlayer', () => {
     mockSeek.mockReset();
     mockEnterPictureInPicture.mockReset();
     mockRequestPictureInPicture.mockReset();
-    shouldExposeEnterPictureInPicture = true;
+    mockShouldExposeEnterPictureInPicture = true;
   });
 
   const emitPlayback = (event: Partial<PlaybackEvent> & Pick<PlaybackEvent, 'type'>) => {
@@ -371,6 +424,77 @@ describe('ProMamoPlayer', () => {
     expect(watermark.props.pointerEvents).toBe('none');
   });
 
+  it('forwards settingsOverlay extraItems to core player', () => {
+    const extraItems = <></>;
+
+    render(
+      <ProMamoPlayer
+        source={{ uri: 'https://example.com/video.mp4' }}
+        settingsOverlay={{
+          showPlaybackSpeed: false,
+          showMute: false,
+          extraItems,
+        }}
+      />,
+    );
+
+    expect(latestVideoProps?.settingsOverlay?.extraItems).toBe(extraItems);
+  });
+
+  it('adds subtitle menu item to core settings overlay and applies subtitle selection', () => {
+    render(
+      <ProMamoPlayer
+        source={{ uri: 'https://example.com/video-with-subtitles.mp4' }}
+        tracks={{
+          audioTracks: [
+            { id: 'en-audio', label: 'English', language: 'en' },
+            { id: 'tr-audio', label: 'Turkish', language: 'tr' },
+          ],
+          subtitleTracks: [
+            {
+              id: 'en-sub',
+              language: 'en',
+              label: 'English',
+              uri: 'https://example.com/subtitles-en.vtt',
+            },
+            {
+              id: 'tr-sub',
+              language: 'tr',
+              label: 'Turkish',
+              uri: 'https://example.com/subtitles-tr.vtt',
+            },
+          ],
+          defaultSubtitleTrackId: 'en-sub',
+        }}
+      />,
+    );
+
+    const subtitleMenuItem = latestVideoProps?.settingsOverlay?.extraMenuItems?.find(
+      (extraMenuItem) => extraMenuItem.key === 'subtitle',
+    );
+
+    expect(subtitleMenuItem).toEqual(
+      expect.objectContaining({
+        title: 'Subtitle',
+        value: 'English',
+        selectedOptionId: 'en-sub',
+      }),
+    );
+    expect(subtitleMenuItem?.options).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: 'en-sub', label: 'English' }),
+        expect.objectContaining({ id: 'tr-sub', label: 'Turkish' }),
+        expect.objectContaining({ id: 'off', label: 'Off' }),
+      ]),
+    );
+
+    act(() => {
+      subtitleMenuItem?.onSelectOption('tr-sub');
+    });
+
+    expect(latestVideoProps?.currentSubtitleTrackId).toBe('tr-sub');
+  });
+
   it('emits PiP events and forwards picture-in-picture status callback', () => {
     const onPipEvent = jest.fn();
     const onPictureInPictureStatusChanged = jest.fn();
@@ -429,7 +553,7 @@ describe('ProMamoPlayer', () => {
   });
 
   it('falls back to PiP native bridge request when player ref PiP entry is unavailable', () => {
-    shouldExposeEnterPictureInPicture = false;
+    mockShouldExposeEnterPictureInPicture = false;
 
     const onPipEvent = jest.fn();
     const { getByTestId } = render(
@@ -1286,7 +1410,26 @@ describe('ProMamoPlayer', () => {
     );
 
     expect(latestVideoProps?.currentSubtitleTrackId).toBe('tr');
-    expect(latestVideoProps?.selectedTextTrack).toEqual({ type: 'index', value: 1 });
+    expect(latestVideoProps?.selectedTextTrack).toEqual({ type: 'title', value: 'Turkish' });
+    expect(latestVideoProps?.source).toEqual(
+      expect.objectContaining({
+        textTracks: [
+          {
+            title: 'English',
+            language: 'en',
+            type: 'text/vtt',
+            uri: 'https://example.com/subtitles-en.vtt',
+          },
+          {
+            title: 'Turkish',
+            language: 'tr',
+            type: 'text/vtt',
+            uri: 'https://example.com/subtitles-tr.vtt',
+          },
+        ],
+        selectedTextTrack: { type: 'title', value: 'Turkish' },
+      }),
+    );
     expect(latestVideoProps?.subtitleTracks).toHaveLength(2);
     expect(latestVideoProps?.textTracks).toEqual([
       {
@@ -1302,6 +1445,41 @@ describe('ProMamoPlayer', () => {
         uri: 'https://example.com/subtitles-tr.vtt',
       },
     ]);
+  });
+
+  it('applies subtitles when source is a string uri', () => {
+    render(
+      <ProMamoPlayer
+        source={'https://example.com/subtitles-string-source.mp4'}
+        tracks={{
+          subtitleTracks: [
+            {
+              id: 'en',
+              language: 'en',
+              label: 'English',
+              uri: 'https://example.com/subtitles-en.vtt',
+              isDefault: true,
+            },
+          ],
+        }}
+      />,
+    );
+
+    expect(latestVideoProps?.selectedTextTrack).toEqual({ type: 'title', value: 'English' });
+    expect(latestVideoProps?.source).toEqual(
+      expect.objectContaining({
+        uri: 'https://example.com/subtitles-string-source.mp4',
+        textTracks: [
+          {
+            title: 'English',
+            language: 'en',
+            type: 'text/vtt',
+            uri: 'https://example.com/subtitles-en.vtt',
+          },
+        ],
+        selectedTextTrack: { type: 'title', value: 'English' },
+      }),
+    );
   });
 
   it('resolves initial subtitle track from isDefault when no explicit default id', () => {
@@ -1329,7 +1507,7 @@ describe('ProMamoPlayer', () => {
     );
 
     expect(latestVideoProps?.currentSubtitleTrackId).toBe('es');
-    expect(latestVideoProps?.selectedTextTrack).toEqual({ type: 'index', value: 1 });
+    expect(latestVideoProps?.selectedTextTrack).toEqual({ type: 'title', value: 'Spanish' });
   });
 
   it('defaults subtitles to off when subtitle tracks exist without default', () => {
@@ -1382,7 +1560,7 @@ describe('ProMamoPlayer', () => {
     });
 
     expect(latestVideoProps?.currentSubtitleTrackId).toBe('fr');
-    expect(latestVideoProps?.selectedTextTrack).toEqual({ type: 'index', value: 1 });
+    expect(latestVideoProps?.selectedTextTrack).toEqual({ type: 'title', value: 'French' });
 
     act(() => {
       latestVideoProps?.onSubtitleTrackChange?.('off');
@@ -1792,6 +1970,35 @@ describe('ProMamoPlayer', () => {
     expect(getByText('Quality')).toBeTruthy();
     expect(getByText('Audio')).toBeTruthy();
     expect(queryByText('Subtitles')).toBeNull();
+  });
+
+  it('hides audio settings when dub languages are not different', () => {
+    const { getByTestId, queryByText, getByText } = render(
+      <ProMamoPlayer
+        source={{ uri: 'https://example.com/settings-overlay-audio-languages.mp4' }}
+        tracks={{
+          qualities: [
+            {
+              id: 'auto',
+              label: 'Auto',
+              uri: 'https://example.com/auto.m3u8',
+              isDefault: true,
+            },
+          ],
+          audioTracks: [
+            { id: 'en-main', label: 'English', language: 'en' },
+            { id: 'en-commentary', label: 'English', language: 'en' },
+          ],
+        }}
+      />,
+    );
+
+    fireEvent.press(getByTestId('pro-settings-button'));
+
+    expect(getByText('Quality')).toBeTruthy();
+    expect(queryByText('Audio')).toBeNull();
+    expect(latestVideoProps?.audioTracks).toBeUndefined();
+    expect(latestVideoProps?.onAudioTrackChange).toBeUndefined();
   });
 
   it('highlights current quality, audio and subtitle selections in settings overlay', () => {

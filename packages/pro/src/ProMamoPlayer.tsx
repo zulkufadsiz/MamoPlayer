@@ -123,6 +123,149 @@ const getErrorMessageFromPlaybackEvent = (playbackEvent?: PlaybackEvent): string
   return getErrorMessageFromUnknown(playbackEvent.error);
 };
 
+const getSubtitleCueTextFromPayload = (payload: unknown): string | undefined => {
+  if (!payload || typeof payload !== 'object') {
+    return undefined;
+  }
+
+  const payloadRecord = payload as {
+    text?: unknown;
+    cue?: { text?: unknown } | unknown;
+    cues?: Array<{ text?: unknown } | unknown> | unknown;
+    nativeEvent?: {
+      text?: unknown;
+      cue?: { text?: unknown } | unknown;
+      cues?: Array<{ text?: unknown } | unknown> | unknown;
+    };
+  };
+
+  const candidateContainers = [payloadRecord, payloadRecord.nativeEvent].filter(Boolean) as Array<{
+    text?: unknown;
+    cue?: { text?: unknown } | unknown;
+    cues?: Array<{ text?: unknown } | unknown> | unknown;
+  }>;
+
+  for (const container of candidateContainers) {
+    if (typeof container.text === 'string') {
+      const normalized = container.text.trim();
+      if (normalized.length > 0) {
+        return normalized;
+      }
+    }
+
+    if (
+      container.cue &&
+      typeof container.cue === 'object' &&
+      typeof (container.cue as { text?: unknown }).text === 'string'
+    ) {
+      const normalized = (container.cue as { text: string }).text.trim();
+      if (normalized.length > 0) {
+        return normalized;
+      }
+    }
+
+    if (Array.isArray(container.cues)) {
+      const textLines = container.cues
+        .filter((cue): cue is { text?: unknown } => Boolean(cue) && typeof cue === 'object')
+        .map((cue) => cue.text)
+        .filter((value): value is string => typeof value === 'string')
+        .map((value) => value.trim())
+        .filter((value) => value.length > 0);
+
+      if (textLines.length > 0) {
+        return textLines.join('\n');
+      }
+    }
+  }
+
+  return undefined;
+};
+
+type ParsedSubtitleCue = {
+  start: number;
+  end: number;
+  text: string;
+};
+
+const parseVttTimestampToSeconds = (rawTimestamp: string): number | null => {
+  const normalizedTimestamp = rawTimestamp.trim().replace(',', '.');
+  const parts = normalizedTimestamp.split(':');
+
+  if (parts.length < 2 || parts.length > 3) {
+    return null;
+  }
+
+  const [hoursPart, minutesPart, secondsPart] =
+    parts.length === 3 ? parts : ['0', parts[0] ?? '0', parts[1] ?? '0'];
+  const hours = Number(hoursPart);
+  const minutes = Number(minutesPart);
+  const seconds = Number(secondsPart);
+
+  if (!Number.isFinite(hours) || !Number.isFinite(minutes) || !Number.isFinite(seconds)) {
+    return null;
+  }
+
+  return hours * 3600 + minutes * 60 + seconds;
+};
+
+const parseVttCues = (vttContent: string): ParsedSubtitleCue[] => {
+  const normalizedContent = vttContent.replace(/\r/g, '');
+  const blocks = normalizedContent.split(/\n\n+/);
+  const cues: ParsedSubtitleCue[] = [];
+
+  for (const block of blocks) {
+    const lines = block
+      .split('\n')
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0);
+
+    if (lines.length === 0) {
+      continue;
+    }
+
+    if (lines[0] === 'WEBVTT' || lines[0].startsWith('NOTE') || lines[0].startsWith('STYLE')) {
+      continue;
+    }
+
+    const timingLineIndex = lines.findIndex((line) => line.includes('-->'));
+
+    if (timingLineIndex < 0) {
+      continue;
+    }
+
+    const timingLine = lines[timingLineIndex];
+    const [startRaw = '', endWithSettings = ''] = timingLine.split('-->');
+    const endRaw = endWithSettings.trim().split(/\s+/)[0] ?? '';
+    const startSeconds = parseVttTimestampToSeconds(startRaw);
+    const endSeconds = parseVttTimestampToSeconds(endRaw);
+
+    if (
+      typeof startSeconds !== 'number' ||
+      typeof endSeconds !== 'number' ||
+      endSeconds <= startSeconds
+    ) {
+      continue;
+    }
+
+    const cueText = lines
+      .slice(timingLineIndex + 1)
+      .join('\n')
+      .trim();
+
+    if (cueText.length === 0) {
+      continue;
+    }
+
+    cues.push({
+      start: startSeconds,
+      end: endSeconds,
+      text: cueText,
+    });
+  }
+
+  return cues;
+};
+
 const getAdPositionFromPayload = (payload?: unknown): AnalyticsEvent['adPosition'] | undefined => {
   if (!payload || typeof payload !== 'object') {
     return undefined;
@@ -351,6 +494,7 @@ interface ProMamoPlayerOverlaysProps {
   icons?: PlayerIconSet;
   watermark?: WatermarkConfig;
   watermarkPosition: { top: number; left: number };
+  subtitleText?: string;
 }
 
 const renderOverlayIcon = (
@@ -411,6 +555,7 @@ const ProMamoPlayerOverlays: React.FC<ProMamoPlayerOverlaysProps> = ({
   icons,
   watermark,
   watermarkPosition,
+  subtitleText,
 }) => {
   const playerTheme = usePlayerTheme();
   const isOttLayout = layoutVariant === 'ott';
@@ -638,8 +783,31 @@ const ProMamoPlayerOverlays: React.FC<ProMamoPlayerOverlaysProps> = ({
           {watermark.text}
         </Text>
       ) : null}
+      {subtitleText ? <Text style={styles.subtitleText}>{subtitleText}</Text> : null}
     </>
   );
+};
+
+interface ProFullscreenSubtitleOverlayProps {
+  subtitleText?: string;
+  layoutVariant: PlayerLayoutVariant;
+}
+
+const ProFullscreenSubtitleOverlay: React.FC<ProFullscreenSubtitleOverlayProps> = ({
+  subtitleText,
+  layoutVariant,
+}) => {
+  const playerTheme = usePlayerTheme();
+  const styles = React.useMemo(
+    () => stylesFactory(playerTheme, layoutVariant),
+    [layoutVariant, playerTheme],
+  );
+
+  if (!subtitleText) {
+    return null;
+  }
+
+  return <Text style={styles.subtitleText}>{subtitleText}</Text>;
 };
 
 export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
@@ -668,8 +836,16 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
   const {
     style: playerStyle,
     topRightActions: consumerTopRightActions,
+    onTextTrackDataChanged: consumerOnTextTrackDataChanged,
+    onFullscreenPlayerDidPresent: consumerOnFullscreenPlayerDidPresent,
+    onFullscreenPlayerDidDismiss: consumerOnFullscreenPlayerDidDismiss,
     ...playerProps
-  } = rest as typeof rest & { topRightActions?: React.ReactNode };
+  } = rest as typeof rest & {
+    topRightActions?: React.ReactNode;
+    onTextTrackDataChanged?: (payload: unknown) => void;
+    onFullscreenPlayerDidPresent?: () => void;
+    onFullscreenPlayerDidDismiss?: () => void;
+  };
 
   const resolvedSettings = {
     enabled: settingsOverlay?.enabled ?? true,
@@ -678,9 +854,33 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
     showAudioTracks: settingsOverlay?.showAudioTracks ?? true,
   };
 
+  const hasMultipleDubLanguageOptions = React.useMemo(() => {
+    const audioTracks = tracks?.audioTracks;
+
+    if (!audioTracks || audioTracks.length < 2) {
+      return false;
+    }
+
+    const uniqueLanguages = new Set(
+      audioTracks
+        .map((audioTrack) => {
+          const normalizedLanguage = audioTrack.language?.trim().toLowerCase();
+          if (normalizedLanguage) {
+            return normalizedLanguage;
+          }
+
+          const normalizedLabel = audioTrack.label.trim().toLowerCase();
+          return normalizedLabel.length > 0 ? normalizedLabel : audioTrack.id;
+        }),
+    );
+
+    return uniqueLanguages.size > 1;
+  }, [tracks?.audioTracks]);
+
   const shouldShowQualitySettings = resolvedSettings.enabled && resolvedSettings.showQuality;
   const shouldShowSubtitleSettings = resolvedSettings.enabled && resolvedSettings.showSubtitles;
-  const shouldShowAudioTrackSettings = resolvedSettings.enabled && resolvedSettings.showAudioTracks;
+  const shouldShowAudioTrackSettings =
+    resolvedSettings.enabled && resolvedSettings.showAudioTracks && hasMultipleDubLanguageOptions;
 
   const playerRef = React.useRef<VideoRef | null>(null);
   const adRef = useRef(new AdStateMachine());
@@ -741,6 +941,11 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
   const [scrubThumbnailFrame, setScrubThumbnailFrame] = React.useState<ThumbnailFrame | null>(
     null,
   );
+  const [activeSubtitleCueText, setActiveSubtitleCueText] = React.useState<string | undefined>(
+    undefined,
+  );
+  const [parsedSubtitleCues, setParsedSubtitleCues] = React.useState<ParsedSubtitleCue[]>([]);
+  const [isCoreFullscreen, setIsCoreFullscreen] = React.useState(false);
 
   const settingsSections = React.useMemo<OverlaySection[]>(() => {
     const sections: OverlaySection[] = [];
@@ -1175,6 +1380,10 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
     setCurrentSubtitleTrackId(initialSubtitleTrackId);
   }, [initialSubtitleTrackId]);
 
+  React.useEffect(() => {
+    setActiveSubtitleCueText(undefined);
+  }, [currentSubtitleTrackId]);
+
   const changeQuality = React.useCallback(
     (qualityId: VideoQualityId) => {
       const qualityVariant = tracks?.qualities?.find((quality) => quality.id === qualityId);
@@ -1233,6 +1442,7 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
           return;
         }
 
+        console.log('[MamoPlayer Pro] Subtitle track changed: off');
         setCurrentSubtitleTrackId('off');
         return;
       }
@@ -1245,6 +1455,14 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
         return;
       }
 
+      const selectedSubtitleTrackLabel = subtitleTracks.find(
+        (subtitleTrack) => subtitleTrack.id === subtitleTrackId,
+      )?.label;
+      console.log(
+        `[MamoPlayer Pro] Subtitle track changed: ${subtitleTrackId}${
+          selectedSubtitleTrackLabel ? ` (${selectedSubtitleTrackLabel})` : ''
+        }`,
+      );
       setCurrentSubtitleTrackId(subtitleTrackId);
     },
     [currentSubtitleTrackId, tracks?.subtitleTracks],
@@ -1305,19 +1523,43 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
       return { type: 'disabled' as const };
     }
 
-    const selectedSubtitleTrackIndex = tracks.subtitleTracks.findIndex(
+    const selectedSubtitleTrack = tracks.subtitleTracks.find(
       (subtitleTrack) => subtitleTrack.id === currentSubtitleTrackId,
     );
 
-    if (selectedSubtitleTrackIndex < 0) {
+    if (!selectedSubtitleTrack) {
       return { type: 'disabled' as const };
     }
 
     return {
-      type: 'index' as const,
-      value: selectedSubtitleTrackIndex,
+      type: 'title' as const,
+      value: selectedSubtitleTrack.label,
     };
   }, [currentSubtitleTrackId, tracks?.subtitleTracks]);
+
+  const sourceWithSubtitles = React.useMemo(() => {
+    if (!textTracks || textTracks.length === 0) {
+      return activeSource;
+    }
+
+    if (typeof activeSource === 'string') {
+      return {
+        uri: activeSource,
+        textTracks,
+        selectedTextTrack,
+      } as MamoPlayerProps['source'];
+    }
+
+    if (activeSource && typeof activeSource === 'object' && !Array.isArray(activeSource)) {
+      return {
+        ...activeSource,
+        textTracks,
+        selectedTextTrack,
+      } as MamoPlayerProps['source'];
+    }
+
+    return activeSource;
+  }, [activeSource, selectedTextTrack, textTracks]);
 
   const completeAdPlayback = React.useCallback(
     (playbackEvent?: PlaybackEvent) => {
@@ -1856,6 +2098,205 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
     completeAdPlayback();
   }, [completeAdPlayback, isSkipDisabled]);
 
+  const selectedAudio = React.useMemo(
+    () => tracks?.audioTracks?.find((audioTrack) => audioTrack.id === currentAudioTrackId),
+    [currentAudioTrackId, tracks?.audioTracks],
+  );
+  const selectedSubtitle = React.useMemo(
+    () => tracks?.subtitleTracks?.find((subtitleTrack) => subtitleTrack.id === currentSubtitleTrackId),
+    [currentSubtitleTrackId, tracks?.subtitleTracks],
+  );
+
+  React.useEffect(() => {
+    if (!shouldShowSubtitleSettings || currentSubtitleTrackId === 'off' || !selectedSubtitle?.uri) {
+      setParsedSubtitleCues([]);
+      return;
+    }
+
+    let isCancelled = false;
+
+    const loadSubtitleCues = async () => {
+      try {
+        const response = await fetch(selectedSubtitle.uri);
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch subtitle track (${response.status})`);
+        }
+
+        const subtitleFileContent = await response.text();
+
+        if (isCancelled) {
+          return;
+        }
+
+        const cues = parseVttCues(subtitleFileContent);
+        setParsedSubtitleCues(cues);
+        console.log(
+          `[MamoPlayer Pro] Loaded subtitle cues: ${cues.length} from ${selectedSubtitle.uri}`,
+        );
+      } catch (error) {
+        if (isCancelled) {
+          return;
+        }
+
+        setParsedSubtitleCues([]);
+        const reason =
+          error instanceof Error ? error.message : 'Unable to parse subtitle cues from track URI.';
+        console.warn(`[MamoPlayer Pro] ${reason}`);
+      }
+    };
+
+    void loadSubtitleCues();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [currentSubtitleTrackId, selectedSubtitle?.uri, shouldShowSubtitleSettings]);
+
+  const fallbackSubtitleCueText = React.useMemo(() => {
+    if (currentSubtitleTrackId === 'off' || parsedSubtitleCues.length === 0) {
+      return undefined;
+    }
+
+    const activeCue = parsedSubtitleCues.find(
+      (cue) => currentPosition >= cue.start && currentPosition <= cue.end,
+    );
+
+    return activeCue?.text;
+  }, [currentPosition, currentSubtitleTrackId, parsedSubtitleCues]);
+  const resolvedSubtitleText = activeSubtitleCueText ?? fallbackSubtitleCueText;
+
+  const handleFullscreenPlayerDidPresent = React.useCallback(() => {
+    setIsCoreFullscreen(true);
+    consumerOnFullscreenPlayerDidPresent?.();
+  }, [consumerOnFullscreenPlayerDidPresent]);
+
+  const handleFullscreenPlayerDidDismiss = React.useCallback(() => {
+    setIsCoreFullscreen(false);
+    consumerOnFullscreenPlayerDidDismiss?.();
+  }, [consumerOnFullscreenPlayerDidDismiss]);
+
+  const handleTextTrackDataChanged = React.useCallback(
+    (payload: unknown) => {
+      console.log('[MamoPlayer Pro] Text track data changed:', payload);
+      const cueText = getSubtitleCueTextFromPayload(payload);
+      setActiveSubtitleCueText(cueText);
+
+      if (cueText) {
+        console.log(`[MamoPlayer Pro] Subtitle cue: ${cueText}`);
+      }
+
+      consumerOnTextTrackDataChanged?.(payload);
+    },
+    [consumerOnTextTrackDataChanged],
+  );
+
+  const getAudioLabels = React.useCallback(
+    (audioTrack?: { label: string; language?: string }) => {
+      if (audioTrack?.label) {
+        return audioTrack.label;
+      }
+
+      if (audioTrack?.language) {
+        return audioTrack.language.toUpperCase();
+      }
+
+      return 'Auto';
+    },
+    [],
+  );
+
+  const getSubtitleLabels = React.useCallback(
+    (subtitleTrack?: { label: string; language?: string }, subtitleTrackId?: string | 'off') => {
+      if (subtitleTrackId === 'off') {
+        return 'Off';
+      }
+
+      if (subtitleTrack?.label) {
+        return subtitleTrack.label;
+      }
+
+      if (subtitleTrack?.language) {
+        return subtitleTrack.language.toUpperCase();
+      }
+
+      return 'Off';
+    },
+    [],
+  );
+
+  const proSubtitleExtraMenuItem = React.useMemo(() => {
+    if (!shouldShowSubtitleSettings || !tracks?.subtitleTracks?.length) {
+      return undefined;
+    }
+
+    return {
+      key: 'subtitle',
+      title: 'Subtitle',
+      value: getSubtitleLabels(selectedSubtitle, currentSubtitleTrackId),
+      options: [
+        ...tracks.subtitleTracks.map((subtitleTrack) => ({
+          id: subtitleTrack.id,
+          label: subtitleTrack.label,
+        })),
+        { id: 'off', label: 'Off' },
+      ],
+      selectedOptionId: currentSubtitleTrackId ?? 'off',
+      onSelectOption: (optionId: string) => {
+        changeSubtitleTrack(optionId as string | 'off');
+      },
+    };
+  }, [
+    changeSubtitleTrack,
+    currentSubtitleTrackId,
+    getSubtitleLabels,
+    selectedSubtitle,
+    shouldShowSubtitleSettings,
+    tracks?.subtitleTracks,
+  ]);
+
+  const proAudioExtraMenuItem = React.useMemo(() => {
+    if (!shouldShowAudioTrackSettings || !tracks?.audioTracks?.length) {
+      return undefined;
+    }
+
+    return {
+      key: 'audio',
+      title: 'Audio',
+      value: getAudioLabels(selectedAudio),
+      options: tracks.audioTracks.map((audioTrack) => ({
+        id: audioTrack.id,
+        label: audioTrack.label,
+      })),
+      selectedOptionId: currentAudioTrackId,
+      onSelectOption: (optionId: string) => {
+        changeAudioTrack(optionId);
+      },
+    };
+  }, [
+    changeAudioTrack,
+    currentAudioTrackId,
+    getAudioLabels,
+    selectedAudio,
+    shouldShowAudioTrackSettings,
+    tracks?.audioTracks,
+  ]);
+
+  const coreSettingsOverlayConfig = React.useMemo<SettingsOverlayConfig | undefined>(() => {
+    const consumerExtraItems = settingsOverlay?.extraItems;
+    const consumerExtraMenuItems = settingsOverlay?.extraMenuItems ?? [];
+    const proExtraMenuItems = [proSubtitleExtraMenuItem, proAudioExtraMenuItem].filter(
+      (menuItem): menuItem is NonNullable<typeof menuItem> => Boolean(menuItem),
+    );
+    const mergedExtraMenuItems = [...consumerExtraMenuItems, ...proExtraMenuItems];
+
+    return {
+      ...settingsOverlay,
+      extraItems: consumerExtraItems,
+      extraMenuItems: mergedExtraMenuItems,
+    };
+  }, [proAudioExtraMenuItem, proSubtitleExtraMenuItem, settingsOverlay]);
+
   return (
     <ThemeProvider theme={theme} themeName={themeName}>
       <View style={[styles.playerContainer, playerStyle]}>
@@ -1864,7 +2305,8 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
           {...playerProps}
           useTextureView={playerProps.useTextureView ?? Platform.OS === 'android'}
           style={StyleSheet.absoluteFillObject}
-          source={activeSource}
+          settingsOverlay={coreSettingsOverlayConfig}
+          source={sourceWithSubtitles}
           autoPlay={effectiveAutoPlay}
           textTracks={textTracks as MamoPlayerProps['textTracks']}
           selectedTextTrack={selectedTextTrack as MamoPlayerProps['selectedTextTrack']}
@@ -1878,6 +2320,17 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
           onQualityChange={shouldShowQualitySettings ? changeQuality : undefined}
           onAudioTrackChange={shouldShowAudioTrackSettings ? changeAudioTrack : undefined}
           onSubtitleTrackChange={shouldShowSubtitleSettings ? changeSubtitleTrack : undefined}
+          onTextTrackDataChanged={handleTextTrackDataChanged}
+          onFullscreenPlayerDidPresent={handleFullscreenPlayerDidPresent}
+          onFullscreenPlayerDidDismiss={handleFullscreenPlayerDidDismiss}
+          overlayContent={
+            isCoreFullscreen ? (
+              <ProFullscreenSubtitleOverlay
+                subtitleText={resolvedSubtitleText}
+                layoutVariant={layoutVariant}
+              />
+            ) : null
+          }
           onPlaybackEvent={handlePlaybackEvent}
           onPictureInPictureStatusChanged={handlePictureInPictureStatusChanged}
           paused={resolvedPausedState}
@@ -1936,6 +2389,7 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
           icons={icons}
           watermark={watermark}
           watermarkPosition={watermarkPosition}
+          subtitleText={!isCoreFullscreen ? resolvedSubtitleText : undefined}
         />
       </View>
     </ThemeProvider>
@@ -2250,6 +2704,20 @@ const stylesFactory = (theme: PlayerThemeConfig, layoutVariant: PlayerLayoutVari
       position: 'absolute',
       color: primaryTextColor,
       fontSize: textSmallSize,
+    },
+    subtitleText: {
+      position: 'absolute',
+      bottom: isOttLayout ? 88 : 72,
+      alignSelf: 'center',
+      color: primaryTextColor,
+      fontSize: isOttLayout ? textMediumSize : textSmallSize,
+      fontWeight: '600',
+      backgroundColor: panelOverlayColor,
+      borderRadius: mediumRadius,
+      paddingHorizontal: isOttLayout ? 10 : 8,
+      paddingVertical: isOttLayout ? 6 : 4,
+      maxWidth: '90%',
+      textAlign: 'center',
     },
   });
 };

@@ -9,6 +9,8 @@ import type { TracksConfig } from '../../packages/pro/src/types/tracks';
 
 const MP4_SOURCE_URI = 'https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4';
 const HLS_SOURCE_URI = 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8';
+const SUBTITLE_EN_URI = 'https://raw.githubusercontent.com/shaka-project/shaka-player/main/test/test/assets/text-clip.vtt';
+const SUBTITLE_FR_URI = 'https://raw.githubusercontent.com/shaka-project/shaka-player/main/test/test/assets/text-clip-alt.vtt';
 const INVALID_MAIN_SOURCE_URI = 'https://invalid-main.m3u8';
 const INVALID_AD_SOURCE_URI = 'https://not-found-ad.mp4';
 
@@ -114,10 +116,10 @@ const demoTracks: TracksConfig = {
       id: 'sub-en',
       language: 'en',
       label: 'English',
-      uri: 'https://subs-en.vtt',
+      uri: SUBTITLE_EN_URI,
       isDefault: true,
     },
-    { id: 'sub-tr', language: 'tr', label: 'Türkçe', uri: 'https://subs-tr.vtt' },
+    { id: 'sub-fr', language: 'fr', label: 'Français', uri: SUBTITLE_FR_URI },
   ],
   defaultQualityId: 'auto',
   defaultAudioTrackId: 'audio-en',
