@@ -495,6 +495,7 @@ interface ProMamoPlayerOverlaysProps {
   watermark?: WatermarkConfig;
   watermarkPosition: { top: number; left: number };
   subtitleText?: string;
+  subtitleBottomOffset?: number;
 }
 
 const renderOverlayIcon = (
@@ -556,6 +557,7 @@ const ProMamoPlayerOverlays: React.FC<ProMamoPlayerOverlaysProps> = ({
   watermark,
   watermarkPosition,
   subtitleText,
+  subtitleBottomOffset,
 }) => {
   const playerTheme = usePlayerTheme();
   const isOttLayout = layoutVariant === 'ott';
@@ -783,7 +785,16 @@ const ProMamoPlayerOverlays: React.FC<ProMamoPlayerOverlaysProps> = ({
           {watermark.text}
         </Text>
       ) : null}
-      {subtitleText ? <Text style={styles.subtitleText}>{subtitleText}</Text> : null}
+      {subtitleText ? (
+        <Text
+          style={[
+            styles.subtitleText,
+            typeof subtitleBottomOffset === 'number' ? { bottom: subtitleBottomOffset } : null,
+          ]}
+        >
+          {subtitleText}
+        </Text>
+      ) : null}
     </>
   );
 };
@@ -837,14 +848,10 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
     style: playerStyle,
     topRightActions: consumerTopRightActions,
     onTextTrackDataChanged: consumerOnTextTrackDataChanged,
-    onFullscreenPlayerDidPresent: consumerOnFullscreenPlayerDidPresent,
-    onFullscreenPlayerDidDismiss: consumerOnFullscreenPlayerDidDismiss,
     ...playerProps
   } = rest as typeof rest & {
     topRightActions?: React.ReactNode;
     onTextTrackDataChanged?: (payload: unknown) => void;
-    onFullscreenPlayerDidPresent?: () => void;
-    onFullscreenPlayerDidDismiss?: () => void;
   };
 
   const resolvedSettings = {
@@ -2165,16 +2172,17 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
     return activeCue?.text;
   }, [currentPosition, currentSubtitleTrackId, parsedSubtitleCues]);
   const resolvedSubtitleText = activeSubtitleCueText ?? fallbackSubtitleCueText;
+  const selectedTextTrackForPlayer = React.useMemo(() => {
+    if (isCoreFullscreen && resolvedSubtitleText) {
+      return { type: 'disabled' as const };
+    }
 
-  const handleFullscreenPlayerDidPresent = React.useCallback(() => {
-    setIsCoreFullscreen(true);
-    consumerOnFullscreenPlayerDidPresent?.();
-  }, [consumerOnFullscreenPlayerDidPresent]);
+    return selectedTextTrack;
+  }, [isCoreFullscreen, resolvedSubtitleText, selectedTextTrack]);
 
-  const handleFullscreenPlayerDidDismiss = React.useCallback(() => {
-    setIsCoreFullscreen(false);
-    consumerOnFullscreenPlayerDidDismiss?.();
-  }, [consumerOnFullscreenPlayerDidDismiss]);
+  const handleCoreFullscreenChange = React.useCallback((isFullscreen: boolean) => {
+    setIsCoreFullscreen(isFullscreen);
+  }, []);
 
   const handleTextTrackDataChanged = React.useCallback(
     (payload: unknown) => {
@@ -2309,7 +2317,7 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
           source={sourceWithSubtitles}
           autoPlay={effectiveAutoPlay}
           textTracks={textTracks as MamoPlayerProps['textTracks']}
-          selectedTextTrack={selectedTextTrack as MamoPlayerProps['selectedTextTrack']}
+          selectedTextTrack={selectedTextTrackForPlayer as MamoPlayerProps['selectedTextTrack']}
           audioTracks={shouldShowAudioTrackSettings ? tracks?.audioTracks : undefined}
           subtitleTracks={shouldShowSubtitleSettings ? tracks?.subtitleTracks : undefined}
           defaultAudioTrackId={initialAudioTrackId ?? null}
@@ -2321,8 +2329,7 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
           onAudioTrackChange={shouldShowAudioTrackSettings ? changeAudioTrack : undefined}
           onSubtitleTrackChange={shouldShowSubtitleSettings ? changeSubtitleTrack : undefined}
           onTextTrackDataChanged={handleTextTrackDataChanged}
-          onFullscreenPlayerDidPresent={handleFullscreenPlayerDidPresent}
-          onFullscreenPlayerDidDismiss={handleFullscreenPlayerDidDismiss}
+          onFullscreenChange={handleCoreFullscreenChange}
           overlayContent={
             isCoreFullscreen ? (
               <ProFullscreenSubtitleOverlay
@@ -2390,6 +2397,7 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
           watermark={watermark}
           watermarkPosition={watermarkPosition}
           subtitleText={!isCoreFullscreen ? resolvedSubtitleText : undefined}
+          subtitleBottomOffset={layoutVariant === 'ott' ? 56 : 42}
         />
       </View>
     </ThemeProvider>
@@ -2707,7 +2715,7 @@ const stylesFactory = (theme: PlayerThemeConfig, layoutVariant: PlayerLayoutVari
     },
     subtitleText: {
       position: 'absolute',
-      bottom: isOttLayout ? 88 : 72,
+      bottom: isOttLayout ? 88 : 48,
       alignSelf: 'center',
       color: primaryTextColor,
       fontSize: isOttLayout ? textMediumSize : textSmallSize,

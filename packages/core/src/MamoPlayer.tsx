@@ -38,6 +38,7 @@ export interface MamoPlayerCoreProps extends Omit<
   settingsOverlay?: SettingsOverlayConfig;
   topRightActions?: React.ReactNode;
   overlayContent?: React.ReactNode;
+  onFullscreenChange?: (isFullscreen: boolean) => void;
   onPlaybackEvent?: (event: PlaybackEvent) => void;
 }
 
@@ -50,6 +51,7 @@ export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
       settingsOverlay,
       topRightActions,
       overlayContent,
+      onFullscreenChange,
       onPlaybackEvent,
       style,
       ...rest
@@ -312,11 +314,15 @@ export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
     }, [hasVisibleSettingsSections, resolvedSettings.enabled, scheduleControlsAutoHide, showControls]);
 
     const handleToggleFullscreen = React.useCallback(() => {
-      setIsFullscreen(prev => !prev);
+      setIsFullscreen(prev => {
+        const nextFullscreen = !prev;
+        onFullscreenChange?.(nextFullscreen);
+        return nextFullscreen;
+      });
       setIsSettingsOpen(false);
       showControls();
       scheduleControlsAutoHide();
-    }, [scheduleControlsAutoHide, showControls]);
+    }, [onFullscreenChange, scheduleControlsAutoHide, showControls]);
 
     const renderPlayer = () => (
       <>
