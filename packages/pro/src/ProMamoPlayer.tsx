@@ -454,6 +454,7 @@ const resolveSourceWithQualityUri = (
 
 interface ProMamoPlayerQualityOverlayProps {
   showAdOverlay: boolean;
+  adOverlayInset?: AdsConfig['overlayInset'];
   skipButtonEnabled: boolean;
   isSkipDisabled: boolean;
   skipSecondsRemaining: number;
@@ -501,6 +502,7 @@ const renderOverlayIcon = (
 
 const ProMamoPlayerQualityOverlay: React.FC<ProMamoPlayerQualityOverlayProps> = ({
   showAdOverlay,
+  adOverlayInset,
   skipButtonEnabled,
   isSkipDisabled,
   skipSecondsRemaining,
@@ -573,6 +575,13 @@ const ProMamoPlayerQualityOverlay: React.FC<ProMamoPlayerQualityOverlayProps> = 
     () => stylesFactory(playerTheme, layoutVariant),
     [layoutVariant, playerTheme],
   );
+  const resolvedAdOverlayInsetStyle = React.useMemo(
+    () => ({
+      paddingRight: adOverlayInset?.right ?? (isOttLayout ? 20 : 14),
+      paddingBottom: adOverlayInset?.bottom ?? (isOttLayout ? 22 : 16),
+    }),
+    [adOverlayInset?.bottom, adOverlayInset?.right, isOttLayout],
+  );
   const handleQualityOptionPress = React.useCallback(
     (optionId: string) => {
       selectQualityOption?.(optionId);
@@ -587,7 +596,7 @@ const ProMamoPlayerQualityOverlay: React.FC<ProMamoPlayerQualityOverlayProps> = 
   return (
     <>
       {showAdOverlay ? (
-        <View style={styles.adOverlay}>
+        <View style={[styles.adOverlay, resolvedAdOverlayInsetStyle]}>
           <Text style={styles.adText}>Ad playing...</Text>
           {skipButtonEnabled ? (
             <Pressable
@@ -2323,6 +2332,7 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
       
         <ProMamoPlayerQualityOverlay
           showAdOverlay={adRef.current.isAdPlaying === true || isNativeAdPlaying}
+          adOverlayInset={ads?.overlayInset}
           skipButtonEnabled={skipButtonEnabled}
           isSkipDisabled={isSkipDisabled}
           skipSecondsRemaining={skipSecondsRemaining}
@@ -2375,6 +2385,8 @@ const stylesFactory = (theme: PlayerThemeConfig, layoutVariant: PlayerLayoutVari
   const panelBackgroundColor = colors.background ?? '#0B0D10';
   const panelOverlayColor = colors.overlay ?? colors.backgroundOverlay ?? overlayBackgroundColor;
   const panelBorderColor = colors.border ?? 'rgba(255, 255, 255, 0.15)';
+  const adButtonBackgroundColor =
+    colors.controlBackground ?? colors.overlay ?? colors.backgroundOverlay ?? 'rgba(31, 41, 55, 0.95)';
   const accentColor = colors.accent ?? colors.primary ?? primaryTextColor;
   const settingsBackdropColor = 'rgba(0, 0, 0, 0.5)';
   const settingsPanelColor = 'rgba(17, 24, 39, 0.98)';
@@ -2418,18 +2430,21 @@ const stylesFactory = (theme: PlayerThemeConfig, layoutVariant: PlayerLayoutVari
   return StyleSheet.create({
     adOverlay: {
       ...StyleSheet.absoluteFillObject,
-      alignItems: 'center',
-      justifyContent: 'center',
+      alignItems: 'flex-end',
+      justifyContent: 'flex-end',
       gap: 8,
       zIndex: 2,
-      backgroundColor: overlayBackgroundColor,
+      backgroundColor: 'transparent',
+      paddingRight: isOttLayout ? 20 : 14,
+      paddingBottom: isOttLayout ? 22 : 16,
     },
     adText: {
       color: primaryTextColor,
       fontSize: textMediumSize,
+      textAlign: 'right',
     },
     skipButton: {
-      backgroundColor: buttonBackgroundColor,
+      backgroundColor: adButtonBackgroundColor,
       borderRadius: mediumRadius,
       paddingHorizontal: 10,
       paddingVertical: 6,

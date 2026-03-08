@@ -6,6 +6,33 @@ title: Pro Player
 
 The Pro Player extends core playback with premium capabilities such as advanced monetization and enterprise-ready controls.
 
+## Ads overlay positioning
+
+When ads are active, the ad label and skip button render in the bottom-right area of the player.
+You can fine-tune the inset with `ads.overlayInset`.
+
+```tsx
+import { ProMamoPlayer } from '@mamoplayer/pro';
+
+<ProMamoPlayer
+  source={{ uri: 'https://cdn.example.com/content/main.m3u8' }}
+  ads={{
+    adBreaks: [
+      {
+        type: 'preroll',
+        source: { uri: 'https://cdn.example.com/ads/preroll.mp4' },
+      },
+    ],
+    skipButtonEnabled: true,
+    skipAfterSeconds: 5,
+    overlayInset: {
+      right: 24,
+      bottom: 24,
+    },
+  }}
+/>;
+```
+
 ## Subtitle track defaults and switching
 
 When `tracks.subtitleTracks` is provided, `ProMamoPlayer` resolves the initial subtitle state in this order:

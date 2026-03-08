@@ -102,9 +102,27 @@ export default function ProMamoPlayerDemo() {
           <Text style={styles.sectionTitle}>Player</Text>
           <View style={styles.playerArea}>
             <ProMamoPlayer
-              source={{ uri: 'https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4' }}
+              source={{ uri: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8' }}
+              autoPlay
               themeName={selectedThemeName}
               layoutVariant={selectedLayoutVariant}
+              // ads={{
+              //   adBreaks: [
+              //     {
+              //       type: 'preroll',
+              //       source: {
+              //         uri: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
+              //         type: 'video/mp4',
+              //       },
+              //     },
+              //   ],
+              //   skipButtonEnabled: true,
+              //   skipAfterSeconds: 5,
+              //   overlayInset: {
+              //     right: 18,
+              //     bottom: 18,
+              //   },
+              // }}
               analytics={{ onEvent: (event: unknown) => console.log('analytics event:', event) }}
               watermark={{
                 text: 'developer@example.com',
