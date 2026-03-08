@@ -604,38 +604,7 @@ const ProMamoPlayerQualityOverlay: React.FC<ProMamoPlayerQualityOverlayProps> = 
         </View>
       ) : null}
       
-      {!isOttLayout && (showPipButton || showSettingsButton) ? (
-        <View style={styles.controlsRow}>
-          {showSettingsButton ? (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Open settings overlay"
-              accessibilityHint="Opens quality settings"
-              onPress={openSettings}
-              style={styles.settingsButton}
-              testID="pro-settings-button"
-            >
-              {renderOverlayIcon(icons?.Settings, '⚙', 18, overlayIconColor)}
-              <Text style={styles.settingsButtonText}>Settings</Text>
-            </Pressable>
-          ) : null}
 
-          {showPipButton ? (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={
-                pipState === 'active' ? 'Picture in picture is active' : 'Enter picture in picture'
-              }
-              onPress={requestPip}
-              style={styles.pipButton}
-              testID="pro-pip-button"
-            >
-              {renderOverlayIcon(icons?.PictureInPicture, '▣', 16, overlayIconColor)}
-              <Text style={styles.pipButtonText}>PiP</Text>
-            </Pressable>
-          ) : null}
-        </View>
-      ) : null}
       {isSettingsOpen ? (
         <View
           style={styles.settingsOverlayRoot}
@@ -2351,7 +2320,7 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
           }
         
         />
-        {/* Modern OTT layout: enable with layoutVariant="ott" and themeName="ott". */}
+      
         <ProMamoPlayerQualityOverlay
           showAdOverlay={adRef.current.isAdPlaying === true || isNativeAdPlaying}
           skipButtonEnabled={skipButtonEnabled}

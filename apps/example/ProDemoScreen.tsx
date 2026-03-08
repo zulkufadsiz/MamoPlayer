@@ -140,7 +140,7 @@ const ProDemoScreen = () => {
     uri: MP4_SOURCE_URI,
   });
   const [themeName, setThemeName] = useState<ThemeName>('ott');
-  const [layoutVariant, setLayoutVariant] = useState<'compact' | 'standard' | 'ott'>('ott');
+
   const [pipEnabled, setPipEnabled] = useState(true);
   const [adsConfig, setAdsConfig] = useState<AdsConfig>(demoAds);
   const [analyticsEvents, setAnalyticsEvents] = useState<AnalyticsEvent[]>([]);
@@ -224,32 +224,6 @@ const ProDemoScreen = () => {
             </View>
           </View>
 
-          <Text style={styles.label}>Layout</Text>
-          <View style={styles.optionsRow}>
-            <View style={styles.optionButtonContainer}>
-              <Button
-                title={`${layoutVariant === 'compact' ? '✓ ' : ''}Compact`}
-                onPress={() => setLayoutVariant('compact')}
-              />
-            </View>
-            <View style={styles.optionButtonContainer}>
-              <Button
-                title={`${layoutVariant === 'standard' ? '✓ ' : ''}Standard`}
-                onPress={() => setLayoutVariant('standard')}
-              />
-            </View>
-            <View style={styles.optionButtonContainer}>
-              <Button
-                title={`${layoutVariant === 'ott' ? '✓ ' : ''}OTT`}
-                onPress={() => setLayoutVariant('ott')}
-              />
-            </View>
-          </View>
-
-          <Text style={styles.legendText}>
-            Use the controls above to preview built-in themes and layout variants.
-          </Text>
-
           <View style={styles.toggleRow}>
             <Text style={styles.label}>Picture-in-Picture</Text>
             <Switch value={pipEnabled} onValueChange={setPipEnabled} />
@@ -275,7 +249,6 @@ const ProDemoScreen = () => {
             ads={adsConfig}
             watermark={watermark}
             themeName={themeName}
-            layoutVariant={layoutVariant}
             style={styles.player}
             settingsOverlay={settingsOverlay}
             analytics={{
