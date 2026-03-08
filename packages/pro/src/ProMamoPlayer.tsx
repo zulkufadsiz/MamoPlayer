@@ -507,18 +507,12 @@ const ProMamoPlayerQualityOverlay: React.FC<ProMamoPlayerQualityOverlayProps> = 
   isSkipDisabled,
   skipSecondsRemaining,
   handleSkipAd,
-  showPipButton,
-  pipState,
-  requestPip,
-  showSettingsButton,
   isSettingsOpen,
-  openSettings,
   closeSettings,
   qualityOptions,
   selectedQualityOptionId,
   selectQualityOption,
   layoutVariant,
-  icons,
   watermark,
   watermarkPosition,
   subtitleText,
@@ -1425,29 +1419,9 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
     };
   }, [currentSubtitleTrackId, tracks?.subtitleTracks]);
 
-  const sourceWithSubtitles = React.useMemo(() => {
-    if (!textTracks || textTracks.length === 0) {
-      return activeSource;
-    }
+  const playerTextTracks = textTracks;
 
-    if (typeof activeSource === 'string') {
-      return {
-        uri: activeSource,
-        textTracks,
-        selectedTextTrack,
-      } as MamoPlayerProps['source'];
-    }
-
-    if (activeSource && typeof activeSource === 'object' && !Array.isArray(activeSource)) {
-      return {
-        ...activeSource,
-        textTracks,
-        selectedTextTrack,
-      } as MamoPlayerProps['source'];
-    }
-
-    return activeSource;
-  }, [activeSource, selectedTextTrack, textTracks]);
+  const sourceWithSubtitles = React.useMemo(() => activeSource, [activeSource]);
 
   const completeAdPlayback = React.useCallback(
     (playbackEvent?: PlaybackEvent) => {
@@ -2076,7 +2050,8 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
 
     return activeCue?.text;
   }, [currentPosition, currentSubtitleTrackId, parsedSubtitleCues]);
-  const resolvedSubtitleText = activeSubtitleCueText ?? fallbackSubtitleCueText;
+  const resolvedSubtitleText =
+    currentSubtitleTrackId === 'off' ? undefined : activeSubtitleCueText ?? fallbackSubtitleCueText;
   const selectedTextTrackForPlayer = React.useMemo(() => {
     if (isCoreFullscreen && currentSubtitleTrackId && currentSubtitleTrackId !== 'off') {
       return { type: 'disabled' as const };
@@ -2096,6 +2071,13 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
   const handleTextTrackDataChanged = React.useCallback(
     (payload: unknown) => {
       console.log('[MamoPlayer Pro] Text track data changed:', payload);
+
+      if (!shouldShowSubtitleSettings || currentSubtitleTrackId === 'off') {
+        setActiveSubtitleCueText(undefined);
+        consumerOnTextTrackDataChanged?.(payload);
+        return;
+      }
+
       const cueText = getSubtitleCueTextFromPayload(payload);
       setActiveSubtitleCueText(cueText);
 
@@ -2105,7 +2087,7 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
 
       consumerOnTextTrackDataChanged?.(payload);
     },
-    [consumerOnTextTrackDataChanged],
+    [consumerOnTextTrackDataChanged, currentSubtitleTrackId, shouldShowSubtitleSettings],
   );
 
   const getAudioLabels = React.useCallback(
@@ -2189,7 +2171,7 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
     if (!shouldShowSubtitleSettings || !tracks?.subtitleTracks?.length) {
       return undefined;
     }
-
+    console.log('Current subtitle track ID:', currentSubtitleTrackId);
     return {
       key: 'subtitle',
       title: 'Subtitle',
@@ -2256,6 +2238,7 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
 
     return {
       ...settingsOverlay,
+      showSubtitles: false,
       extraItems: consumerExtraItems,
       extraMenuItems: mergedExtraMenuItems,
     };
@@ -2277,18 +2260,15 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
           settingsOverlay={coreSettingsOverlayConfig}
           source={sourceWithSubtitles}
           autoPlay={effectiveAutoPlay}
-          textTracks={textTracks as MamoPlayerProps['textTracks']}
+          textTracks={playerTextTracks as MamoPlayerProps['textTracks']}
           selectedTextTrack={selectedTextTrackForPlayer as MamoPlayerProps['selectedTextTrack']}
           audioTracks={shouldShowAudioTrackSettings ? tracks?.audioTracks : undefined}
-          subtitleTracks={shouldShowSubtitleSettings ? tracks?.subtitleTracks : undefined}
           defaultAudioTrackId={initialAudioTrackId ?? null}
           rate={rate}
           currentQualityId={shouldShowQualitySettings ? currentQualityId : undefined}
           currentAudioTrackId={shouldShowAudioTrackSettings ? currentAudioTrackId : undefined}
-          currentSubtitleTrackId={shouldShowSubtitleSettings ? currentSubtitleTrackId : undefined}
           onQualityChange={shouldShowQualitySettings ? changeQuality : undefined}
           onAudioTrackChange={shouldShowAudioTrackSettings ? changeAudioTrack : undefined}
-          onSubtitleTrackChange={shouldShowSubtitleSettings ? changeSubtitleTrack : undefined}
           onTextTrackDataChanged={handleTextTrackDataChanged}
           onFullscreenChange={handleCoreFullscreenChange}
           overlayContent={

@@ -12,7 +12,7 @@ type DemoSubtitleMode = 'off' | 'sub-en' | 'track-default';
 export default function ProMamoPlayerDemo() {
   const [selectedThemeName, setSelectedThemeName] = useState<DemoThemeName>('dark');
   const [selectedLayoutVariant, setSelectedLayoutVariant] = useState<DemoLayoutVariant>('standard');
-  const [subtitleMode, setSubtitleMode] = useState<DemoSubtitleMode>('sub-en');
+  const [subtitleMode, setSubtitleMode] = useState<DemoSubtitleMode>('off');
 
   const tracksConfig = useMemo(() => {
     return {

@@ -55,6 +55,7 @@ let latestVideoProps:
         | { type: 'disabled' }
         | { type: 'index'; value: number }
         | { type: 'title'; value: string };
+      onTextTrackDataChanged?: (payload: unknown) => void;
       onFullscreenChange?: (isFullscreen: boolean) => void;
       defaultAudioTrackId?: string | null;
       currentAudioTrackId?: string;
@@ -128,6 +129,7 @@ jest.mock('@mamoplayer/core', () => {
         subtitleTracks,
         textTracks,
         selectedTextTrack,
+        onTextTrackDataChanged,
         onFullscreenChange,
         defaultAudioTrackId,
         currentAudioTrackId,
@@ -173,6 +175,7 @@ jest.mock('@mamoplayer/core', () => {
           | { type: 'disabled' }
           | { type: 'index'; value: number }
           | { type: 'title'; value: string };
+        onTextTrackDataChanged?: (payload: unknown) => void;
         onFullscreenChange?: (isFullscreen: boolean) => void;
         defaultAudioTrackId?: string | null;
         currentAudioTrackId?: string;
@@ -214,6 +217,7 @@ jest.mock('@mamoplayer/core', () => {
         subtitleTracks,
         textTracks,
         selectedTextTrack,
+        onTextTrackDataChanged,
         onFullscreenChange,
         defaultAudioTrackId,
         currentAudioTrackId,
@@ -497,6 +501,32 @@ describe('ProMamoPlayer', () => {
     });
 
     expect(latestVideoProps?.currentSubtitleTrackId).toBe('tr-sub');
+  });
+
+  it('does not render incoming subtitle cue text when default subtitle track is off', () => {
+    const { queryByText } = render(
+      <ProMamoPlayer
+        source={{ uri: 'https://example.com/video-with-subtitles-off.mp4' }}
+        tracks={{
+          subtitleTracks: [
+            {
+              id: 'en-sub',
+              language: 'en',
+              label: 'English',
+              uri: 'https://example.com/subtitles-en-off.vtt',
+            },
+          ],
+          defaultSubtitleTrackId: 'off',
+        }}
+      />,
+    );
+
+    act(() => {
+      latestVideoProps?.onTextTrackDataChanged?.({ text: 'Subtitle should stay hidden' });
+    });
+
+    expect(latestVideoProps?.currentSubtitleTrackId).toBe('off');
+    expect(queryByText('Subtitle should stay hidden')).toBeNull();
   });
 
   it('adds quality menu item to core settings overlay and applies quality selection', () => {
