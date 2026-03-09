@@ -70,7 +70,7 @@ const config = {
         title: 'MamoPlayer',
         logo: {
           alt: 'MamoPlayer Logo',
-          src: 'img/logo.svg',
+          src: 'img/logo.png',
         },
         items: [
           {
@@ -155,6 +155,21 @@ const config = {
         darkTheme: darkCodeTheme,
       },
     }),
+};
+
+config.webpack = {
+  jsLoader: (isServer) => ({
+    loader: require.resolve('babel-loader'),
+    options: {
+      presets: [
+        require.resolve('@docusaurus/core/lib/babel/preset'),
+        [require.resolve('@babel/preset-react'), { runtime: 'automatic' }],
+      ],
+      babelrc: false,
+      configFile: false,
+      caller: { name: isServer ? 'server' : 'client' },
+    },
+  }),
 };
 
 module.exports = config;
