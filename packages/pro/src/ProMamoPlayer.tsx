@@ -1,19 +1,18 @@
 import {
-    MamoPlayer,
-    PlaybackOptions,
-    Timeline,
-    type MamoPlayerProps,
-    type PlaybackEvent,
-    type SettingsOverlayConfig,
+  MamoPlayerCore,
+  type MamoPlayerProps,
+  type PlaybackEvent,
+  type SettingsOverlayConfig
 } from '@mamoplayer/core';
+import MaterialIcons from '@react-native-vector-icons/material-icons';
 import React, { useRef } from 'react';
-import { Animated, Easing, Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, Easing, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { VideoRef } from 'react-native-video';
 import { AdStateMachine } from './ads/AdState';
 import { loadAds, releaseAds, subscribeToAdsEvents } from './ima/nativeBridge';
 import { getThumbnailForTime } from './internal/thumbnails';
 import { validateLicenseKey } from './licensing/license';
-import { subscribeToPipEvents } from './pip/nativeBridge';
+import { requestPictureInPicture, subscribeToPipEvents } from './pip/nativeBridge';
 import { ThemeProvider, usePlayerTheme } from './theme/ThemeContext';
 import type { AdBreak, AdsConfig } from './types/ads';
 import type { AnalyticsConfig, AnalyticsEvent } from './types/analytics';
@@ -48,13 +47,6 @@ export interface ProMamoPlayerProps extends MamoPlayerProps {
 type OverlayOption = {
   id: string;
   label: string;
-};
-
-type OverlaySection = {
-  key: 'quality' | 'subtitles' | 'audio';
-  title: 'Quality' | 'Subtitles' | 'Audio';
-  options: OverlayOption[];
-  selectedOptionId?: string;
 };
 
 type Quartile = 25 | 50 | 75 | 100;
@@ -122,6 +114,149 @@ const getErrorMessageFromPlaybackEvent = (playbackEvent?: PlaybackEvent): string
   }
 
   return getErrorMessageFromUnknown(playbackEvent.error);
+};
+
+const getSubtitleCueTextFromPayload = (payload: unknown): string | undefined => {
+  if (!payload || typeof payload !== 'object') {
+    return undefined;
+  }
+
+  const payloadRecord = payload as {
+    text?: unknown;
+    cue?: { text?: unknown } | unknown;
+    cues?: Array<{ text?: unknown } | unknown> | unknown;
+    nativeEvent?: {
+      text?: unknown;
+      cue?: { text?: unknown } | unknown;
+      cues?: Array<{ text?: unknown } | unknown> | unknown;
+    };
+  };
+
+  const candidateContainers = [payloadRecord, payloadRecord.nativeEvent].filter(Boolean) as Array<{
+    text?: unknown;
+    cue?: { text?: unknown } | unknown;
+    cues?: Array<{ text?: unknown } | unknown> | unknown;
+  }>;
+
+  for (const container of candidateContainers) {
+    if (typeof container.text === 'string') {
+      const normalized = container.text.trim();
+      if (normalized.length > 0) {
+        return normalized;
+      }
+    }
+
+    if (
+      container.cue &&
+      typeof container.cue === 'object' &&
+      typeof (container.cue as { text?: unknown }).text === 'string'
+    ) {
+      const normalized = (container.cue as { text: string }).text.trim();
+      if (normalized.length > 0) {
+        return normalized;
+      }
+    }
+
+    if (Array.isArray(container.cues)) {
+      const textLines = container.cues
+        .filter((cue): cue is { text?: unknown } => Boolean(cue) && typeof cue === 'object')
+        .map((cue) => cue.text)
+        .filter((value): value is string => typeof value === 'string')
+        .map((value) => value.trim())
+        .filter((value) => value.length > 0);
+
+      if (textLines.length > 0) {
+        return textLines.join('\n');
+      }
+    }
+  }
+
+  return undefined;
+};
+
+type ParsedSubtitleCue = {
+  start: number;
+  end: number;
+  text: string;
+};
+
+const parseVttTimestampToSeconds = (rawTimestamp: string): number | null => {
+  const normalizedTimestamp = rawTimestamp.trim().replace(',', '.');
+  const parts = normalizedTimestamp.split(':');
+
+  if (parts.length < 2 || parts.length > 3) {
+    return null;
+  }
+
+  const [hoursPart, minutesPart, secondsPart] =
+    parts.length === 3 ? parts : ['0', parts[0] ?? '0', parts[1] ?? '0'];
+  const hours = Number(hoursPart);
+  const minutes = Number(minutesPart);
+  const seconds = Number(secondsPart);
+
+  if (!Number.isFinite(hours) || !Number.isFinite(minutes) || !Number.isFinite(seconds)) {
+    return null;
+  }
+
+  return hours * 3600 + minutes * 60 + seconds;
+};
+
+const parseVttCues = (vttContent: string): ParsedSubtitleCue[] => {
+  const normalizedContent = vttContent.replace(/\r/g, '');
+  const blocks = normalizedContent.split(/\n\n+/);
+  const cues: ParsedSubtitleCue[] = [];
+
+  for (const block of blocks) {
+    const lines = block
+      .split('\n')
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0);
+
+    if (lines.length === 0) {
+      continue;
+    }
+
+    if (lines[0] === 'WEBVTT' || lines[0].startsWith('NOTE') || lines[0].startsWith('STYLE')) {
+      continue;
+    }
+
+    const timingLineIndex = lines.findIndex((line) => line.includes('-->'));
+
+    if (timingLineIndex < 0) {
+      continue;
+    }
+
+    const timingLine = lines[timingLineIndex];
+    const [startRaw = '', endWithSettings = ''] = timingLine.split('-->');
+    const endRaw = endWithSettings.trim().split(/\s+/)[0] ?? '';
+    const startSeconds = parseVttTimestampToSeconds(startRaw);
+    const endSeconds = parseVttTimestampToSeconds(endRaw);
+
+    if (
+      typeof startSeconds !== 'number' ||
+      typeof endSeconds !== 'number' ||
+      endSeconds <= startSeconds
+    ) {
+      continue;
+    }
+
+    const cueText = lines
+      .slice(timingLineIndex + 1)
+      .join('\n')
+      .trim();
+
+    if (cueText.length === 0) {
+      continue;
+    }
+
+    cues.push({
+      start: startSeconds,
+      end: endSeconds,
+      text: cueText,
+    });
+  }
+
+  return cues;
 };
 
 const getAdPositionFromPayload = (payload?: unknown): AnalyticsEvent['adPosition'] | undefined => {
@@ -317,8 +452,9 @@ const resolveSourceWithQualityUri = (
   return { uri: qualityUri } as MamoPlayerProps['source'];
 };
 
-interface ProMamoPlayerOverlaysProps {
+interface ProMamoPlayerQualityOverlayProps {
   showAdOverlay: boolean;
+  adOverlayInset?: AdsConfig['overlayInset'];
   skipButtonEnabled: boolean;
   isSkipDisabled: boolean;
   skipSecondsRemaining: number;
@@ -330,28 +466,15 @@ interface ProMamoPlayerOverlaysProps {
   isSettingsOpen: boolean;
   openSettings: () => void;
   closeSettings: () => void;
-  settingsSections: OverlaySection[];
-  settingsHeaderTitle: string;
-  settingsLabelForOff: string;
+  qualityOptions: OverlayOption[];
+  selectedQualityOptionId?: string;
   selectQualityOption?: (qualityId: string) => void;
-  selectSubtitleOption?: (subtitleTrackId: string | 'off') => void;
-  selectAudioOption?: (audioTrackId: string) => void;
-  showTransportControls: boolean;
-  isPlaying: boolean;
-  timelineDuration: number;
-  timelinePosition: number;
-  timelineBuffered?: number;
-  timelineThumbnailUri?: string | null;
-  onTimelineScrubStart: () => void;
-  onTimelineScrub: (time: number) => void;
-  onTimelineScrubEnd: (time: number) => void;
-  onTogglePlayback: () => void;
-  onSeekBackTenSeconds: () => void;
-  onSeekForwardTenSeconds: () => void;
   layoutVariant: PlayerLayoutVariant;
   icons?: PlayerIconSet;
   watermark?: WatermarkConfig;
   watermarkPosition: { top: number; left: number };
+  subtitleText?: string;
+  subtitleBottomOffset?: number;
 }
 
 const renderOverlayIcon = (
@@ -377,41 +500,23 @@ const renderOverlayIcon = (
   );
 };
 
-const ProMamoPlayerOverlays: React.FC<ProMamoPlayerOverlaysProps> = ({
+const ProMamoPlayerQualityOverlay: React.FC<ProMamoPlayerQualityOverlayProps> = ({
   showAdOverlay,
+  adOverlayInset,
   skipButtonEnabled,
   isSkipDisabled,
   skipSecondsRemaining,
   handleSkipAd,
-  showPipButton,
-  pipState,
-  requestPip,
-  showSettingsButton,
   isSettingsOpen,
-  openSettings,
   closeSettings,
-  settingsSections,
-  settingsHeaderTitle,
-  settingsLabelForOff,
+  qualityOptions,
+  selectedQualityOptionId,
   selectQualityOption,
-  selectSubtitleOption,
-  selectAudioOption,
-  showTransportControls,
-  isPlaying,
-  timelineDuration,
-  timelinePosition,
-  timelineBuffered,
-  timelineThumbnailUri,
-  onTimelineScrubStart,
-  onTimelineScrub,
-  onTimelineScrubEnd,
-  onTogglePlayback,
-  onSeekBackTenSeconds,
-  onSeekForwardTenSeconds,
   layoutVariant,
-  icons,
   watermark,
   watermarkPosition,
+  subtitleText,
+  subtitleBottomOffset,
 }) => {
   const playerTheme = usePlayerTheme();
   const isOttLayout = layoutVariant === 'ott';
@@ -458,33 +563,34 @@ const ProMamoPlayerOverlays: React.FC<ProMamoPlayerOverlaysProps> = ({
   const overlayIconColor = React.useMemo(() => {
     const { colors } = getThemePrimitives(playerTheme);
 
-    return colors.primaryText ?? colors.textPrimary ?? colors.secondaryText ?? '#FFFFFF';
+    return colors.primaryText ?? colors.textPrimary ?? colors.secondaryText ?? '#E5E7EB';
   }, [playerTheme]);
   const styles = React.useMemo(
     () => stylesFactory(playerTheme, layoutVariant),
     [layoutVariant, playerTheme],
   );
-  const handleSectionOptionPress = React.useCallback(
-    (sectionKey: OverlaySection['key'], optionId: string) => {
-      if (sectionKey === 'quality') {
-        selectQualityOption?.(optionId);
-      } else if (sectionKey === 'audio') {
-        selectAudioOption?.(optionId);
-      } else if (sectionKey === 'subtitles') {
-        selectSubtitleOption?.(optionId);
-      }
+  const resolvedAdOverlayInsetStyle = React.useMemo(
+    () => ({
+      paddingRight: adOverlayInset?.right ?? (isOttLayout ? 20 : 14),
+      paddingBottom: adOverlayInset?.bottom ?? (isOttLayout ? 22 : 16),
+    }),
+    [adOverlayInset?.bottom, adOverlayInset?.right, isOttLayout],
+  );
+  const handleQualityOptionPress = React.useCallback(
+    (optionId: string) => {
+      selectQualityOption?.(optionId);
 
       if (CLOSE_SETTINGS_ON_SELECTION) {
         closeSettings();
       }
     },
-    [closeSettings, selectAudioOption, selectQualityOption, selectSubtitleOption],
+    [closeSettings, selectQualityOption],
   );
 
   return (
     <>
       {showAdOverlay ? (
-        <View style={styles.adOverlay}>
+        <View style={[styles.adOverlay, resolvedAdOverlayInsetStyle]}>
           <Text style={styles.adText}>Ad playing...</Text>
           {skipButtonEnabled ? (
             <Pressable
@@ -500,91 +606,8 @@ const ProMamoPlayerOverlays: React.FC<ProMamoPlayerOverlaysProps> = ({
           ) : null}
         </View>
       ) : null}
-      {showTransportControls ? (
-        <View style={styles.transportControlsRoot}>
-          <View style={styles.transportControlsRow}>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={isPlaying ? 'Pause' : 'Play'}
-              accessibilityHint={isPlaying ? 'Pauses playback' : 'Resumes playback'}
-              onPress={onTogglePlayback}
-              style={styles.transportPrimaryButton}
-              testID="pro-transport-play-toggle"
-            >
-              <View style={styles.transportButtonContent}>
-                {renderOverlayIcon(
-                  isPlaying ? icons?.Pause : icons?.Play,
-                  isPlaying ? '⏸' : '▶',
-                  isOttLayout ? 22 : 20,
-                  overlayIconColor,
-                )}
-                <Text style={styles.transportButtonLabel}>{isPlaying ? 'Pause' : 'Play'}</Text>
-              </View>
-            </Pressable>
-            <View style={styles.transportOptions}>
-              <PlaybackOptions
-                isPlaying={isPlaying}
-                onSeekBack={onSeekBackTenSeconds}
-                onTogglePlayPause={onTogglePlayback}
-                onSeekForward={onSeekForwardTenSeconds}
-              />
-            </View>
-          </View>
+      
 
-          <View style={styles.ottProgressTrack} testID="pro-transport-progress-track">
-            {timelineThumbnailUri ? (
-              <View style={styles.timelineThumbnailContainer}>
-                <Image
-                  source={{ uri: timelineThumbnailUri }}
-                  style={styles.timelineThumbnail}
-                  resizeMode="cover"
-                  testID="pro-scrub-thumbnail"
-                />
-              </View>
-            ) : null}
-            <Timeline
-              duration={timelineDuration}
-              position={timelinePosition}
-              buffered={timelineBuffered}
-              onScrubStart={onTimelineScrubStart}
-              onSeek={onTimelineScrub}
-              onScrubEnd={onTimelineScrubEnd}
-            />
-          </View>
-        </View>
-      ) : null}
-      {!isOttLayout && (showPipButton || showSettingsButton) ? (
-        <View style={styles.controlsRow}>
-          {showSettingsButton ? (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Open settings overlay"
-              accessibilityHint="Opens quality, subtitles and audio settings"
-              onPress={openSettings}
-              style={styles.settingsButton}
-              testID="pro-settings-button"
-            >
-              {renderOverlayIcon(icons?.Settings, '⚙', 18, overlayIconColor)}
-              <Text style={styles.settingsButtonText}>Settings</Text>
-            </Pressable>
-          ) : null}
-
-          {showPipButton ? (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={
-                pipState === 'active' ? 'Picture in picture is active' : 'Enter picture in picture'
-              }
-              onPress={requestPip}
-              style={styles.pipButton}
-              testID="pro-pip-button"
-            >
-              {renderOverlayIcon(icons?.PictureInPicture, '▣', 16, overlayIconColor)}
-              <Text style={styles.pipButtonText}>PiP</Text>
-            </Pressable>
-          ) : null}
-        </View>
-      ) : null}
       {isSettingsOpen ? (
         <View
           style={styles.settingsOverlayRoot}
@@ -593,8 +616,8 @@ const ProMamoPlayerOverlays: React.FC<ProMamoPlayerOverlaysProps> = ({
         >
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Close settings overlay background"
-            accessibilityHint="Closes the settings overlay"
+            accessibilityLabel="Close quality settings overlay background"
+            accessibilityHint="Closes the quality settings overlay"
             onPress={closeSettings}
             style={styles.settingsOverlayBackdrop}
             testID="pro-settings-overlay-backdrop"
@@ -602,11 +625,11 @@ const ProMamoPlayerOverlays: React.FC<ProMamoPlayerOverlaysProps> = ({
 
           <Animated.View style={[styles.settingsPanel, settingsPanelAnimatedStyle]}>
             <View style={styles.settingsHeader}>
-              <Text style={styles.settingsTitle}>{settingsHeaderTitle}</Text>
+              <Text style={styles.settingsTitle}>Video Quality Options</Text>
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel="Close settings overlay"
-                accessibilityHint="Closes the settings overlay"
+                accessibilityLabel="Close video quality options overlay"
+                accessibilityHint="Closes the video quality options overlay"
                 onPress={closeSettings}
                 style={styles.settingsCloseButton}
                 testID="pro-settings-close-button"
@@ -620,59 +643,44 @@ const ProMamoPlayerOverlays: React.FC<ProMamoPlayerOverlaysProps> = ({
               </Pressable>
             </View>
 
-            <View style={styles.settingsSectionsContainer}>
-              {settingsSections.map((section) => (
-                <View key={section.key} style={styles.settingsSection}>
-                  <Text style={styles.settingsSectionTitle}>{section.title}</Text>
-                  {section.options.map((option) => {
-                    const isSelected = option.id === section.selectedOptionId;
+            <ScrollView
+              style={styles.settingsSectionsScroll}
+              contentContainerStyle={styles.settingsSectionsContainer}
+              showsVerticalScrollIndicator={false}
+              testID="pro-settings-sections-scroll"
+            >
+              <View style={styles.settingsSection}>
+                {qualityOptions.map((option) => {
+                  const isSelected = option.id === selectedQualityOptionId;
 
-                    return (
-                      <Pressable
-                        key={`${section.key}-${option.id}`}
-                        accessibilityRole="button"
-                        accessibilityLabel={`${section.title} ${option.label}`}
-                        accessibilityHint={`Select ${option.label} for ${section.title.toLowerCase()}`}
-                        onPress={() => handleSectionOptionPress(section.key, option.id)}
-                        style={styles.settingsOptionRow}
-                        testID={`pro-settings-option-${section.key}-${option.id}`}
+                  return (
+                    <Pressable
+                      key={`quality-${option.id}`}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Quality ${option.label}`}
+                      accessibilityHint={`Select ${option.label} for quality`}
+                      onPress={() => handleQualityOptionPress(option.id)}
+                      style={styles.settingsOptionRow}
+                      testID={`pro-settings-option-quality-${option.id}`}
+                    >
+                      <Text
+                        style={[
+                          styles.settingsOptionLabel,
+                          isSelected ? styles.settingsOptionLabelSelected : null,
+                        ]}
                       >
-                        <Text
-                          style={[
-                            styles.settingsOptionLabel,
-                            isSelected ? styles.settingsOptionLabelSelected : null,
-                          ]}
-                        >
-                          {option.label}
-                        </Text>
-                        {isSelected ? (
-                          <Text style={styles.settingsOptionSelectedLabel}>Current</Text>
-                        ) : null}
-                      </Pressable>
-                    );
-                  })}
-                </View>
-              ))}
-              {isOttLayout && showPipButton ? (
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={
-                    pipState === 'active'
-                      ? 'Picture in picture is active'
-                      : 'Enter picture in picture'
-                  }
-                  accessibilityHint="Moves playback into picture in picture"
-                  onPress={requestPip}
-                  style={styles.settingsOptionRow}
-                  testID="pro-settings-pip-button"
-                >
-                  <View style={styles.settingsOptionLeading}>
-                    {renderOverlayIcon(icons?.PictureInPicture, '▣', 16, overlayIconColor)}
-                    <Text style={styles.settingsOptionLabel}>Picture in Picture</Text>
-                  </View>
-                </Pressable>
-              ) : null}
-            </View>
+                        {option.label}
+                      </Text>
+                      {isSelected ? (
+                        <MaterialIcons name="check" size={22} color={overlayIconColor} />
+                      ) : (
+                        <View style={styles.settingsOptionCheckPlaceholder} />
+                      )}
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </ScrollView>
           </Animated.View>
         </View>
       ) : null}
@@ -691,8 +699,40 @@ const ProMamoPlayerOverlays: React.FC<ProMamoPlayerOverlaysProps> = ({
           {watermark.text}
         </Text>
       ) : null}
+      {subtitleText ? (
+        <Text
+          style={[
+            styles.subtitleText,
+            typeof subtitleBottomOffset === 'number' ? { bottom: subtitleBottomOffset } : null,
+          ]}
+        >
+          {subtitleText}
+        </Text>
+      ) : null}
     </>
   );
+};
+
+interface ProFullscreenSubtitleOverlayProps {
+  subtitleText?: string;
+  layoutVariant: PlayerLayoutVariant;
+}
+
+const ProFullscreenSubtitleOverlay: React.FC<ProFullscreenSubtitleOverlayProps> = ({
+  subtitleText,
+  layoutVariant,
+}) => {
+  const playerTheme = usePlayerTheme();
+  const styles = React.useMemo(
+    () => stylesFactory(playerTheme, layoutVariant),
+    [layoutVariant, playerTheme],
+  );
+
+  if (!subtitleText) {
+    return null;
+  }
+
+  return <Text style={styles.subtitleText}>{subtitleText}</Text>;
 };
 
 export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
@@ -715,10 +755,18 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
   onPipEvent,
   ...rest
 }) => {
-  const ProCompatibleMamoPlayer = MamoPlayer as unknown as React.ComponentType<
+  const ProCompatibleMamoPlayer = MamoPlayerCore as unknown as React.ComponentType<
     Record<string, unknown>
   >;
-  const { style: playerStyle, ...playerProps } = rest;
+  const {
+    style: playerStyle,
+    topRightActions: consumerTopRightActions,
+    onTextTrackDataChanged: consumerOnTextTrackDataChanged,
+    ...playerProps
+  } = rest as typeof rest & {
+    topRightActions?: React.ReactNode;
+    onTextTrackDataChanged?: (payload: unknown) => void;
+  };
 
   const resolvedSettings = {
     enabled: settingsOverlay?.enabled ?? true,
@@ -727,9 +775,33 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
     showAudioTracks: settingsOverlay?.showAudioTracks ?? true,
   };
 
+  const hasMultipleDubLanguageOptions = React.useMemo(() => {
+    const audioTracks = tracks?.audioTracks;
+
+    if (!audioTracks || audioTracks.length < 2) {
+      return false;
+    }
+
+    const uniqueLanguages = new Set(
+      audioTracks
+        .map((audioTrack) => {
+          const normalizedLanguage = audioTrack.language?.trim().toLowerCase();
+          if (normalizedLanguage) {
+            return normalizedLanguage;
+          }
+
+          const normalizedLabel = audioTrack.label.trim().toLowerCase();
+          return normalizedLabel.length > 0 ? normalizedLabel : audioTrack.id;
+        }),
+    );
+
+    return uniqueLanguages.size > 1;
+  }, [tracks?.audioTracks]);
+
   const shouldShowQualitySettings = resolvedSettings.enabled && resolvedSettings.showQuality;
   const shouldShowSubtitleSettings = resolvedSettings.enabled && resolvedSettings.showSubtitles;
-  const shouldShowAudioTrackSettings = resolvedSettings.enabled && resolvedSettings.showAudioTracks;
+  const shouldShowAudioTrackSettings =
+    resolvedSettings.enabled && resolvedSettings.showAudioTracks && hasMultipleDubLanguageOptions;
 
   const playerRef = React.useRef<VideoRef | null>(null);
   const adRef = useRef(new AdStateMachine());
@@ -752,6 +824,8 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
   const mainSourceRef = React.useRef(initialMainSource);
   const pendingSessionEndEventRef = React.useRef<PlaybackEvent | null>(null);
   const pendingQualitySeekPositionRef = React.useRef<number | null>(null);
+  const pendingFullscreenSeekPositionRef = React.useRef<number | null>(null);
+  const pendingAdSeekPositionRef = React.useRef<number | null>(null);
   const adSourceMapRef = React.useRef<Map<string, AdBreak>>(new Map());
   const adMainContentStartPositionRef = React.useRef<number | null>(null);
   const [isAdMode, setIsAdMode] = React.useState(false);
@@ -776,6 +850,7 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
   >(initialSubtitleTrackId);
   const [pipState, setPipState] = React.useState<PipState>('inactive');
   const [isSettingsOpen, setIsSettingsOpen] = React.useState(false);
+  const [pausedOverride, setPausedOverride] = React.useState<boolean | null>(null);
   const [isInlinePlaybackPaused, setIsInlinePlaybackPaused] = React.useState<boolean | undefined>(
     undefined,
   );
@@ -789,94 +864,63 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
   const [scrubThumbnailFrame, setScrubThumbnailFrame] = React.useState<ThumbnailFrame | null>(
     null,
   );
+  const [activeSubtitleCueText, setActiveSubtitleCueText] = React.useState<string | undefined>(
+    undefined,
+  );
+  const [parsedSubtitleCues, setParsedSubtitleCues] = React.useState<ParsedSubtitleCue[]>([]);
+  const [isCoreFullscreen, setIsCoreFullscreen] = React.useState(false);
 
-  const settingsSections = React.useMemo<OverlaySection[]>(() => {
-    const sections: OverlaySection[] = [];
-
-    if (shouldShowQualitySettings && tracks?.qualities?.length) {
-      sections.push({
-        key: 'quality',
-        title: 'Quality',
-        options: tracks.qualities.map((quality) => ({ id: quality.id, label: quality.label })),
-        selectedOptionId: currentQualityId,
-      });
+  const qualityOptions = React.useMemo<OverlayOption[]>(() => {
+    if (!shouldShowQualitySettings || !tracks?.qualities?.length) {
+      return [];
     }
 
-    if (shouldShowSubtitleSettings && tracks?.subtitleTracks) {
-      sections.push({
-        key: 'subtitles',
-        title: 'Subtitles',
-        options: [
-          ...tracks.subtitleTracks.map((subtitleTrack) => ({
-            id: subtitleTrack.id,
-            label: subtitleTrack.label,
-          })),
-          { id: 'off', label: 'Off' },
-        ],
-        selectedOptionId: currentSubtitleTrackId ?? 'off',
-      });
-    }
+    return tracks.qualities.map((quality) => ({
+      id: quality.id,
+      label: quality.label,
+    }));
+  }, [shouldShowQualitySettings, tracks?.qualities]);
 
-    if (shouldShowAudioTrackSettings && tracks?.audioTracks?.length) {
-      sections.push({
-        key: 'audio',
-        title: 'Audio',
-        options: tracks.audioTracks.map((audioTrack) => ({
-          id: audioTrack.id,
-          label: audioTrack.label,
-        })),
-        selectedOptionId: currentAudioTrackId,
-      });
-    }
-
-    return sections;
-  }, [
-    currentAudioTrackId,
-    currentQualityId,
-    currentSubtitleTrackId,
-    shouldShowAudioTrackSettings,
-    shouldShowQualitySettings,
-    shouldShowSubtitleSettings,
-    tracks?.audioTracks,
-    tracks?.qualities,
-    tracks?.subtitleTracks,
-  ]);
-
-  const hasSettingsSections = settingsSections.length > 0;
+  const hasQualityOptions = Boolean(shouldShowQualitySettings && tracks?.qualities?.length);
 
   React.useEffect(() => {
-    if (!hasSettingsSections && isSettingsOpen) {
+    if (!hasQualityOptions && isSettingsOpen) {
       setIsSettingsOpen(false);
     }
-  }, [hasSettingsSections, isSettingsOpen]);
+  }, [hasQualityOptions, isSettingsOpen]);
 
   const openSettings = React.useCallback(() => {
-    if (!hasSettingsSections) {
+    if (!hasQualityOptions) {
       return;
     }
 
     setIsSettingsOpen(true);
-  }, [hasSettingsSections]);
+  }, [hasQualityOptions]);
 
   const closeSettings = React.useCallback(() => {
     setIsSettingsOpen(false);
   }, []);
 
-  const resolvedPausedState =
-    typeof rest.paused === 'boolean' ? rest.paused : isInlinePlaybackPaused;
-  const canTogglePlayback = typeof rest.paused !== 'boolean';
+  const resolvedPausedState = pausedOverride ??
+    (typeof rest.paused === 'boolean' ? rest.paused : isInlinePlaybackPaused);
+
+  React.useEffect(() => {
+    setPausedOverride(null);
+  }, [rest.paused]);
 
   const handleTogglePlayback = React.useCallback(() => {
-    if (!canTogglePlayback) {
-      return;
+    const currentlyPaused =
+      typeof resolvedPausedState === 'boolean' ? resolvedPausedState : !isInlinePlaybackActive;
+    const nextPaused = !currentlyPaused;
+
+    if (typeof rest.paused === 'boolean') {
+      setPausedOverride(nextPaused);
+    } else {
+      setIsInlinePlaybackPaused(nextPaused);
     }
 
-    setIsInlinePlaybackPaused((previousValue) => {
-      const currentlyPaused =
-        typeof previousValue === 'boolean' ? previousValue : !isInlinePlaybackActive;
-      return !currentlyPaused;
-    });
-  }, [canTogglePlayback, isInlinePlaybackActive]);
+    setIsInlinePlaybackActive(!nextPaused);
+  }, [isInlinePlaybackActive, resolvedPausedState, rest.paused]);
 
   const handleSeekBackTenSeconds = React.useCallback(() => {
     const nextPosition = Math.max(0, positionRef.current - 10);
@@ -937,14 +981,44 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
     [onPipEvent],
   );
   const requestPip = React.useCallback(() => {
+    if (pip?.enabled === false) {
+      return;
+    }
+
     emitPipEvent({
       state: 'entering',
     });
 
-    console.log('PiP requested');
-    // TODO: Invoke native PiP entry request once native bridge API is available.
-    // TODO: Hook this to the underlying player's PiP APIs and error handling callbacks.
-  }, [emitPipEvent]);
+    let lastPipError: unknown;
+
+    if (typeof playerRef.current?.enterPictureInPicture === 'function') {
+      try {
+        playerRef.current.enterPictureInPicture();
+        return;
+      } catch (error) {
+        lastPipError = error;
+      }
+    }
+
+    try {
+      requestPictureInPicture();
+      return;
+    } catch (error) {
+      lastPipError = error;
+    }
+
+    if (lastPipError) {
+      const reason =
+        lastPipError instanceof Error
+          ? lastPipError.message
+          : 'Unable to enter picture in picture.';
+      console.warn(`[MamoPlayer Pro] ${reason}`);
+      emitPipEvent({
+        state: 'inactive',
+        reason,
+      });
+    }
+  }, [emitPipEvent, pip?.enabled]);
   const handleNativePipStateChange = React.useCallback(
     (state: Extract<PipState, 'active' | 'exiting'>) => {
       emitPipEvent({ state });
@@ -1188,6 +1262,10 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
     setCurrentSubtitleTrackId(initialSubtitleTrackId);
   }, [initialSubtitleTrackId]);
 
+  React.useEffect(() => {
+    setActiveSubtitleCueText(undefined);
+  }, [currentSubtitleTrackId]);
+
   const changeQuality = React.useCallback(
     (qualityId: VideoQualityId) => {
       const qualityVariant = tracks?.qualities?.find((quality) => quality.id === qualityId);
@@ -1246,6 +1324,7 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
           return;
         }
 
+        console.log('[MamoPlayer Pro] Subtitle track changed: off');
         setCurrentSubtitleTrackId('off');
         return;
       }
@@ -1258,6 +1337,14 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
         return;
       }
 
+      const selectedSubtitleTrackLabel = subtitleTracks.find(
+        (subtitleTrack) => subtitleTrack.id === subtitleTrackId,
+      )?.label;
+      console.log(
+        `[MamoPlayer Pro] Subtitle track changed: ${subtitleTrackId}${
+          selectedSubtitleTrackLabel ? ` (${selectedSubtitleTrackLabel})` : ''
+        }`,
+      );
       setCurrentSubtitleTrackId(subtitleTrackId);
     },
     [currentSubtitleTrackId, tracks?.subtitleTracks],
@@ -1318,28 +1405,39 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
       return { type: 'disabled' as const };
     }
 
-    const selectedSubtitleTrackIndex = tracks.subtitleTracks.findIndex(
+    const selectedSubtitleTrack = tracks.subtitleTracks.find(
       (subtitleTrack) => subtitleTrack.id === currentSubtitleTrackId,
     );
 
-    if (selectedSubtitleTrackIndex < 0) {
+    if (!selectedSubtitleTrack) {
       return { type: 'disabled' as const };
     }
 
     return {
-      type: 'index' as const,
-      value: selectedSubtitleTrackIndex,
+      type: 'title' as const,
+      value: selectedSubtitleTrack.label,
     };
   }, [currentSubtitleTrackId, tracks?.subtitleTracks]);
+
+  const playerTextTracks = textTracks;
+
+  const sourceWithSubtitles = React.useMemo(() => activeSource, [activeSource]);
 
   const completeAdPlayback = React.useCallback(
     (playbackEvent?: PlaybackEvent) => {
       const currentAdBreak = adRef.current.currentAdBreak;
+      const mainContentPositionToResume =
+        adMainContentStartPositionRef.current ?? positionRef.current;
 
       if (currentAdBreak) {
         adRef.current.markAdCompleted(currentAdBreak);
       }
 
+      if (mainContentPositionToResume > 0) {
+        pendingAdSeekPositionRef.current = mainContentPositionToResume;
+      }
+
+      positionRef.current = mainContentPositionToResume;
       setIsAdMode(false);
       setActiveSource(mainSourceRef.current);
       setResumeMainAfterAd(true);
@@ -1349,7 +1447,7 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
         playbackEvent,
         fallbackPosition: positionRef.current,
         adPosition: currentAdBreak?.type,
-        mainContentPositionAtAdStart: adMainContentStartPositionRef.current ?? positionRef.current,
+        mainContentPositionAtAdStart: mainContentPositionToResume,
       });
       adMainContentStartPositionRef.current = null;
     },
@@ -1388,7 +1486,7 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
       playbackEvent?: PlaybackEvent,
     ) => {
       adRef.current.markAdStarted(adBreak);
-      mainSourceRef.current = rest.source;
+      mainSourceRef.current = activeSource;
       setActiveSource(adSource as MamoPlayerProps['source']);
       setIsAdMode(true);
       setAdStartedAt(Date.now());
@@ -1404,7 +1502,7 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
         mainContentPositionAtAdStart,
       });
     },
-    [analytics, rest.source],
+    [activeSource, analytics],
   );
 
   React.useEffect(() => {
@@ -1479,6 +1577,21 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
     [analytics],
   );
 
+  const restorePendingSeekPosition = React.useCallback(() => {
+    const positionToRestore =
+      pendingQualitySeekPositionRef.current ??
+      pendingFullscreenSeekPositionRef.current ??
+      pendingAdSeekPositionRef.current;
+
+    pendingQualitySeekPositionRef.current = null;
+    pendingFullscreenSeekPositionRef.current = null;
+    pendingAdSeekPositionRef.current = null;
+
+    if (typeof positionToRestore === 'number' && positionToRestore > 0) {
+      playerRef.current?.seek(positionToRestore);
+    }
+  }, []);
+
   const handlePlaybackEvent = React.useCallback(
     (playbackEvent: PlaybackEvent) => {
       const playbackEventWithBuffer = playbackEvent as PlaybackEvent & {
@@ -1517,13 +1630,12 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
 
         if (playbackEvent.type === 'ready') {
           if (
-            pendingQualitySeekPositionRef.current !== null &&
+            (pendingQualitySeekPositionRef.current !== null ||
+              pendingFullscreenSeekPositionRef.current !== null) &&
             !isNativeAdPlaying &&
             !isMainContentPausedByNativeAd
           ) {
-            const positionToRestore = pendingQualitySeekPositionRef.current;
-            pendingQualitySeekPositionRef.current = null;
-            playerRef.current?.seek(positionToRestore);
+            restorePendingSeekPosition();
           }
 
           quartileStateRef.current = createQuartileState();
@@ -1717,10 +1829,12 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
       }
 
       if (playbackEvent.type === 'ready') {
-        if (pendingQualitySeekPositionRef.current !== null) {
-          const positionToRestore = pendingQualitySeekPositionRef.current;
-          pendingQualitySeekPositionRef.current = null;
-          playerRef.current?.seek(positionToRestore);
+        if (
+          pendingQualitySeekPositionRef.current !== null ||
+          pendingFullscreenSeekPositionRef.current !== null ||
+          pendingAdSeekPositionRef.current !== null
+        ) {
+          restorePendingSeekPosition();
         }
 
         quartileStateRef.current = createQuartileState();
@@ -1805,6 +1919,7 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
       isAdMode,
       onPlaybackEvent,
       restrictions,
+      restorePendingSeekPosition,
       resumeMainAfterAd,
       trackQuartiles,
       useNativeIMA,
@@ -1869,6 +1984,271 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
     completeAdPlayback();
   }, [completeAdPlayback, isSkipDisabled]);
 
+  const selectedAudio = React.useMemo(
+    () => tracks?.audioTracks?.find((audioTrack) => audioTrack.id === currentAudioTrackId),
+    [currentAudioTrackId, tracks?.audioTracks],
+  );
+  const selectedSubtitle = React.useMemo(
+    () => tracks?.subtitleTracks?.find((subtitleTrack) => subtitleTrack.id === currentSubtitleTrackId),
+    [currentSubtitleTrackId, tracks?.subtitleTracks],
+  );
+
+  React.useEffect(() => {
+    if (!shouldShowSubtitleSettings || currentSubtitleTrackId === 'off' || !selectedSubtitle?.uri) {
+      setParsedSubtitleCues([]);
+      return;
+    }
+
+    let isCancelled = false;
+
+    const loadSubtitleCues = async () => {
+      try {
+        const response = await fetch(selectedSubtitle.uri);
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch subtitle track (${response.status})`);
+        }
+
+        const subtitleFileContent = await response.text();
+
+        if (isCancelled) {
+          return;
+        }
+
+        const cues = parseVttCues(subtitleFileContent);
+        setParsedSubtitleCues(cues);
+        console.log(
+          `[MamoPlayer Pro] Loaded subtitle cues: ${cues.length} from ${selectedSubtitle.uri}`,
+        );
+      } catch (error) {
+        if (isCancelled) {
+          return;
+        }
+
+        setParsedSubtitleCues([]);
+        const reason =
+          error instanceof Error ? error.message : 'Unable to parse subtitle cues from track URI.';
+        console.warn(`[MamoPlayer Pro] ${reason}`);
+      }
+    };
+
+    void loadSubtitleCues();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [currentSubtitleTrackId, selectedSubtitle?.uri, shouldShowSubtitleSettings]);
+
+  const fallbackSubtitleCueText = React.useMemo(() => {
+    if (currentSubtitleTrackId === 'off' || parsedSubtitleCues.length === 0) {
+      return undefined;
+    }
+
+    const activeCue = parsedSubtitleCues.find(
+      (cue) => currentPosition >= cue.start && currentPosition <= cue.end,
+    );
+
+    return activeCue?.text;
+  }, [currentPosition, currentSubtitleTrackId, parsedSubtitleCues]);
+  const resolvedSubtitleText =
+    currentSubtitleTrackId === 'off' ? undefined : activeSubtitleCueText ?? fallbackSubtitleCueText;
+  const selectedTextTrackForPlayer = React.useMemo(() => {
+    if (isCoreFullscreen && currentSubtitleTrackId && currentSubtitleTrackId !== 'off') {
+      return { type: 'disabled' as const };
+    }
+
+    return selectedTextTrack;
+  }, [currentSubtitleTrackId, isCoreFullscreen, selectedTextTrack]);
+
+  const handleCoreFullscreenChange = React.useCallback((isFullscreen: boolean) => {
+    if (positionRef.current > 0) {
+      pendingFullscreenSeekPositionRef.current = positionRef.current;
+    }
+
+    setIsCoreFullscreen(isFullscreen);
+  }, []);
+
+  const handleTextTrackDataChanged = React.useCallback(
+    (payload: unknown) => {
+      console.log('[MamoPlayer Pro] Text track data changed:', payload);
+
+      if (!shouldShowSubtitleSettings || currentSubtitleTrackId === 'off') {
+        setActiveSubtitleCueText(undefined);
+        consumerOnTextTrackDataChanged?.(payload);
+        return;
+      }
+
+      const cueText = getSubtitleCueTextFromPayload(payload);
+      setActiveSubtitleCueText(cueText);
+
+      if (cueText) {
+        console.log(`[MamoPlayer Pro] Subtitle cue: ${cueText}`);
+      }
+
+      consumerOnTextTrackDataChanged?.(payload);
+    },
+    [consumerOnTextTrackDataChanged, currentSubtitleTrackId, shouldShowSubtitleSettings],
+  );
+
+  const getAudioLabels = React.useCallback(
+    (audioTrack?: { label: string; language?: string }) => {
+      if (audioTrack?.label) {
+        return audioTrack.label;
+      }
+
+      if (audioTrack?.language) {
+        return audioTrack.language.toUpperCase();
+      }
+
+      return 'Auto';
+    },
+    [],
+  );
+
+  const getQualityLabel = React.useCallback(
+    (qualityId?: VideoQualityId) => {
+      if (!qualityId) {
+        return 'Auto';
+      }
+
+      const selectedQuality = tracks?.qualities?.find((quality) => quality.id === qualityId);
+
+      if (selectedQuality?.label) {
+        return selectedQuality.label;
+      }
+
+      return qualityId;
+    },
+    [tracks?.qualities],
+  );
+
+  const getSubtitleLabels = React.useCallback(
+    (subtitleTrack?: { label: string; language?: string }, subtitleTrackId?: string | 'off') => {
+      if (subtitleTrackId === 'off') {
+        return 'Off';
+      }
+
+      if (subtitleTrack?.label) {
+        return subtitleTrack.label;
+      }
+
+      if (subtitleTrack?.language) {
+        return subtitleTrack.language.toUpperCase();
+      }
+
+      return 'Off';
+    },
+    [],
+  );
+
+  const proQualityExtraMenuItem = React.useMemo(() => {
+    if (!shouldShowQualitySettings || !tracks?.qualities?.length) {
+      return undefined;
+    }
+
+    return {
+      key: 'quality',
+      title: 'Quality',
+      value: getQualityLabel(currentQualityId),
+      options: tracks.qualities.map((quality) => ({
+        id: quality.id,
+        label: quality.label,
+      })),
+      selectedOptionId: currentQualityId,
+      onSelectOption: (optionId: string) => {
+        changeQuality(optionId as VideoQualityId);
+      },
+    };
+  }, [
+    changeQuality,
+    currentQualityId,
+    getQualityLabel,
+    shouldShowQualitySettings,
+    tracks?.qualities,
+  ]);
+
+  const proSubtitleExtraMenuItem = React.useMemo(() => {
+    if (!shouldShowSubtitleSettings || !tracks?.subtitleTracks?.length) {
+      return undefined;
+    }
+    console.log('Current subtitle track ID:', currentSubtitleTrackId);
+    return {
+      key: 'subtitle',
+      title: 'Subtitle',
+      value: getSubtitleLabels(selectedSubtitle, currentSubtitleTrackId),
+      options: [
+        ...tracks.subtitleTracks.map((subtitleTrack) => ({
+          id: subtitleTrack.id,
+          label: subtitleTrack.label,
+        })),
+        { id: 'off', label: 'Off' },
+      ],
+      selectedOptionId: currentSubtitleTrackId ?? 'off',
+      onSelectOption: (optionId: string) => {
+        changeSubtitleTrack(optionId as string | 'off');
+      },
+    };
+  }, [
+    changeSubtitleTrack,
+    currentSubtitleTrackId,
+    getSubtitleLabels,
+    selectedSubtitle,
+    shouldShowSubtitleSettings,
+    tracks?.subtitleTracks,
+  ]);
+
+  const proAudioExtraMenuItem = React.useMemo(() => {
+    if (!shouldShowAudioTrackSettings || !tracks?.audioTracks?.length) {
+      return undefined;
+    }
+
+    return {
+      key: 'audio',
+      title: 'Audio',
+      value: getAudioLabels(selectedAudio),
+      options: tracks.audioTracks.map((audioTrack) => ({
+        id: audioTrack.id,
+        label: audioTrack.label,
+      })),
+      selectedOptionId: currentAudioTrackId,
+      onSelectOption: (optionId: string) => {
+        changeAudioTrack(optionId);
+      },
+    };
+  }, [
+    changeAudioTrack,
+    currentAudioTrackId,
+    getAudioLabels,
+    selectedAudio,
+    shouldShowAudioTrackSettings,
+    tracks?.audioTracks,
+  ]);
+
+  const coreSettingsOverlayConfig = React.useMemo<SettingsOverlayConfig | undefined>(() => {
+    const consumerExtraItems = settingsOverlay?.extraItems;
+    const consumerExtraMenuItems = settingsOverlay?.extraMenuItems ?? [];
+    const proExtraMenuItems = [
+      proQualityExtraMenuItem,
+      proSubtitleExtraMenuItem,
+      proAudioExtraMenuItem,
+    ].filter(
+      (menuItem): menuItem is NonNullable<typeof menuItem> => Boolean(menuItem),
+    );
+    const mergedExtraMenuItems = [...consumerExtraMenuItems, ...proExtraMenuItems];
+
+    return {
+      ...settingsOverlay,
+      showSubtitles: false,
+      extraItems: consumerExtraItems,
+      extraMenuItems: mergedExtraMenuItems,
+    };
+  }, [
+    proAudioExtraMenuItem,
+    proQualityExtraMenuItem,
+    proSubtitleExtraMenuItem,
+    settingsOverlay,
+  ]);
+
   return (
     <ThemeProvider theme={theme} themeName={themeName}>
       <View style={[styles.playerContainer, playerStyle]}>
@@ -1877,27 +2257,62 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
           {...playerProps}
           useTextureView={playerProps.useTextureView ?? Platform.OS === 'android'}
           style={StyleSheet.absoluteFillObject}
-          source={activeSource}
+          settingsOverlay={coreSettingsOverlayConfig}
+          source={sourceWithSubtitles}
           autoPlay={effectiveAutoPlay}
-          textTracks={textTracks as MamoPlayerProps['textTracks']}
-          selectedTextTrack={selectedTextTrack as MamoPlayerProps['selectedTextTrack']}
+          textTracks={playerTextTracks as MamoPlayerProps['textTracks']}
+          selectedTextTrack={selectedTextTrackForPlayer as MamoPlayerProps['selectedTextTrack']}
           audioTracks={shouldShowAudioTrackSettings ? tracks?.audioTracks : undefined}
-          subtitleTracks={shouldShowSubtitleSettings ? tracks?.subtitleTracks : undefined}
           defaultAudioTrackId={initialAudioTrackId ?? null}
           rate={rate}
           currentQualityId={shouldShowQualitySettings ? currentQualityId : undefined}
           currentAudioTrackId={shouldShowAudioTrackSettings ? currentAudioTrackId : undefined}
-          currentSubtitleTrackId={shouldShowSubtitleSettings ? currentSubtitleTrackId : undefined}
           onQualityChange={shouldShowQualitySettings ? changeQuality : undefined}
           onAudioTrackChange={shouldShowAudioTrackSettings ? changeAudioTrack : undefined}
-          onSubtitleTrackChange={shouldShowSubtitleSettings ? changeSubtitleTrack : undefined}
+          onTextTrackDataChanged={handleTextTrackDataChanged}
+          onFullscreenChange={handleCoreFullscreenChange}
+          overlayContent={
+            isCoreFullscreen ? (
+              <ProFullscreenSubtitleOverlay
+                subtitleText={resolvedSubtitleText}
+                layoutVariant={layoutVariant}
+              />
+            ) : null
+          }
           onPlaybackEvent={handlePlaybackEvent}
           onPictureInPictureStatusChanged={handlePictureInPictureStatusChanged}
           paused={resolvedPausedState}
+          topRightActions={
+            <View style={styles.topRightActionsContainer}>
+              {consumerTopRightActions ? consumerTopRightActions : null}
+              {pip?.enabled === true ? (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Enter picture in picture"
+                  onPress={requestPip}
+                  testID="pro-topright-pip-button"
+                >
+                  <MaterialIcons name="picture-in-picture" size={24} color="#FFFFFF" />
+                </Pressable>
+              ) : null}
+              {hasQualityOptions ? (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Open quality settings overlay"
+                  onPress={openSettings}
+                  testID="pro-topright-hd-button"
+                >
+                  <MaterialIcons name="hd" size={24} color="#FFFFFF" />
+                </Pressable>
+              ) : null}
+            </View>
+          }
+        
         />
-        {/* Modern OTT layout: enable with layoutVariant="ott" and themeName="ott". */}
-        <ProMamoPlayerOverlays
+      
+        <ProMamoPlayerQualityOverlay
           showAdOverlay={adRef.current.isAdPlaying === true || isNativeAdPlaying}
+          adOverlayInset={ads?.overlayInset}
           skipButtonEnabled={skipButtonEnabled}
           isSkipDisabled={isSkipDisabled}
           skipSecondsRemaining={skipSecondsRemaining}
@@ -1905,34 +2320,19 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
           showPipButton={pip?.enabled === true}
           pipState={pipState}
           requestPip={requestPip}
-          showSettingsButton={hasSettingsSections}
+          showSettingsButton={hasQualityOptions}
           isSettingsOpen={isSettingsOpen}
           openSettings={openSettings}
           closeSettings={closeSettings}
-          settingsSections={settingsSections}
-          settingsHeaderTitle="Settings"
-          settingsLabelForOff="Off"
+          qualityOptions={qualityOptions}
+          selectedQualityOptionId={currentQualityId}
           selectQualityOption={selectQualityOption}
-          selectSubtitleOption={selectSubtitleOption}
-          selectAudioOption={selectAudioOption}
-          showTransportControls
-          isPlaying={
-            resolvedPausedState === undefined ? isInlinePlaybackActive : !resolvedPausedState
-          }
-          timelineDuration={mediaDuration}
-          timelinePosition={currentPosition}
-          timelineBuffered={bufferedPosition}
-          timelineThumbnailUri={isTimelineScrubbing ? scrubThumbnailFrame?.uri ?? null : null}
-          onTimelineScrubStart={handleTimelineScrubStart}
-          onTimelineScrub={handleTimelineScrub}
-          onTimelineScrubEnd={handleTimelineScrubEnd}
-          onTogglePlayback={handleTogglePlayback}
-          onSeekBackTenSeconds={handleSeekBackTenSeconds}
-          onSeekForwardTenSeconds={handleSeekForwardTenSeconds}
           layoutVariant={layoutVariant}
           icons={icons}
           watermark={watermark}
           watermarkPosition={watermarkPosition}
+          subtitleText={!isCoreFullscreen ? resolvedSubtitleText : undefined}
+          subtitleBottomOffset={layoutVariant === 'ott' ? 56 : 42}
         />
       </View>
     </ThemeProvider>
@@ -1943,6 +2343,11 @@ const styles = StyleSheet.create({
   playerContainer: {
     position: 'relative',
     overflow: 'hidden',
+  },
+  topRightActionsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
   },
 });
 
@@ -1960,7 +2365,15 @@ const stylesFactory = (theme: PlayerThemeConfig, layoutVariant: PlayerLayoutVari
   const panelBackgroundColor = colors.background ?? '#0B0D10';
   const panelOverlayColor = colors.overlay ?? colors.backgroundOverlay ?? overlayBackgroundColor;
   const panelBorderColor = colors.border ?? 'rgba(255, 255, 255, 0.15)';
+  const adButtonBackgroundColor =
+    colors.controlBackground ?? colors.overlay ?? colors.backgroundOverlay ?? 'rgba(31, 41, 55, 0.95)';
   const accentColor = colors.accent ?? colors.primary ?? primaryTextColor;
+  const settingsBackdropColor = 'rgba(0, 0, 0, 0.5)';
+  const settingsPanelColor = 'rgba(17, 24, 39, 0.98)';
+  const settingsBorderColor = 'rgba(148, 163, 184, 0.3)';
+  const settingsHeaderBorderColor = 'rgba(148, 163, 184, 0.35)';
+  const settingsPrimaryTextColor = colors.primaryText ?? colors.textPrimary ?? '#E5E7EB';
+  const settingsSecondaryTextColor = colors.secondaryText ?? colors.textSecondary ?? '#9CA3AF';
   const textSmallSize =
     typeof typography.fontSizeSmall === 'number'
       ? typography.fontSizeSmall
@@ -1997,18 +2410,21 @@ const stylesFactory = (theme: PlayerThemeConfig, layoutVariant: PlayerLayoutVari
   return StyleSheet.create({
     adOverlay: {
       ...StyleSheet.absoluteFillObject,
-      alignItems: 'center',
-      justifyContent: 'center',
+      alignItems: 'flex-end',
+      justifyContent: 'flex-end',
       gap: 8,
       zIndex: 2,
-      backgroundColor: overlayBackgroundColor,
+      backgroundColor: 'transparent',
+      paddingRight: isOttLayout ? 20 : 14,
+      paddingBottom: isOttLayout ? 22 : 16,
     },
     adText: {
       color: primaryTextColor,
       fontSize: textMediumSize,
+      textAlign: 'right',
     },
     skipButton: {
-      backgroundColor: buttonBackgroundColor,
+      backgroundColor: adButtonBackgroundColor,
       borderRadius: mediumRadius,
       paddingHorizontal: 10,
       paddingVertical: 6,
@@ -2156,16 +2572,16 @@ const stylesFactory = (theme: PlayerThemeConfig, layoutVariant: PlayerLayoutVari
     },
     settingsOverlayBackdrop: {
       ...StyleSheet.absoluteFillObject,
-      backgroundColor: panelOverlayColor,
+      backgroundColor: settingsBackdropColor,
     },
     settingsPanel: {
-      backgroundColor: panelBackgroundColor,
+      backgroundColor: settingsPanelColor,
       borderTopLeftRadius: isOttLayout ? largeRadius : mediumRadius,
       borderTopRightRadius: isOttLayout ? largeRadius : mediumRadius,
       borderBottomLeftRadius: isOttLayout ? 0 : mediumRadius,
       borderBottomRightRadius: isOttLayout ? 0 : mediumRadius,
       borderWidth: 1,
-      borderColor: panelBorderColor,
+      borderColor: settingsBorderColor,
       borderBottomWidth: isOttLayout ? 0 : 1,
       paddingHorizontal: isOttLayout ? 20 : 16,
       paddingTop: isOttLayout ? 16 : 12,
@@ -2177,50 +2593,66 @@ const stylesFactory = (theme: PlayerThemeConfig, layoutVariant: PlayerLayoutVari
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      marginBottom: isOttLayout ? 14 : 10,
+      minHeight: 36,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: settingsHeaderBorderColor,
+      paddingBottom: 8,
+      marginBottom: isOttLayout ? 10 : 8,
     },
     settingsTitle: {
-      color: primaryTextColor,
-      fontSize: isOttLayout ? tokenLargeTypography : textMediumSize,
-      fontWeight: '800',
+      color: settingsPrimaryTextColor,
+      flex: 1,
+      textAlign: 'center',
+      fontSize: 15,
+      lineHeight: 20,
+      fontWeight: '700',
     },
     settingsCloseButton: {
-      minWidth: isOttLayout ? 44 : 36,
-      minHeight: isOttLayout ? 44 : 36,
-      borderRadius: isOttLayout ? 22 : 18,
+      width: 34,
+      height: 34,
+      borderRadius: 17,
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: overlayBackgroundColor,
+      backgroundColor: 'transparent',
     },
     settingsCloseButtonText: {
       color: primaryTextColor,
     },
     settingsSectionsContainer: {
       gap: isOttLayout ? 16 : 12,
+      paddingBottom: isOttLayout ? 8 : 4,
+    },
+    settingsSectionsScroll: {
+      flexShrink: 1,
     },
     settingsSection: {
-      gap: 8,
+      gap: 4,
     },
     settingsSectionTitle: {
-      color: primaryTextColor,
-      fontSize: isOttLayout ? tokenLargeTypography : textSmallSize,
+      color: settingsSecondaryTextColor,
+      fontSize: 13,
+      lineHeight: 18,
       fontWeight: '700',
+      marginTop: isOttLayout ? 6 : 4,
     },
     settingsOptionRow: {
-      minHeight: isOttLayout ? 58 : 42,
-      borderRadius: mediumRadius,
-      backgroundColor: panelOverlayColor,
-      borderWidth: 1,
-      borderColor: panelBorderColor,
-      paddingHorizontal: isOttLayout ? 18 : 12,
+      minHeight: isOttLayout ? 50 : 44,
+      borderRadius: 0,
+      backgroundColor: 'transparent',
+      borderWidth: 0,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: settingsBorderColor,
+      paddingHorizontal: 0,
+      paddingVertical: 12,
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
     },
     settingsOptionLabel: {
-      color: secondaryTextColor,
-      fontSize: isOttLayout ? textLargeSize : textSmallSize,
-      fontWeight: '500',
+      color: settingsPrimaryTextColor,
+      fontSize: 14,
+      lineHeight: 20,
+      fontWeight: '400',
       flexShrink: 1,
     },
     settingsOptionLeading: {
@@ -2230,8 +2662,12 @@ const stylesFactory = (theme: PlayerThemeConfig, layoutVariant: PlayerLayoutVari
       flexShrink: 1,
     },
     settingsOptionLabelSelected: {
-      color: primaryTextColor,
-      fontWeight: '700',
+      color: settingsPrimaryTextColor,
+      fontWeight: '600',
+    },
+    settingsOptionCheckPlaceholder: {
+      width: 24,
+      height: 24,
     },
     settingsOptionSelectedLabel: {
       color: accentColor,
@@ -2242,6 +2678,20 @@ const stylesFactory = (theme: PlayerThemeConfig, layoutVariant: PlayerLayoutVari
       position: 'absolute',
       color: primaryTextColor,
       fontSize: textSmallSize,
+    },
+    subtitleText: {
+      position: 'absolute',
+      bottom: isOttLayout ? 88 : 48,
+      alignSelf: 'center',
+      color: primaryTextColor,
+      fontSize: isOttLayout ? textMediumSize : textSmallSize,
+      fontWeight: '600',
+      backgroundColor: panelOverlayColor,
+      borderRadius: mediumRadius,
+      paddingHorizontal: isOttLayout ? 10 : 8,
+      paddingVertical: isOttLayout ? 6 : 4,
+      maxWidth: '90%',
+      textAlign: 'center',
     },
   });
 };

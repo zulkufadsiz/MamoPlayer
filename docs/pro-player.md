@@ -1,18 +1,34 @@
 # ProMamoPlayer
 
-`ProMamoPlayer` is the advanced player component from `@mamoplayer/pro`.
+`ProMamoPlayer` is the advanced component from `@mamoplayer/pro`.
 
-Use it when your app needs OTT-focused capabilities beyond basic playback, especially:
+Use it when your app needs OTT-focused capabilities beyond basic playback:
 
 - analytics instrumentation
 - ad monetization (simulated ad breaks or IMA)
 - watermark overlays
 - playback policy enforcement
+- track/quality switching
+- picture-in-picture support
 - premium theming and layout control
 
-## analytics
+## Installation
 
-`analytics` lets you capture normalized player and ad telemetry (`play`, `pause`, `quartile`, `ad_start`, `ad_complete`, `ad_error`, etc.).
+```bash
+npm install @mamoplayer/pro
+```
+
+## Minimal usage
+
+```tsx
+import { ProMamoPlayer } from '@mamoplayer/pro';
+
+<ProMamoPlayer source={{ uri: 'https://cdn.example.com/main/master.m3u8' }} />;
+```
+
+## Analytics
+
+`analytics` emits normalized telemetry (`play`, `pause`, `seek`, `quartile`, `ad_start`, `ad_complete`, `ad_error`, etc.).
 
 ```tsx
 import { ProMamoPlayer } from '@mamoplayer/pro';
@@ -20,7 +36,7 @@ import { ProMamoPlayer } from '@mamoplayer/pro';
 <ProMamoPlayer
   source={{ uri: 'https://cdn.example.com/movie/master.m3u8' }}
   analytics={{
-    sessionId: 'session-2026-02-22-001',
+    sessionId: 'session-2026-03-08-001',
     onEvent: (event) => {
       console.log('[analytics]', event.type, event.position, event.quartile);
     },
@@ -28,9 +44,9 @@ import { ProMamoPlayer } from '@mamoplayer/pro';
 />;
 ```
 
-## ads
+## Simulated ads (`ads`)
 
-`ads` configures simulated ad breaks that play as regular video assets (useful for local testing, fallback flows, and demo environments).
+`ads` configures ad breaks as regular video assets (great for local development and fallback flows).
 
 ```tsx
 import { ProMamoPlayer } from '@mamoplayer/pro';
@@ -45,13 +61,17 @@ import { ProMamoPlayer } from '@mamoplayer/pro';
     ],
     skipButtonEnabled: true,
     skipAfterSeconds: 5,
+    overlayInset: {
+      right: 24,
+      bottom: 24,
+    },
   }}
 />;
 ```
 
-## ima
+## Google IMA (`ima`)
 
-`ima` enables Google IMA/VAST ad serving via an ad tag URL, for production ad decisioning and measurement.
+Use `ima` for ad-tag-based serving (VAST/IMA).
 
 ```tsx
 import { ProMamoPlayer } from '@mamoplayer/pro';
@@ -66,9 +86,58 @@ import { ProMamoPlayer } from '@mamoplayer/pro';
 />;
 ```
 
-## watermark
+## Tracks (quality/audio/subtitles)
 
-`watermark` adds a visible text overlay for anti-piracy and account traceability.
+`tracks` enables quality, audio, and subtitle selection.
+
+Subtitle startup resolves in this order:
+
+1. `tracks.defaultSubtitleTrackId` (including `"off"`)
+2. first subtitle marked with `isDefault: true`
+3. `"off"`
+
+```tsx
+import { ProMamoPlayer } from '@mamoplayer/pro';
+
+<ProMamoPlayer
+  source={{ uri: 'https://cdn.example.com/content/main.m3u8' }}
+  tracks={{
+    qualities: [
+      {
+        id: 'auto',
+        label: 'Auto',
+        uri: 'https://cdn.example.com/content/master.m3u8',
+        isDefault: true,
+      },
+      { id: '720p', label: '720p', uri: 'https://cdn.example.com/content/720.m3u8' },
+      { id: '1080p', label: '1080p', uri: 'https://cdn.example.com/content/1080.m3u8' },
+    ],
+    audioTracks: [
+      { id: 'en', language: 'en', label: 'English' },
+      { id: 'tr', language: 'tr', label: 'Türkçe' },
+    ],
+    subtitleTracks: [
+      {
+        id: 'en',
+        language: 'en',
+        label: 'English',
+        uri: 'https://cdn.example.com/subtitles/en.vtt',
+      },
+      {
+        id: 'tr',
+        language: 'tr',
+        label: 'Türkçe',
+        uri: 'https://cdn.example.com/subtitles/tr.vtt',
+      },
+    ],
+    defaultQualityId: 'auto',
+    defaultAudioTrackId: 'en',
+    defaultSubtitleTrackId: 'off',
+  }}
+/>;
+```
+
+## Watermark and restrictions
 
 ```tsx
 import { ProMamoPlayer } from '@mamoplayer/pro';
@@ -81,18 +150,6 @@ import { ProMamoPlayer } from '@mamoplayer/pro';
     randomizePosition: true,
     intervalMs: 5000,
   }}
-/>;
-```
-
-## restrictions
-
-`restrictions` enforces playback policy (for example, blocking forward seek in content windows or capping playback speed).
-
-```tsx
-import { ProMamoPlayer } from '@mamoplayer/pro';
-
-<ProMamoPlayer
-  source={{ uri: 'https://cdn.example.com/lesson.mp4' }}
   restrictions={{
     disableSeekingForward: true,
     disableSeekingBackward: false,
@@ -101,66 +158,9 @@ import { ProMamoPlayer } from '@mamoplayer/pro';
 />;
 ```
 
-## theme / themeName
+## Theme, layout, and icons
 
-Use `themeName` for built-in themes (`light`, `dark`, `ott`), or `theme` for full token-level customization. If both are provided, `theme` takes precedence.
-
-```tsx
-import { ProMamoPlayer } from '@mamoplayer/pro';
-
-<ProMamoPlayer source={{ uri: 'https://cdn.example.com/premium/master.m3u8' }} themeName="ott" />;
-```
-
-```tsx
-import { ProMamoPlayer } from '@mamoplayer/pro';
-
-<ProMamoPlayer
-  source={{ uri: 'https://cdn.example.com/premium/master.m3u8' }}
-  theme={{
-    tokens: {
-      colors: {
-        background: '#0B1220',
-        backgroundOverlay: '#0B1220CC',
-        primary: '#7C3AED',
-        primaryText: '#F8FAFC',
-        secondaryText: '#CBD5E1',
-        accent: '#22D3EE',
-        danger: '#F43F5E',
-        border: '#1E293B',
-        sliderTrack: '#64748B',
-        sliderThumb: '#22D3EE',
-      },
-      typography: {
-        fontSizeSmall: 12,
-        fontSizeMedium: 14,
-        fontSizeLarge: 20,
-      },
-      shape: {
-        borderRadiusSmall: 8,
-        borderRadiusMedium: 12,
-        borderRadiusLarge: 18,
-      },
-    },
-  }}
-/>;
-```
-
-## layoutVariant
-
-`layoutVariant` switches the controls/UI composition for different viewing contexts.
-
-```tsx
-import { ProMamoPlayer } from '@mamoplayer/pro';
-
-<ProMamoPlayer
-  source={{ uri: 'https://cdn.example.com/premium/master.m3u8' }}
-  layoutVariant="ott"
-/>;
-```
-
-## icons
-
-`icons` lets you override default control icons with your own React components.
+Use `themeName` (`light`, `dark`, `ott`) for defaults, or pass a custom `theme` object. If both are provided, `theme` takes precedence.
 
 ```tsx
 import { ProMamoPlayer } from '@mamoplayer/pro';
@@ -168,6 +168,8 @@ import { MyPlayIcon, MyPauseIcon } from './player-icons';
 
 <ProMamoPlayer
   source={{ uri: 'https://cdn.example.com/premium/master.m3u8' }}
+  themeName="ott"
+  layoutVariant="ott"
   icons={{
     Play: MyPlayIcon,
     Pause: MyPauseIcon,
@@ -175,47 +177,36 @@ import { MyPlayIcon, MyPauseIcon } from './player-icons';
 />;
 ```
 
-## Full OTT-style setup
+## PiP and settings overlay
 
-This example combines analytics, simulated ads, watermark, and `themeName="ott"`.
+`pip` controls picture-in-picture behavior and `onPipEvent` lets you react to state changes.
 
 ```tsx
 import { ProMamoPlayer } from '@mamoplayer/pro';
 
-export function OttPlayerScreen() {
-  return (
-    <ProMamoPlayer
-      source={{ uri: 'https://cdn.example.com/ott/main/master.m3u8' }}
-      themeName="ott"
-      analytics={{
-        sessionId: 'ott-session-001',
-        onEvent: (event) => {
-          console.log('[OTT analytics]', event.type, {
-            position: event.position,
-            quartile: event.quartile,
-            adPosition: event.adPosition,
-          });
-        },
-      }}
-      ads={{
-        adBreaks: [
-          { type: 'preroll', source: { uri: 'https://cdn.example.com/ads/preroll.mp4' } },
-          {
-            type: 'midroll',
-            time: 180,
-            source: { uri: 'https://cdn.example.com/ads/midroll.mp4' },
-          },
-        ],
-        skipButtonEnabled: true,
-        skipAfterSeconds: 5,
-      }}
-      watermark={{
-        text: 'subscriber-84 • ott.example.com',
-        opacity: 0.3,
-        randomizePosition: true,
-        intervalMs: 4500,
-      }}
-    />
-  );
-}
+<ProMamoPlayer
+  source={{ uri: 'https://cdn.example.com/main/master.m3u8' }}
+  pip={{ enabled: true, autoEnter: true }}
+  onPipEvent={(event) => console.log('[pip]', event.state, event.reason)}
+  settingsOverlay={{
+    enabled: true,
+    showPlaybackSpeed: true,
+    showQuality: true,
+    showSubtitles: true,
+    showAudioTracks: true,
+  }}
+/>;
+```
+
+## License key
+
+You can pass a `licenseKey` directly to `ProMamoPlayer`.
+
+```tsx
+import { ProMamoPlayer } from '@mamoplayer/pro';
+
+<ProMamoPlayer
+  source={{ uri: 'https://cdn.example.com/premium/master.m3u8' }}
+  licenseKey={process.env.MAMOPLAYER_PRO_LICENSE_KEY}
+/>;
 ```

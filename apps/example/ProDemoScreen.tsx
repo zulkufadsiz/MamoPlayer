@@ -9,6 +9,8 @@ import type { TracksConfig } from '../../packages/pro/src/types/tracks';
 
 const MP4_SOURCE_URI = 'https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4';
 const HLS_SOURCE_URI = 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8';
+const SUBTITLE_EN_URI = 'https://raw.githubusercontent.com/shaka-project/shaka-player/main/test/test/assets/text-clip.vtt';
+const SUBTITLE_FR_URI = 'https://raw.githubusercontent.com/shaka-project/shaka-player/main/test/test/assets/text-clip-alt.vtt';
 const INVALID_MAIN_SOURCE_URI = 'https://invalid-main.m3u8';
 const INVALID_AD_SOURCE_URI = 'https://not-found-ad.mp4';
 
@@ -114,10 +116,10 @@ const demoTracks: TracksConfig = {
       id: 'sub-en',
       language: 'en',
       label: 'English',
-      uri: 'https://subs-en.vtt',
+      uri: SUBTITLE_EN_URI,
       isDefault: true,
     },
-    { id: 'sub-tr', language: 'tr', label: 'Türkçe', uri: 'https://subs-tr.vtt' },
+    { id: 'sub-fr', language: 'fr', label: 'Français', uri: SUBTITLE_FR_URI },
   ],
   defaultQualityId: 'auto',
   defaultAudioTrackId: 'audio-en',
@@ -138,7 +140,7 @@ const ProDemoScreen = () => {
     uri: MP4_SOURCE_URI,
   });
   const [themeName, setThemeName] = useState<ThemeName>('ott');
-  const [layoutVariant, setLayoutVariant] = useState<'compact' | 'standard' | 'ott'>('ott');
+
   const [pipEnabled, setPipEnabled] = useState(true);
   const [adsConfig, setAdsConfig] = useState<AdsConfig>(demoAds);
   const [analyticsEvents, setAnalyticsEvents] = useState<AnalyticsEvent[]>([]);
@@ -222,32 +224,6 @@ const ProDemoScreen = () => {
             </View>
           </View>
 
-          <Text style={styles.label}>Layout</Text>
-          <View style={styles.optionsRow}>
-            <View style={styles.optionButtonContainer}>
-              <Button
-                title={`${layoutVariant === 'compact' ? '✓ ' : ''}Compact`}
-                onPress={() => setLayoutVariant('compact')}
-              />
-            </View>
-            <View style={styles.optionButtonContainer}>
-              <Button
-                title={`${layoutVariant === 'standard' ? '✓ ' : ''}Standard`}
-                onPress={() => setLayoutVariant('standard')}
-              />
-            </View>
-            <View style={styles.optionButtonContainer}>
-              <Button
-                title={`${layoutVariant === 'ott' ? '✓ ' : ''}OTT`}
-                onPress={() => setLayoutVariant('ott')}
-              />
-            </View>
-          </View>
-
-          <Text style={styles.legendText}>
-            Use the controls above to preview built-in themes and layout variants.
-          </Text>
-
           <View style={styles.toggleRow}>
             <Text style={styles.label}>Picture-in-Picture</Text>
             <Switch value={pipEnabled} onValueChange={setPipEnabled} />
@@ -273,7 +249,6 @@ const ProDemoScreen = () => {
             ads={adsConfig}
             watermark={watermark}
             themeName={themeName}
-            layoutVariant={layoutVariant}
             style={styles.player}
             settingsOverlay={settingsOverlay}
             analytics={{

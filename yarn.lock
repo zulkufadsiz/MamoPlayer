@@ -2686,7 +2686,7 @@
     picocolors "^1.1.1"
     plist "^3.1.0"
 
-"@react-native-vector-icons/material-icons@^12.4.1":
+"@react-native-vector-icons/material-icons@12.4.1", "@react-native-vector-icons/material-icons@^12.4.1":
   version "12.4.1"
   resolved "https://registry.yarnpkg.com/@react-native-vector-icons/material-icons/-/material-icons-12.4.1.tgz#6ad392691bc0af5fef5d535b821224842f133e2f"
   integrity sha512-xUgYPEptDJ955AJcTvIog68jZTav88wX+/zfyuTHbgZFj3xu907DnKU3L/asGqbZztwM6tiAOpNKeySM5PEoqw==

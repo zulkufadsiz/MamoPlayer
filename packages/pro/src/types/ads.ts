@@ -13,6 +13,10 @@ export interface AdsConfig {
   adBreaks: AdBreak[];
   skipButtonEnabled?: boolean;
   skipAfterSeconds?: number;
+  overlayInset?: {
+    right?: number;
+    bottom?: number;
+  };
 }
 
 export type AdBreakType = AdBreak['type'];

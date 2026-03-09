@@ -10,6 +10,8 @@ type MamoPipEventName = 'mamo_pip_active' | 'mamo_pip_exiting';
 interface MamoPipNativeModule extends NativeModule {
   addListener(eventType: string): void;
   removeListeners(count: number): void;
+  requestPictureInPicture?: () => void;
+  enterPictureInPicture?: () => void;
 }
 
 type MamoPipEventsHandler = (eventName: MamoPipEventName, payload?: unknown) => void;
@@ -28,6 +30,24 @@ const getPipModule = (): MamoPipNativeModule => {
 
 const getPipEventEmitter = (): NativeEventEmitter => {
   return new NativeEventEmitter(getPipModule());
+};
+
+export const requestPictureInPicture = (): void => {
+  const pipModule = getPipModule();
+
+  if (typeof pipModule.requestPictureInPicture === 'function') {
+    pipModule.requestPictureInPicture();
+    return;
+  }
+
+  if (typeof pipModule.enterPictureInPicture === 'function') {
+    pipModule.enterPictureInPicture();
+    return;
+  }
+
+  throw new Error(
+    `${MAMO_PIP_MODULE_NAME} does not expose requestPictureInPicture or enterPictureInPicture.`,
+  );
 };
 
 export const subscribeToPipEvents = (handler: MamoPipEventsHandler): (() => void) => {

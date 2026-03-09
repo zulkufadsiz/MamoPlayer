@@ -7,7 +7,7 @@ const LAYOUT_OPTIONS = ['compact', 'standard', 'ott'] as const;
 
 type DemoThemeName = (typeof THEME_OPTIONS)[number];
 type DemoLayoutVariant = (typeof LAYOUT_OPTIONS)[number];
-type DemoSubtitleMode = 'off' | 'en' | 'track-default';
+type DemoSubtitleMode = 'off' | 'sub-en' | 'track-default';
 
 export default function ProMamoPlayerDemo() {
   const [selectedThemeName, setSelectedThemeName] = useState<DemoThemeName>('dark');
@@ -18,16 +18,16 @@ export default function ProMamoPlayerDemo() {
     return {
       subtitleTracks: [
         {
-          id: 'en',
+          id: 'sub-en',
           language: 'en',
           label: 'English',
-          uri: 'https://bitdash-a.akamaihd.net/content/sintel/subtitles/subtitles_en.vtt',
+          uri: 'https://raw.githubusercontent.com/shaka-project/shaka-player/main/test/test/assets/text-clip.vtt',
         },
         {
-          id: 'tr',
-          language: 'tr',
-          label: 'Turkish',
-          uri: 'https://raw.githubusercontent.com/andreyvit/subtitle-tools/master/sample.srt.vtt',
+          id: 'sub-fr',
+          language: 'fr',
+          label: 'French',
+          uri: 'https://raw.githubusercontent.com/shaka-project/shaka-player/main/test/test/assets/text-clip-alt.vtt',
           isDefault: true,
         },
       ],
@@ -81,8 +81,8 @@ export default function ProMamoPlayerDemo() {
             </View>
             <View style={styles.optionButtonContainer}>
               <Button
-                title={`${subtitleMode === 'en' ? '✓ ' : ''}ENGLISH`}
-                onPress={() => setSubtitleMode('en')}
+                title={`${subtitleMode === 'sub-en' ? '✓ ' : ''}ENGLISH`}
+                onPress={() => setSubtitleMode('sub-en')}
               />
             </View>
             <View style={styles.optionButtonContainer}>
@@ -102,9 +102,27 @@ export default function ProMamoPlayerDemo() {
           <Text style={styles.sectionTitle}>Player</Text>
           <View style={styles.playerArea}>
             <ProMamoPlayer
-              source={{ uri: 'https://test-stream.m3u8' }}
+              source={{ uri: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8' }}
+              autoPlay
               themeName={selectedThemeName}
               layoutVariant={selectedLayoutVariant}
+              // ads={{
+              //   adBreaks: [
+              //     {
+              //       type: 'preroll',
+              //       source: {
+              //         uri: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
+              //         type: 'video/mp4',
+              //       },
+              //     },
+              //   ],
+              //   skipButtonEnabled: true,
+              //   skipAfterSeconds: 5,
+              //   overlayInset: {
+              //     right: 18,
+              //     bottom: 18,
+              //   },
+              // }}
               analytics={{ onEvent: (event: unknown) => console.log('analytics event:', event) }}
               watermark={{
                 text: 'developer@example.com',

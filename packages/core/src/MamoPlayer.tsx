@@ -36,11 +36,28 @@ export interface MamoPlayerCoreProps extends Omit<
   autoPlay?: boolean;
   paused?: boolean;
   settingsOverlay?: SettingsOverlayConfig;
+  topRightActions?: React.ReactNode;
+  overlayContent?: React.ReactNode;
+  onFullscreenChange?: (isFullscreen: boolean) => void;
   onPlaybackEvent?: (event: PlaybackEvent) => void;
 }
 
 export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
-  ({ source, autoPlay = true, paused, settingsOverlay, onPlaybackEvent, style, ...rest }, ref) => {
+  (
+    {
+      source,
+      autoPlay = true,
+      paused,
+      settingsOverlay,
+      topRightActions,
+      overlayContent,
+      onFullscreenChange,
+      onPlaybackEvent,
+      style,
+      ...rest
+    },
+    ref,
+  ) => {
     const [duration, setDuration] = React.useState<number>(0);
     const [position, setPosition] = React.useState<number>(0);
     const [buffered, setBuffered] = React.useState<number | undefined>(undefined);
@@ -63,6 +80,8 @@ export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
       enabled: settingsOverlay?.enabled ?? true,
       showPlaybackSpeed: settingsOverlay?.showPlaybackSpeed ?? true,
       showMute: settingsOverlay?.showMute ?? true,
+      extraItems: settingsOverlay?.extraItems,
+      extraMenuItems: settingsOverlay?.extraMenuItems,
     };
 
     React.useImperativeHandle(ref, () => videoRef.current as VideoRef);
@@ -177,7 +196,11 @@ export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
     );
 
     const resolvedPaused = pausedOverride ?? paused ?? !isPlaying;
-    const hasVisibleSettingsSections = resolvedSettings.showPlaybackSpeed || resolvedSettings.showMute;
+    const hasVisibleSettingsSections =
+      resolvedSettings.showPlaybackSpeed ||
+      resolvedSettings.showMute ||
+      Boolean(resolvedSettings.extraItems) ||
+      Boolean(resolvedSettings.extraMenuItems?.length);
 
     React.useEffect(() => {
       setPausedOverride(null);
@@ -291,11 +314,15 @@ export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
     }, [hasVisibleSettingsSections, resolvedSettings.enabled, scheduleControlsAutoHide, showControls]);
 
     const handleToggleFullscreen = React.useCallback(() => {
-      setIsFullscreen(prev => !prev);
+      setIsFullscreen(prev => {
+        const nextFullscreen = !prev;
+        onFullscreenChange?.(nextFullscreen);
+        return nextFullscreen;
+      });
       setIsSettingsOpen(false);
       showControls();
       scheduleControlsAutoHide();
-    }, [scheduleControlsAutoHide, showControls]);
+    }, [onFullscreenChange, scheduleControlsAutoHide, showControls]);
 
     const renderPlayer = () => (
       <>
@@ -315,6 +342,7 @@ export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
           onSeek={handleSeek}
           onBuffer={handleBuffer}
         />
+        {overlayContent}
         {!controlsVisible ? (
           <Pressable
             accessibilityRole="button"
@@ -327,6 +355,7 @@ export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
         {controlsVisible && !isSettingsOpen ? (
           <View style={[styles.controlsOverlay, isFullscreen && styles.controlsOverlayFullscreen]} testID="core-controls-overlay">
             <View style={[styles.topRightControls, isFullscreen && styles.topRightControlsFullscreen]}>
+              {topRightActions ? <View style={styles.topRightActionsContainer}>{topRightActions}</View> : null}
               <PlaybackOptions
                 isPlaying={!resolvedPaused}
                 isFullscreen={isFullscreen}
@@ -376,6 +405,8 @@ export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
           <SettingsOverlay
             showPlaybackSpeed={resolvedSettings.showPlaybackSpeed}
             showMute={resolvedSettings.showMute}
+            extraItems={resolvedSettings.extraItems}
+            extraMenuItems={resolvedSettings.extraMenuItems}
             playbackRate={playbackRate}
             muted={muted}
             isFullscreen={isFullscreen}
@@ -450,9 +481,16 @@ const styles = StyleSheet.create({
     top: 12,
     right: 12,
     zIndex: 2,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   topRightControlsFullscreen: {
     top: 40,
+  },
+  topRightActionsContainer: {
+    marginRight: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   centerControlsContainer: {
     flex: 1,

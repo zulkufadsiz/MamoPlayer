@@ -4,6 +4,9 @@
 const lightCodeTheme = require('prism-react-renderer/themes/github');
 const darkCodeTheme = require('prism-react-renderer/themes/dracula');
 
+const isProduction = process.env.NODE_ENV === 'production';
+const resolvedBaseUrl = process.env.DOCS_BASE_URL || (isProduction ? '/MamoPlayer-docs/' : '/');
+
 /** @type {import('@docusaurus/types').Config} */
 const config = {
   title: 'MamoPlayer',
@@ -14,7 +17,7 @@ const config = {
   url: 'https://zulkufadsiz.github.io',
   // Set the /<baseUrl>/ pathname under which your site is served
   // For GitHub pages deployment, it is often '/<projectName>/'
-  baseUrl: '/MamoPlayer-docs/',
+  baseUrl: resolvedBaseUrl,
 
   // GitHub pages deployment config.
   // If you aren't using GitHub pages, you don't need these.
@@ -67,7 +70,7 @@ const config = {
         title: 'MamoPlayer',
         logo: {
           alt: 'MamoPlayer Logo',
-          src: 'img/logo.svg',
+          src: 'img/logo.png',
         },
         items: [
           {
@@ -122,7 +125,7 @@ const config = {
             items: [
               {
                 label: 'Getting Started',
-                to: '/docs/getting-started/index',
+                to: '/docs/getting-started/',
               },
             ],
           },
@@ -145,13 +148,28 @@ const config = {
             ],
           },
         ],
-        copyright: `Copyright © ${new Date().getFullYear()} MamoPlayer. Built with Docusaurus.`,
+        copyright: `Copyright © ${new Date().getFullYear()} MamoPlayer.`,
       },
       prism: {
         theme: lightCodeTheme,
         darkTheme: darkCodeTheme,
       },
     }),
+};
+
+config.webpack = {
+  jsLoader: (isServer) => ({
+    loader: require.resolve('babel-loader'),
+    options: {
+      presets: [
+        require.resolve('@docusaurus/core/lib/babel/preset'),
+        [require.resolve('@babel/preset-react'), { runtime: 'automatic' }],
+      ],
+      babelrc: false,
+      configFile: false,
+      caller: { name: isServer ? 'server' : 'client' },
+    },
+  }),
 };
 
 module.exports = config;

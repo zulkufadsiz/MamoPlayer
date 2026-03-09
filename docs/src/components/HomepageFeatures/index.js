@@ -1,36 +1,36 @@
-import React from 'react';
 import clsx from 'clsx';
+import React from 'react';
 import styles from './styles.module.css';
 
 const FeatureList = [
   {
-    title: 'Easy to Use',
+    title: 'Fast Integration',
     Svg: require('@site/static/img/undraw_docusaurus_mountain.svg').default,
     description: (
-      <>
-        Docusaurus was designed from the ground up to be easily installed and used to get your
-        website up and running quickly.
-      </>
+      <React.Fragment>
+        Start with the core player quickly using the setup guides and drop-in examples in the
+        documentation.
+      </React.Fragment>
     ),
   },
   {
-    title: 'Focus on What Matters',
+    title: 'Production Features',
     Svg: require('@site/static/img/undraw_docusaurus_tree.svg').default,
     description: (
-      <>
-        Docusaurus lets you focus on your docs, and we&apos;ll do the chores. Go ahead and move your
-        docs into the <code>docs</code> directory.
-      </>
+      <React.Fragment>
+        Explore analytics events, ads and monetization, theming, and pro capabilities for OTT
+        experiences.
+      </React.Fragment>
     ),
   },
   {
-    title: 'Powered by React',
+    title: 'React Native Ready',
     Svg: require('@site/static/img/undraw_docusaurus_react.svg').default,
     description: (
-      <>
-        Extend or customize your website layout by reusing React. Docusaurus can be extended while
-        reusing the same header and footer.
-      </>
+      <React.Fragment>
+        Built for React Native apps with practical guidance for implementation, customization, and
+        troubleshooting.
+      </React.Fragment>
     ),
   },
 ];
