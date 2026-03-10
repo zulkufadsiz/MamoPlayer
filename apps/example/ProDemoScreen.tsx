@@ -1,11 +1,8 @@
 import type { PlaybackEvent } from '@mamoplayer/core';
+import type { AdsConfig, AnalyticsEvent, ThemeName, TracksConfig } from '@mamoplayer/pro';
 import { ProMamoPlayer } from '@mamoplayer/pro';
 import { useState } from 'react';
 import { Button, SafeAreaView, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
-import type { AdsConfig } from '../../packages/pro/src/types/ads';
-import type { AnalyticsEvent } from '../../packages/pro/src/types/analytics';
-import type { ThemeName } from '../../packages/pro/src/types/theme';
-import type { TracksConfig } from '../../packages/pro/src/types/tracks';
 
 const MP4_SOURCE_URI = 'https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4';
 const HLS_SOURCE_URI = 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8';
