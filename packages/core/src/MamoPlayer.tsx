@@ -1,16 +1,16 @@
 import React from 'react';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import Video, {
-  type OnBufferData,
-  type OnLoadData,
-  type OnProgressData,
-  type OnSeekData,
-  type OnVideoErrorData,
-  type ReactVideoProps,
-  type VideoRef,
+    type OnBufferData,
+    type OnLoadData,
+    type OnProgressData,
+    type OnSeekData,
+    type OnVideoErrorData,
+    type ReactVideoProps,
+    type VideoRef,
 } from 'react-native-video';
 import {
-  PlaybackOptions,
+    PlaybackOptions,
 } from './components/PlaybackOptions';
 import { SettingsOverlay } from './components/SettingsOverlay';
 import { Timeline } from './components/Timeline';
@@ -328,6 +328,7 @@ export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
       <>
         <Video
           ref={videoRef}
+          useTextureView={Platform.OS === 'android'}
           {...rest}
           source={source as ReactVideoProps['source']}
           style={styles.video}
