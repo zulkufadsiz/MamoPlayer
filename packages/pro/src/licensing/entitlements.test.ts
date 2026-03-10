@@ -1,11 +1,11 @@
 import {
-  addPremiumEntitlements,
-  clearPremiumEntitlements,
-  hasPremiumEntitlement,
-  PremiumFeatureError,
-  requirePremiumEntitlement,
-  setPremiumEntitlements,
-} from '../licensing';
+    addPremiumEntitlements,
+    clearPremiumEntitlements,
+    hasPremiumEntitlement,
+    PremiumFeatureError,
+    requirePremiumEntitlement,
+    setPremiumEntitlements,
+} from './entitlements';
 
 describe('licensing', () => {
   afterEach(() => {

@@ -1,5 +1,12 @@
 # ninja log v5
-0	23	0	/Users/zulkufadsiz/Projects/MamoPlayer/android/app/.cxx/Debug/5v22tw67/arm64-v8a/CMakeFiles/cmake.verify_globs	6cc756d4ebc7ac6f
+0	29	0	/Users/zulkufadsiz/Projects/MamoPlayer/android/app/.cxx/Debug/5v22tw67/arm64-v8a/CMakeFiles/cmake.verify_globs	6cc756d4ebc7ac6f
 0	2393	1772129474279232109	CMakeFiles/appmodules.dir/Users/zulkufadsiz/Projects/MamoPlayer/android/app/build/generated/autolinking/src/main/jni/autolinking.cpp.o	e6a207bbbae9ba8e
-4	2608	1772129474491629453	CMakeFiles/appmodules.dir/OnLoad.cpp.o	2831c0d12b2052e6
-2608	2680	1772129474568326519	/Users/zulkufadsiz/Projects/MamoPlayer/android/app/build/intermediates/cxx/Debug/5v22tw67/obj/arm64-v8a/libappmodules.so	1800b9c8917f1f10
+25	2055	1773166760392540151	CMakeFiles/appmodules.dir/OnLoad.cpp.o	2831c0d12b2052e6
+2055	2241	1773166760583157933	/Users/zulkufadsiz/Projects/MamoPlayer/android/app/build/intermediates/cxx/Debug/5v22tw67/obj/arm64-v8a/libappmodules.so	1800b9c8917f1f10
+0	10	0	/Users/zulkufadsiz/Projects/MamoPlayer/android/app/.cxx/Debug/5v22tw67/arm64-v8a/CMakeFiles/cmake.verify_globs	6cc756d4ebc7ac6f
+0	30	0	/Users/zulkufadsiz/Projects/MamoPlayer/android/app/.cxx/Debug/5v22tw67/arm64-v8a/CMakeFiles/cmake.verify_globs	6cc756d4ebc7ac6f
+0	23	0	/Users/zulkufadsiz/Projects/MamoPlayer/android/app/.cxx/Debug/5v22tw67/arm64-v8a/CMakeFiles/cmake.verify_globs	6cc756d4ebc7ac6f
+0	25	0	/Users/zulkufadsiz/Projects/MamoPlayer/android/app/.cxx/Debug/5v22tw67/arm64-v8a/CMakeFiles/cmake.verify_globs	6cc756d4ebc7ac6f
+0	25	0	/Users/zulkufadsiz/Projects/MamoPlayer/android/app/.cxx/Debug/5v22tw67/arm64-v8a/CMakeFiles/cmake.verify_globs	6cc756d4ebc7ac6f
+0	23	0	/Users/zulkufadsiz/Projects/MamoPlayer/android/app/.cxx/Debug/5v22tw67/arm64-v8a/CMakeFiles/cmake.verify_globs	6cc756d4ebc7ac6f
+0	25	0	/Users/zulkufadsiz/Projects/MamoPlayer/android/app/.cxx/Debug/5v22tw67/arm64-v8a/CMakeFiles/cmake.verify_globs	6cc756d4ebc7ac6f
