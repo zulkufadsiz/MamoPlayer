@@ -10,12 +10,12 @@ type LicenseRecord = {
 };
 
 async function main(): Promise<void> {
-  const licenseFilePath = path.resolve(process.cwd(), 'config/licenses.json');
+  const licenseFilePath = path.resolve(__dirname, 'licenses.json');
   const raw = await readFile(licenseFilePath, 'utf8');
   const parsed: unknown = JSON.parse(raw);
 
   if (!Array.isArray(parsed)) {
-    throw new Error('Expected config/licenses.json to contain an array of licenses.');
+    throw new Error('Expected tools/licenses.json to contain an array of licenses.');
   }
 
   const rows = (parsed as LicenseRecord[]).map((license) => ({
@@ -27,7 +27,7 @@ async function main(): Promise<void> {
   }));
 
   if (rows.length === 0) {
-    console.log('No licenses found in config/licenses.json');
+    console.log('No licenses found in tools/licenses.json');
     return;
   }
 
