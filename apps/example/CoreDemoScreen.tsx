@@ -1,16 +1,16 @@
 import {
-    MamoPlayer,
-    PlaybackOptions,
-    type PlaybackEvent,
+  MamoPlayer,
+  PlaybackOptions,
+  type PlaybackEvent,
 } from '@mamoplayer/core';
 import {
-    useRef,
-    useState,
-    type ComponentProps,
-    type ComponentType,
-    type RefAttributes,
+  useRef,
+  useState,
+  type ComponentProps,
+  type ComponentType,
+  type RefAttributes,
 } from 'react';
-import { Button, Platform, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Button, Platform, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { VideoRef } from 'react-native-video';
 
 const VIDEO_URL = 'https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4';
@@ -20,7 +20,7 @@ const SUBTITLE_SUPPORTED_PLATFORMS = new Set(['ios', 'android', 'tvos', 'visiono
 type CorePlayerWithRefProps = ComponentProps<typeof MamoPlayer> & RefAttributes<VideoRef>;
 const CorePlayerWithRef = MamoPlayer as ComponentType<CorePlayerWithRefProps>;
 
-const CoreDemoScreen = () => {
+const CoreDemoScreen = ({ onBack }: { onBack?: () => void } = {}) => {
   const [source, setSource] = useState<CorePlayerWithRefProps['source']>({ uri: VIDEO_URL });
   const [paused, setPaused] = useState(false);
   const [position, setPosition] = useState(0);
@@ -104,6 +104,11 @@ const CoreDemoScreen = () => {
 
   return (
     <SafeAreaView style={styles.container}>
+      {onBack ? (
+        <Pressable style={styles.backButton} onPress={onBack} testID="back-to-demos">
+          <Text style={styles.backText}>← Demos</Text>
+        </Pressable>
+      ) : null}
       <ScrollView contentContainerStyle={styles.contentContainer}>
         <Text style={styles.title}>MamoPlayer Core Demo</Text>
 
@@ -227,6 +232,14 @@ const styles = StyleSheet.create({
   },
   noteText: {
     fontSize: 12,
+  },
+  backButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
+  backText: {
+    fontSize: 14,
+    fontWeight: '600',
   },
 });
 

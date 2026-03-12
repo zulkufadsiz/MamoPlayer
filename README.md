@@ -13,6 +13,24 @@ MamoPlayer is a modular SDK for mobile streaming apps:
 
 You can start with Core and upgrade to Pro without rewriting your player integration.
 
+## Running the Demo App
+
+The [`apps/example`](./apps/example/) directory is the canonical demo surface for the SDK.
+A `DemoNavigator` home screen lets you switch between the Core and Pro demos without editing any files.
+
+```bash
+# Install dependencies
+npm install
+
+# iOS
+npm run start:example
+
+# Android
+npm run start:example:android
+```
+
+See [`apps/example/README.md`](./apps/example/README.md) for full details on each demo screen.
+
 ## MamoPlayer Pro (Paid)
 
 MamoPlayer Pro is built for OTT teams that need production features like ad monetization, analytics, advanced theming, watermarking, and playback policy controls.
