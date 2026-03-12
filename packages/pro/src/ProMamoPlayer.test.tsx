@@ -136,6 +136,7 @@ jest.mock('@mamoplayer/core', () => {
         onAudioTrackChange,
         currentSubtitleTrackId,
         onSubtitleTrackChange,
+        topRightActions,
       }: {
         onPlaybackEvent?: (event: PlaybackEvent) => void;
         rate?: number;
@@ -182,6 +183,7 @@ jest.mock('@mamoplayer/core', () => {
         onAudioTrackChange?: (audioTrackId: string) => void;
         currentSubtitleTrackId?: string | 'off';
         onSubtitleTrackChange?: (subtitleTrackId: string | 'off') => void;
+        topRightActions?: React.ReactNode;
       },
       ref: React.Ref<{
         seek: (position: number) => void;
@@ -225,7 +227,7 @@ jest.mock('@mamoplayer/core', () => {
         currentSubtitleTrackId,
         onSubtitleTrackChange,
       };
-      return <View testID="mamoplayer-mock" />;
+      return <View testID="mamoplayer-mock">{topRightActions ?? null}</View>;
     },
   );
 
@@ -599,13 +601,13 @@ describe('ProMamoPlayer', () => {
       <ProMamoPlayer source={{ uri: 'https://example.com/video.mp4' }} />,
     );
 
-    expect(queryByTestId('pro-pip-button')).toBeNull();
+    expect(queryByTestId('pro-topright-pip-button')).toBeNull();
 
     rerender(
       <ProMamoPlayer source={{ uri: 'https://example.com/video.mp4' }} pip={{ enabled: true }} />,
     );
 
-    expect(queryByTestId('pro-pip-button')).not.toBeNull();
+    expect(queryByTestId('pro-topright-pip-button')).not.toBeNull();
   });
 
   it('requests PiP by emitting entering state and invoking native PiP entry', () => {
@@ -618,7 +620,7 @@ describe('ProMamoPlayer', () => {
       />,
     );
 
-    fireEvent.press(getByTestId('pro-pip-button'));
+    fireEvent.press(getByTestId('pro-topright-pip-button'));
 
     expect(onPipEvent).toHaveBeenCalledWith({ state: 'entering' });
     expect(mockEnterPictureInPicture).toHaveBeenCalledTimes(1);
@@ -637,7 +639,7 @@ describe('ProMamoPlayer', () => {
       />,
     );
 
-    fireEvent.press(getByTestId('pro-pip-button'));
+    fireEvent.press(getByTestId('pro-topright-pip-button'));
 
     expect(onPipEvent).toHaveBeenCalledWith({ state: 'entering' });
     expect(mockEnterPictureInPicture).not.toHaveBeenCalled();
@@ -2058,7 +2060,7 @@ describe('ProMamoPlayer', () => {
     expect(getByTestId('pro-transport-fullscreen')).toBeTruthy();
 
     expect(queryByTestId('pro-settings-button')).toBeNull();
-    expect(queryByTestId('pro-pip-button')).toBeNull();
+    expect(queryByTestId('pro-topright-pip-button')).toBeNull();
     expect(queryByTestId('pro-settings-pip-button')).toBeNull();
 
     expect(getByText('Play')).toBeTruthy();
