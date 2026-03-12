@@ -2343,4 +2343,187 @@ describe('ProMamoPlayer', () => {
     fireEvent.press(getByTestId('pro-settings-option-subtitles-off'));
     expect(latestVideoProps?.currentSubtitleTrackId).toBe('off');
   });
+
+  describe('settings overlay behavior', () => {
+    describe('quality options', () => {
+      it('renders quality option rows in the overlay when tracks.qualities is provided', () => {
+        const { getByTestId, queryByTestId } = render(
+          <ProMamoPlayer
+            source={{ uri: 'https://example.com/video.mp4' }}
+            tracks={{
+              qualities: [
+                { id: 'auto', label: 'Auto', uri: 'https://example.com/auto.m3u8', isDefault: true },
+                { id: '720p', label: '720p', uri: 'https://example.com/720.m3u8' },
+                { id: '1080p', label: '1080p', uri: 'https://example.com/1080.m3u8' },
+              ],
+              defaultQualityId: 'auto',
+            }}
+          />,
+        );
+
+        expect(queryByTestId('pro-settings-overlay')).toBeNull();
+
+        fireEvent.press(getByTestId('pro-topright-hd-button'));
+
+        expect(getByTestId('pro-settings-overlay')).toBeTruthy();
+        expect(getByTestId('pro-settings-option-quality-auto')).toBeTruthy();
+        expect(getByTestId('pro-settings-option-quality-720p')).toBeTruthy();
+        expect(getByTestId('pro-settings-option-quality-1080p')).toBeTruthy();
+      });
+
+      it('does not show the quality settings button when tracks.qualities is absent', () => {
+        const { queryByTestId } = render(
+          <ProMamoPlayer source={{ uri: 'https://example.com/video.mp4' }} />,
+        );
+
+        expect(queryByTestId('pro-topright-hd-button')).toBeNull();
+        expect(queryByTestId('pro-settings-overlay')).toBeNull();
+      });
+    });
+
+    describe('subtitle options', () => {
+      it('adds subtitle option rows to core extraMenuItems when tracks.subtitleTracks is provided', () => {
+        render(
+          <ProMamoPlayer
+            source={{ uri: 'https://example.com/video.mp4' }}
+            tracks={{
+              subtitleTracks: [
+                { id: 'en', language: 'en', label: 'English', uri: 'https://example.com/en.vtt' },
+                { id: 'fr', language: 'fr', label: 'French', uri: 'https://example.com/fr.vtt' },
+              ],
+            }}
+          />,
+        );
+
+        const subtitleItem = latestVideoProps?.settingsOverlay?.extraMenuItems?.find(
+          (item) => item.key === 'subtitle',
+        );
+
+        expect(subtitleItem).toBeDefined();
+        expect(subtitleItem?.options).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({ id: 'en', label: 'English' }),
+            expect.objectContaining({ id: 'fr', label: 'French' }),
+            expect.objectContaining({ id: 'off', label: 'Off' }),
+          ]),
+        );
+        expect(subtitleItem?.options).toHaveLength(3);
+      });
+
+      it('omits subtitle menu item when tracks.subtitleTracks is absent', () => {
+        render(
+          <ProMamoPlayer source={{ uri: 'https://example.com/video.mp4' }} />,
+        );
+
+        const subtitleItem = latestVideoProps?.settingsOverlay?.extraMenuItems?.find(
+          (item) => item.key === 'subtitle',
+        );
+
+        expect(subtitleItem).toBeUndefined();
+      });
+    });
+
+    describe('audio/dub options', () => {
+      it('adds audio option rows to core extraMenuItems when tracks.audioTracks has multiple distinct languages', () => {
+        render(
+          <ProMamoPlayer
+            source={{ uri: 'https://example.com/video.mp4' }}
+            tracks={{
+              audioTracks: [
+                { id: 'en', label: 'English', language: 'en' },
+                { id: 'de', label: 'German', language: 'de' },
+                { id: 'tr', label: 'Turkish', language: 'tr' },
+              ],
+            }}
+          />,
+        );
+
+        const audioItem = latestVideoProps?.settingsOverlay?.extraMenuItems?.find(
+          (item) => item.key === 'audio',
+        );
+
+        expect(audioItem).toBeDefined();
+        expect(audioItem?.options).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({ id: 'en', label: 'English' }),
+            expect.objectContaining({ id: 'de', label: 'German' }),
+            expect.objectContaining({ id: 'tr', label: 'Turkish' }),
+          ]),
+        );
+        expect(audioItem?.options).toHaveLength(3);
+      });
+
+      it('omits audio menu item when all audio tracks share the same language', () => {
+        render(
+          <ProMamoPlayer
+            source={{ uri: 'https://example.com/video.mp4' }}
+            tracks={{
+              audioTracks: [
+                { id: 'en-main', label: 'English', language: 'en' },
+                { id: 'en-commentary', label: 'Commentary', language: 'en' },
+              ],
+            }}
+          />,
+        );
+
+        const audioItem = latestVideoProps?.settingsOverlay?.extraMenuItems?.find(
+          (item) => item.key === 'audio',
+        );
+
+        expect(audioItem).toBeUndefined();
+      });
+
+      it('omits audio menu item when tracks.audioTracks is absent', () => {
+        render(
+          <ProMamoPlayer source={{ uri: 'https://example.com/video.mp4' }} />,
+        );
+
+        const audioItem = latestVideoProps?.settingsOverlay?.extraMenuItems?.find(
+          (item) => item.key === 'audio',
+        );
+
+        expect(audioItem).toBeUndefined();
+      });
+    });
+
+    describe('close behavior', () => {
+      it('closes the quality overlay when the close button is pressed', () => {
+        const { getByTestId, queryByTestId } = render(
+          <ProMamoPlayer
+            source={{ uri: 'https://example.com/video.mp4' }}
+            tracks={{
+              qualities: [
+                { id: 'auto', label: 'Auto', uri: 'https://example.com/auto.m3u8', isDefault: true },
+              ],
+            }}
+          />,
+        );
+
+        fireEvent.press(getByTestId('pro-topright-hd-button'));
+        expect(getByTestId('pro-settings-overlay')).toBeTruthy();
+
+        fireEvent.press(getByTestId('pro-settings-close-button'));
+        expect(queryByTestId('pro-settings-overlay')).toBeNull();
+      });
+
+      it('closes the quality overlay when the backdrop is pressed', () => {
+        const { getByTestId, queryByTestId } = render(
+          <ProMamoPlayer
+            source={{ uri: 'https://example.com/video.mp4' }}
+            tracks={{
+              qualities: [
+                { id: 'auto', label: 'Auto', uri: 'https://example.com/auto.m3u8', isDefault: true },
+              ],
+            }}
+          />,
+        );
+
+        fireEvent.press(getByTestId('pro-topright-hd-button'));
+        expect(getByTestId('pro-settings-overlay')).toBeTruthy();
+
+        fireEvent.press(getByTestId('pro-settings-overlay-backdrop'));
+        expect(queryByTestId('pro-settings-overlay')).toBeNull();
+      });
+    });
+  });
 });
