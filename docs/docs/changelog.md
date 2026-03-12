@@ -6,14 +6,15 @@ title: Changelog
 
 Track notable changes, fixes, and release highlights for MamoPlayer documentation and SDK behavior.
 
-## Unreleased (2026-02-24)
+## Planned / Deferred (not yet shipped)
 
-### Pro Player
+The following items are scoped and designed but intentionally deferred past the 1.0.0 release candidate.
+They will be completed in a subsequent patch or minor release.
 
-- Added deterministic startup selection for `tracks.subtitleTracks` in `ProMamoPlayer`:
-  - `tracks.defaultSubtitleTrackId`
-  - first track with `isDefault: true`
-  - fallback to `"off"`
-- Added explicit subtitle runtime switching support with `changeSubtitleTrack(subtitleTrackId: string | "off")`.
-- Wired subtitle state to the underlying player (`textTracks` / `selectedTextTrack`), including proper disable behavior when `"off"` is selected.
-- Exposed `currentSubtitleTrackId` and `subtitleTracks` to the settings layer for subtitle language menu rendering.
+### Pro Player — Subtitle track imperative API
+
+Internal subtitle track management is fully implemented (startup selection, settings-menu switching, `textTracks` / `selectedTextTrack` wired to `react-native-video`, custom cue overlay in fullscreen). What remains is surfacing control to consumers as a programmatic API:
+
+- Convert `ProMamoPlayer` from `React.FC` to `React.forwardRef` and define a `ProMamoPlayerRef` handle that exposes:
+  - `changeSubtitleTrack(subtitleTrackId: string | "off")`
+  - `currentSubtitleTrackId` (read-only)

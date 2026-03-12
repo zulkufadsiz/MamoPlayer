@@ -55,106 +55,50 @@ export default function VideoScreen() {
 
 ## Subtitles, quality, and audio tracks
 
-```tsx
-<MamoPlayerCore
-  source={{ uri: 'https://example.com/video-default.m3u8' }}
-  qualitySources={{
-    Auto: { uri: 'https://example.com/video-auto.m3u8' },
-    '1080p': { uri: 'https://example.com/video-1080.m3u8' },
-    '720p': { uri: 'https://example.com/video-720.m3u8' },
-  }}
-  subtitleTracks={[
-    {
-      id: 'en',
-      label: 'English',
-      language: 'en',
-      subtitles: [
-        { start: 0, end: 2, text: 'Hello' },
-        { start: 2, end: 4, text: 'Welcome' },
-      ],
-    },
-  ]}
-  audioTracks={[
-    { id: 'en', label: 'English', language: 'en' },
-    { id: 'tr', label: 'Türkçe', language: 'tr' },
-  ]}
-  defaultSubtitleTrackId="en"
-  defaultAudioTrackId="en"
-/>
-```
-
-## How audio track selection changes video source
-
-`audioTracks` alone only defines labels/options shown in Settings. The actual stream switch happens through language source maps.
-
-Recommended approach: use `qualitySourcesByLanguage` with an `Auto` source per language.
-
-Mapping behavior:
-
-1. User selects an audio track (for example `id: 'tr'`).
-2. Player resolves the selected language key from that track id.
-3. Player checks `qualitySourcesByLanguage['tr']` first.
-4. If quality map exists, selected quality is used; `Auto` acts as the default/base stream.
-5. If language-specific quality map is missing, player falls back to `videoSourcesByLanguage['tr']`, then to global `qualitySources` and finally `source`.
-
-So `videoSourcesByLanguage` is optional when `qualitySourcesByLanguage` is fully defined.
-
-Example:
+Track management (quality switching, subtitle tracks, audio tracks) is a **Pro feature** provided by `@mamoplayer/pro` via the `tracks` prop on `ProMamoPlayer`.
 
 ```tsx
-<MamoPlayerCore
-  source={{ uri: 'https://example.com/default.m3u8' }}
-  audioTracks={[
-    { id: 'en', label: 'English', language: 'en' },
-    { id: 'tr', label: 'Türkçe', language: 'tr' },
-  ]}
-  qualitySourcesByLanguage={{
-    en: {
-      Auto: { uri: 'https://example.com/en/auto.m3u8' },
-      '720p': { uri: 'https://example.com/en/720.m3u8' },
-    },
-    tr: {
-      Auto: { uri: 'https://example.com/tr/auto.m3u8' },
-      '720p': { uri: 'https://example.com/tr/720.m3u8' },
-    },
+import { ProMamoPlayer } from '@mamoplayer/pro';
+
+<ProMamoPlayer
+  source={{ uri: 'https://example.com/video.m3u8' }}
+  tracks={{
+    qualities: [
+      { id: 'auto', label: 'Auto', isDefault: true },
+      { id: '1080p', label: '1080p', uri: 'https://example.com/video-1080.m3u8' },
+      { id: '720p', label: '720p', uri: 'https://example.com/video-720.m3u8' },
+    ],
+    subtitleTracks: [
+      { id: 'en', label: 'English', language: 'en', uri: 'https://example.com/en.vtt' },
+    ],
+    audioTracks: [
+      { id: 'en', label: 'English', language: 'en' },
+      { id: 'tr', label: 'Türkçe', language: 'tr' },
+    ],
+    defaultSubtitleTrackId: 'en',
+    defaultAudioTrackId: 'en',
   }}
 />
 ```
 
-## Premium gating behavior
-
-The core player includes premium feature code paths that are gated by `isPremiumUser`.
-
-Default behavior (`isPremiumUser` omitted or `false`):
-
-- Playback analytics disabled
-- Subtitle size/style customization hidden
-- Resume position persistence disabled
-- Media transport integration disabled
-
-Enable premium behavior at runtime:
-
-```tsx
-<MamoPlayerCore source={{ uri: 'https://example.com/video.m3u8' }} isPremiumUser />
-```
+See the [Pro Player docs](./pro-player/) for the full `TracksConfig` API.
 
 ## Core props reference
 
-Most-used props:
+Props specific to `MamoPlayerCore` / `MamoPlayer`:
 
-- `source`: `VideoSource` (required)
-- `autoPlay`: autoplay on ready
-- `startAt`: start time in seconds
-- `resizeMode`: `'contain' | 'cover' | 'stretch'` (useful for visual comparison/testing)
-- `contentFit`: `'contain' | 'cover' | 'fill'`
-- `allowsFullscreen`: enable fullscreen button/flow
-- `skipSeconds`: skip interval for forward/back controls
-- `showSkipButtons`: show/hide skip controls
-- `subtitles` / `subtitleTracks`: subtitle data
-- `qualitySources` / `qualitySourcesByLanguage`: quality switching sources
-- `videoSourcesByLanguage`: language-based source map
-- `audioTracks`: explicit audio track labels/options
-- `isPremiumUser`: runtime gate for premium-only behavior
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `source` | `MamoPlayerSource` | — | **Required.** Video source (`{ uri }` or number). |
+| `autoPlay` | `boolean` | `true` | Begin playback as soon as the player is ready. |
+| `paused` | `boolean` | `undefined` | Controlled pause state. |
+| `settingsOverlay` | `SettingsOverlayConfig` | — | Configure the built-in settings panel (speed, mute, extra items). |
+| `topRightActions` | `ReactNode` | — | Custom content rendered in the top-right overlay slot. |
+| `overlayContent` | `ReactNode` | — | Custom content layered over the video. |
+| `onFullscreenChange` | `(isFullscreen: boolean) => void` | — | Fires when fullscreen state changes. |
+| `onPlaybackEvent` | `(event: PlaybackEvent) => void` | — | Unified playback event callback. See [Playback Events](./core-player.md). |
+
+All other props from `react-native-video`'s `ReactVideoProps` are forwarded to the underlying `<Video>` component (e.g. `style`, `resizeMode`, `poster`, `volume`, `onReadyForDisplay`).
 
 ## Pro ads quick start
 
@@ -209,7 +153,6 @@ Current limitation: native Google IMA is not integrated yet. Planned roadmap: Ph
 
 ## Notes
 
-- `MamoPlayerCore` always renders the simple player mode.
-- `MamoPlayerCore` type is `Omit<MamoPlayerProps, 'playerType'>`.
-- If both are provided, `resizeMode` takes precedence over `contentFit` (`fill` maps to `stretch`).
-- If you need custom feature access control, set `isPremiumUser` based on your backend entitlement response.
+- `MamoPlayerCore` and its `MamoPlayer` alias are identical — choose whichever reads more cleanly in your codebase.
+- The player manages playback rate and mute state internally and exposes them through the settings overlay. Pass `settingsOverlay={{ showPlaybackSpeed: false, showMute: false }}` to hide those controls.
+- All quality, subtitle, and audio track management requires `@mamoplayer/pro`. Core only renders the base player with settings (speed/mute) and fullscreen support.

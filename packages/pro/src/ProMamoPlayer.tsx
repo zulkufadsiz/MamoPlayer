@@ -1,8 +1,8 @@
 import {
-  MamoPlayerCore,
-  type MamoPlayerProps,
-  type PlaybackEvent,
-  type SettingsOverlayConfig
+    MamoPlayerCore,
+    type MamoPlayerProps,
+    type PlaybackEvent,
+    type SettingsOverlayConfig
 } from '@mamoplayer/core';
 import MaterialIcons from '@react-native-vector-icons/material-icons';
 import React, { useRef } from 'react';
@@ -1312,6 +1312,10 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
   );
 
   const changeSubtitleTrack = React.useCallback(
+    // TODO: Expose as part of a ProMamoPlayer imperative ref handle so consumers can
+    // programmatically switch subtitle tracks (e.g. changeSubtitleTrack('en') or 'off').
+    // Requires converting ProMamoPlayer from React.FC to React.forwardRef and defining
+    // a ProMamoPlayerRef type with { changeSubtitleTrack, currentSubtitleTrackId }.
     (subtitleTrackId: string | 'off') => {
       const subtitleTracks = tracks?.subtitleTracks;
 
