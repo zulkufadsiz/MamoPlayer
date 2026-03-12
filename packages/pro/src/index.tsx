@@ -1,19 +1,22 @@
-export {
-    MamoPlayerCore,
-    MamoPlayerCore as MamoPlayerPro,
-    type MamoPlayerCoreProps,
-    type MamoPlayerCoreProps as MamoPlayerProProps,
-    type SettingsOverlayConfig
+export type {
+    MamoPlayerSource,
+    PlaybackEvent,
+    PlaybackEventBase,
+    PlaybackEventType,
+    PlaybackTimePayload,
+    SettingsOverlayConfig,
+    SettingsOverlayExtraMenuItem,
+    SettingsOverlayExtraMenuOption
 } from '@mamoplayer/core';
-export { loadAds, releaseAds, startAds, stopAds, subscribeToAdsEvents } from './ima/nativeBridge';
 export {
-    PremiumFeatureError, addPremiumEntitlements,
+    PremiumFeatureError,
+    addPremiumEntitlements,
     clearPremiumEntitlements,
-    hasPremiumEntitlement, requirePremiumEntitlement,
+    hasPremiumEntitlement,
+    requirePremiumEntitlement,
     setPremiumEntitlements,
     type PremiumFeature
 } from './licensing/entitlements';
-export { subscribeToPipEvents } from './pip/nativeBridge';
 export {
     ProMamoPlayer,
     default as ProMamoPlayerDefault,
