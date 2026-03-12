@@ -19,7 +19,7 @@ export {
 } from './licensing/entitlements';
 export {
     ProMamoPlayer,
-    default as ProMamoPlayerDefault,
+    default,
     type ProMamoPlayerProps
 } from './ProMamoPlayer';
 export type * from './types/ads';
