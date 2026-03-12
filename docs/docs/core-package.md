@@ -27,10 +27,10 @@ npm install @mamoplayer/core
 import { MamoPlayerCore } from '@mamoplayer/core';
 ```
 
-You can also import `SimplePlayer` directly:
+`MamoPlayer` is also exported as a convenience alias for `MamoPlayerCore`:
 
 ```ts
-import { SimplePlayer } from '@mamoplayer/core';
+import { MamoPlayer } from '@mamoplayer/core';
 ```
 
 ## Minimal usage
