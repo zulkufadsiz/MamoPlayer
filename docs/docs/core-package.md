@@ -6,7 +6,7 @@ This guide explains how to integrate the published core package in a React Nativ
 
 The npm package currently exposes only the core entrypoint:
 
-- `mamoplayer/core`
+- `@mamoplayer/core`
 
 ## Requirements
 
@@ -18,19 +18,19 @@ Your app should satisfy these peer dependencies:
 ## Install
 
 ```bash
-npm install mamoplayer
+npm install @mamoplayer/core
 ```
 
 ## Import
 
 ```ts
-import { MamoPlayerCore } from 'mamoplayer/core';
+import { MamoPlayerCore } from '@mamoplayer/core';
 ```
 
 You can also import `SimplePlayer` directly:
 
 ```ts
-import { SimplePlayer } from 'mamoplayer/core';
+import { SimplePlayer } from '@mamoplayer/core';
 ```
 
 ## Minimal usage
@@ -38,7 +38,7 @@ import { SimplePlayer } from 'mamoplayer/core';
 ```tsx
 import React from 'react';
 import { View } from 'react-native';
-import { MamoPlayerCore } from 'mamoplayer/core';
+import { MamoPlayerCore } from '@mamoplayer/core';
 
 export default function VideoScreen() {
   return (

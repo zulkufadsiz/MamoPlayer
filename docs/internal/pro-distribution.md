@@ -36,7 +36,7 @@ Notes:
 ### 3) Consumer `.npmrc` example
 
 ```ini
-@zulkufadsiz:registry=https://registry.npmjs.org/
+@mamoplayer:registry=https://registry.npmjs.org/
 //registry.npmjs.org/:_authToken=${NPM_TOKEN}
 always-auth=true
 ```
@@ -44,7 +44,7 @@ always-auth=true
 Consumer install:
 
 ```bash
-npm install @zulkufadsiz/mamoplayer-pro
+npm install @mamoplayer/pro
 ```
 
 ## Option B: Publish to GitHub Packages
@@ -58,7 +58,7 @@ npm install @zulkufadsiz/mamoplayer-pro
 Example login config in publisher `.npmrc`:
 
 ```ini
-@zulkufadsiz:registry=https://npm.pkg.github.com
+@mamoplayer:registry=https://npm.pkg.github.com
 //npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}
 always-auth=true
 ```
@@ -73,7 +73,7 @@ npm publish --registry=https://npm.pkg.github.com
 ### 3) Consumer `.npmrc` example
 
 ```ini
-@zulkufadsiz:registry=https://npm.pkg.github.com
+@mamoplayer:registry=https://npm.pkg.github.com
 //npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}
 always-auth=true
 ```
@@ -81,7 +81,7 @@ always-auth=true
 Consumer install:
 
 ```bash
-npm install @zulkufadsiz/mamoplayer-pro
+npm install @mamoplayer/pro
 ```
 
 ## Quick verification
@@ -89,7 +89,7 @@ npm install @zulkufadsiz/mamoplayer-pro
 After publishing, verify with:
 
 ```bash
-npm view @zulkufadsiz/mamoplayer-pro --registry=https://registry.npmjs.org/
+npm view @mamoplayer/pro --registry=https://registry.npmjs.org/
 # or
-npm view @zulkufadsiz/mamoplayer-pro --registry=https://npm.pkg.github.com
+npm view @mamoplayer/pro --registry=https://npm.pkg.github.com
 ```
