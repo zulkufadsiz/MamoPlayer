@@ -2,7 +2,7 @@ import type { PlaybackEvent } from '@mamoplayer/core';
 import type { AdsConfig, AnalyticsEvent, ThemeName, TracksConfig } from '@mamoplayer/pro';
 import { ProMamoPlayer } from '@mamoplayer/pro';
 import { useState } from 'react';
-import { Button, SafeAreaView, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { Button, Pressable, SafeAreaView, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 
 const MP4_SOURCE_URI = 'https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4';
 const HLS_SOURCE_URI = 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8';
@@ -132,7 +132,7 @@ const thumbnails = {
   ],
 };
 
-const ProDemoScreen = () => {
+const ProDemoScreen = ({ onBack }: { onBack?: () => void } = {}) => {
   const [source, setSource] = useState<{ uri: string }>({
     uri: MP4_SOURCE_URI,
   });
@@ -145,6 +145,11 @@ const ProDemoScreen = () => {
 
   return (
     <SafeAreaView style={styles.container}>
+      {onBack ? (
+        <Pressable style={styles.backButton} onPress={onBack} testID="back-to-demos">
+          <Text style={styles.backText}>← Demos</Text>
+        </Pressable>
+      ) : null}
       <ScrollView contentContainerStyle={styles.contentContainer}>
         <Text style={styles.title}>MamoPlayer Pro Demo</Text>
 
@@ -421,6 +426,14 @@ const styles = StyleSheet.create({
   },
   errorBannerText: {
     fontSize: 13,
+    fontWeight: '600',
+  },
+  backButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
+  backText: {
+    fontSize: 14,
     fontWeight: '600',
   },
 });

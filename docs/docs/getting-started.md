@@ -6,6 +6,12 @@ title: Getting Started with MamoPlayer
 
 This guide helps you install MamoPlayer and render your first player using the Core package.
 
+> **Want to see it running first?** Clone the repo and launch the demo app:
+> ```bash
+> npm install && npm run start:example
+> ```
+> The `apps/example` directory contains a **Core Demo** and a **Pro Demo** accessible from a single home screen. See [`apps/example/README.md`](https://github.com/mamoplayer/MamoPlayer/blob/main/apps/example/README.md) for details.
+
 ## What is MamoPlayer?
 
 MamoPlayer is a React Native video player SDK that provides ready-to-use player UIs and playback building blocks.

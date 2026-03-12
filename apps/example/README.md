@@ -1,10 +1,61 @@
-# Example App (React Native CLI)
+# apps/example — MamoPlayer SDK Demo
 
-Use `CoreDemoScreen` in a non-Expo React Native app like this.
+`apps/example` is the canonical demo surface for the MamoPlayer SDK. It contains two demo screens
+and a `DemoNavigator` that lets developers switch between them without editing any files.
+
+## Structure
+
+```
+apps/example/
+├── DemoNavigator.tsx       ← entry point registered in root index.js
+├── CoreDemoScreen.tsx      ← @mamoplayer/core demo
+├── CoreDemoScreen.test.tsx
+├── ProDemoScreen.tsx       ← @mamoplayer/pro demo
+├── ProDemoScreen.test.tsx
+├── index.ts                ← re-exports DemoNavigator (default), CoreDemoScreen, ProDemoScreen
+└── assets/
+    └── .gitkeep
+```
+
+## Running the demo
+
+From the repo root:
+
+```bash
+npm install
+
+# iOS
+npm run start:example
+
+# Android
+npm run start:example:android
+```
+
+When the app launches you will see the **Demo Home** screen with two cards:
+
+| Card | Package | What it shows |
+|--|--|--|
+| **Core Demo** | `@mamoplayer/core` | MP4/HLS playback, subtitles, seek controls, playback event log |
+| **Pro Demo** | `@mamoplayer/pro` | Ads (pre/mid/post-roll), analytics log, themes, PiP, watermark, tracks |
+
+Tap a card to open that demo. Tap **← Demos** at the top to return to the home screen.
+
+## DemoNavigator
+
+`DemoNavigator` is a zero-dependency, state-machine navigator:
+
+```tsx
+import DemoNavigator from './apps/example/DemoNavigator';
+
+AppRegistry.registerComponent(appName, () => DemoNavigator);
+```
+
+It manages a single `activeDemo` state (`null | 'core' | 'pro'`). When a demo is chosen it mounts
+the screen and passes an `onBack` callback so the back button in the header sends the user home.
 
 ## MamoPlayer Core Demo
 
-`CoreDemoScreen` is a compact, developer-oriented demo for validating core playback behavior with `@mamoplayer/core`.
+`CoreDemoScreen` validates the core playback API:
 
 ### What this screen shows
 
@@ -17,24 +68,17 @@ Use `CoreDemoScreen` in a non-Expo React Native app like this.
 
 ### How to navigate to it
 
-If this example app is your main app entry, point `App.tsx` to `CoreDemoScreen`:
+`DemoNavigator` (the default entry point) handles navigation automatically. Tap the **Core Demo**
+card on the home screen. Tap **← Demos** to return.
+
+To use `CoreDemoScreen` standalone in your own navigator, pass an `onBack` prop:
 
 ```tsx
 import CoreDemoScreen from './apps/example/CoreDemoScreen';
 
-export default CoreDemoScreen;
+// inside a custom navigator
+<CoreDemoScreen onBack={() => navigation.goBack()} />
 ```
-
-If needed, ensure `index.js` registers your app entry:
-
-```js
-import { AppRegistry } from 'react-native';
-import App from './App';
-
-AppRegistry.registerComponent('MamoPlayer', () => App);
-```
-
-If your native app name is different, replace `'MamoPlayer'` with your actual app name.
 
 ### Features demonstrated
 
@@ -62,46 +106,22 @@ Add a screenshot at `apps/example/assets/core-demo.png`, then uncomment the line
 <!-- ![MamoPlayer Core Demo](./assets/core-demo.png) -->
 ```
 
-## ProMamoPlayer Demo
+## MamoPlayer Pro Demo
 
-`ProDemoScreen` is the integration testbed for `@mamoplayer/pro` behaviors in this example app.
-
-### Run the example app
-
-From the repo root:
-
-```bash
-npm install
-npm run start:example
-```
-
-Android:
-
-```bash
-npm run start:example:android
-```
+`ProDemoScreen` is the integration testbed for `@mamoplayer/pro` behaviors.
 
 ### Navigate to the Pro demo screen
 
-This example does not include a route/menu switch by default; `App.tsx` decides which demo screen is mounted.
-To open the Pro demo, point `App.tsx` to `ProDemoScreen`:
+`DemoNavigator` handles navigation automatically. Tap the **Pro Demo** card on the home screen.
+Tap **← Demos** to return.
+
+To use `ProDemoScreen` standalone in your own navigator, pass an `onBack` prop:
 
 ```tsx
 import ProDemoScreen from './apps/example/ProDemoScreen';
 
-export default ProDemoScreen;
-```
-
-Quick switch between Core and Pro in `App.tsx`:
-
-```tsx
-// Core
-import DemoScreen from './apps/example/CoreDemoScreen';
-
-// Pro
-// import DemoScreen from './apps/example/ProDemoScreen';
-
-export default DemoScreen;
+// inside a custom navigator
+<ProDemoScreen onBack={() => navigation.goBack()} />
 ```
 
 ### What this screen tests
