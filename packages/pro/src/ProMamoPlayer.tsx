@@ -802,6 +802,10 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
   const shouldShowSubtitleSettings = resolvedSettings.enabled && resolvedSettings.showSubtitles;
   const shouldShowAudioTrackSettings =
     resolvedSettings.enabled && resolvedSettings.showAudioTracks && hasMultipleDubLanguageOptions;
+  // Separate from shouldShowAudioTrackSettings: this only requires the tracks to exist,
+  // not multiple distinct languages, so the Audio section appears whenever audio tracks are provided.
+  const hasAudioSectionOptions =
+    resolvedSettings.enabled && resolvedSettings.showAudioTracks && Boolean(tracks?.audioTracks?.length);
 
   const playerRef = React.useRef<VideoRef | null>(null);
   const adRef = useRef(new AdStateMachine());
@@ -2272,7 +2276,7 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
   ]);
 
   const proAudioExtraMenuItem = React.useMemo(() => {
-    if (!shouldShowAudioTrackSettings || !tracks?.audioTracks?.length) {
+    if (!hasAudioSectionOptions) {
       return undefined;
     }
 
@@ -2280,7 +2284,7 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
       key: 'audio',
       title: 'Audio',
       value: getAudioLabels(selectedAudio),
-      options: tracks.audioTracks.map((audioTrack) => ({
+      options: tracks!.audioTracks!.map((audioTrack) => ({
         id: audioTrack.id,
         label: audioTrack.label,
       })),
@@ -2293,8 +2297,8 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
     changeAudioTrack,
     currentAudioTrackId,
     getAudioLabels,
+    hasAudioSectionOptions,
     selectedAudio,
-    shouldShowAudioTrackSettings,
     tracks?.audioTracks,
   ]);
 
