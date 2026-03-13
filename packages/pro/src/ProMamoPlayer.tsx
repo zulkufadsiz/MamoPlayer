@@ -811,6 +811,10 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
   const adRef = useRef(new AdStateMachine());
   const quartileStateRef = React.useRef<Record<Quartile, boolean>>(createQuartileState());
   const positionRef = React.useRef(0);
+  // Tracks the last thumbnail frame URI that triggered a setScrubThumbnailFrame call so
+  // we can bail out early when the thumbnail hasn't actually changed, avoiding unnecessary
+  // re-renders of ProMamoPlayer (and its entire subtree) on every pan-move event.
+  const scrubThumbnailFrameRef = React.useRef<ThumbnailFrame | null>(null);
   const initialQualityId = React.useMemo(() => getInitialQualityId(tracks), [tracks]);
   const initialAudioTrackId = React.useMemo(() => getInitialAudioTrackId(tracks), [tracks]);
   const initialSubtitleTrackId = React.useMemo(() => getInitialSubtitleTrackId(tracks), [tracks]);
@@ -949,34 +953,43 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
     setIsTimelineScrubbing(true);
 
     if (!thumbnails) {
+      scrubThumbnailFrameRef.current = null;
       setScrubThumbnailFrame(null);
       return;
     }
 
-    setScrubThumbnailFrame(resolveScrubThumbnailFrame(positionRef.current));
+    const initialFrame = resolveScrubThumbnailFrame(positionRef.current);
+    scrubThumbnailFrameRef.current = initialFrame;
+    setScrubThumbnailFrame(initialFrame);
   }, [resolveScrubThumbnailFrame, thumbnails]);
 
   const handleTimelineScrub = React.useCallback(
     (time: number) => {
-      if (!isTimelineScrubbing || !thumbnails) {
+      if (!thumbnails) {
         return;
       }
 
-      setScrubThumbnailFrame(resolveScrubThumbnailFrame(time));
+      const nextFrame = resolveScrubThumbnailFrame(time);
+      // Only update state when the thumbnail URI actually changes to prevent
+      // re-rendering the full ProMamoPlayer tree on every pan-move event.
+      if (nextFrame?.uri === scrubThumbnailFrameRef.current?.uri) {
+        return;
+      }
+      scrubThumbnailFrameRef.current = nextFrame;
+      setScrubThumbnailFrame(nextFrame);
     },
-    [isTimelineScrubbing, resolveScrubThumbnailFrame, thumbnails],
+    [resolveScrubThumbnailFrame, thumbnails],
   );
 
   const handleTimelineScrubEnd = React.useCallback(
-    (time: number) => {
-      const safeDuration = mediaDuration > 0 ? mediaDuration : Number.MAX_SAFE_INTEGER;
-      const nextPosition = Math.max(0, Math.min(time, safeDuration));
-
+    (_time: number) => {
+      // MamoPlayerCore already handles the seek and playback resume on scrub end.
+      // Here we only clear the thumbnail preview state.
       setIsTimelineScrubbing(false);
+      scrubThumbnailFrameRef.current = null;
       setScrubThumbnailFrame(null);
-      playerRef.current?.seek(nextPosition);
     },
-    [mediaDuration],
+    [],
   );
   const emitPipEvent = React.useCallback(
     (event: PipEvent) => {
@@ -2364,6 +2377,10 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
           onPlaybackEvent={handlePlaybackEvent}
           onPictureInPictureStatusChanged={handlePictureInPictureStatusChanged}
           paused={resolvedPausedState}
+          onScrubStart={handleTimelineScrubStart}
+          onScrubMove={handleTimelineScrub}
+          onScrubEnd={handleTimelineScrubEnd}
+          timelineConfig={scrubThumbnailFrame?.uri ? { thumbnailUri: scrubThumbnailFrame.uri } : undefined}
           topRightActions={
             <View style={styles.topRightActionsContainer}>
               {consumerTopRightActions ? consumerTopRightActions : null}
