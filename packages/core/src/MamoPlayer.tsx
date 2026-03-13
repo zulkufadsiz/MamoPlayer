@@ -9,6 +9,7 @@ import Video, {
     type ReactVideoProps,
     type VideoRef,
 } from 'react-native-video';
+import { DoubleTapSeekOverlay } from './components/DoubleTapSeekOverlay';
 import {
     PlaybackOptions,
 } from './components/PlaybackOptions';
@@ -33,6 +34,11 @@ export interface ControlsConfig {
   autoHideDelay?: number;
 }
 
+export interface GesturesConfig {
+  /** Enable double-tap on left/right side of the player to seek ±10 seconds. Defaults to true. */
+  doubleTapSeek?: boolean;
+}
+
 export interface MamoPlayerCoreProps extends Omit<
   ReactVideoProps,
   'source' | 'paused' | 'controls' | 'onLoad' | 'onProgress' | 'onEnd' | 'onError' | 'onSeek' | 'onBuffer'
@@ -46,6 +52,7 @@ export interface MamoPlayerCoreProps extends Omit<
   onFullscreenChange?: (isFullscreen: boolean) => void;
   onPlaybackEvent?: (event: PlaybackEvent) => void;
   controls?: ControlsConfig;
+  gestures?: GesturesConfig;
 }
 
 export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
@@ -59,8 +66,7 @@ export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
       overlayContent,
       onFullscreenChange,
       onPlaybackEvent,
-      controls,
-      style,
+      controls,      gestures,      style,
       ...rest
     },
     ref,
@@ -78,6 +84,7 @@ export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
     const [, setIsBuffering] = React.useState<boolean>(false);
     const resolvedAutoHide = controls?.autoHide ?? true;
     const resolvedAutoHideDelay = controls?.autoHideDelay ?? DEFAULT_AUTO_HIDE_DELAY_MS;
+    const doubleTapSeekEnabled = gestures?.doubleTapSeek !== false;
 
     const durationRef = React.useRef(0);
     const positionRef = React.useRef(0);
@@ -371,7 +378,13 @@ export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
           onBuffer={handleBuffer}
         />
         {overlayContent}
-        {!controlsVisible ? (
+        {doubleTapSeekEnabled ? (
+          <DoubleTapSeekOverlay
+            onSeekBackward={handleSeekBackward}
+            onSeekForward={handleSeekForward}
+            onSingleTap={handleSurfacePress}
+          />
+        ) : !controlsVisible ? (
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Show playback controls"
