@@ -54,6 +54,20 @@ export interface MamoPlayerCoreProps extends Omit<
   onPlaybackEvent?: (event: PlaybackEvent) => void;
   controls?: ControlsConfig;
   gestures?: GesturesConfig;
+  /**
+   * Optional thumbnail URI and other per-scrub configuration forwarded to the
+   * Timeline.  Set by ProMamoPlayer to show a thumbnail frame preview while the
+   * user is dragging the scrubber.
+   */
+  timelineConfig?: {
+    thumbnailUri?: string;
+  };
+  /** Called once when a scrub gesture begins (before any position change). */
+  onScrubStart?: () => void;
+  /** Called on every scrub move with the candidate seek time in seconds. */
+  onScrubMove?: (time: number) => void;
+  /** Called when the scrub gesture ends with the final seek time in seconds. */
+  onScrubEnd?: (time: number) => void;
 }
 
 export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
@@ -68,6 +82,10 @@ export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
       onFullscreenChange,
       onPlaybackEvent,
       controls,      gestures,      style,
+      timelineConfig,
+      onScrubStart: onScrubStartProp,
+      onScrubMove: onScrubMoveProp,
+      onScrubEnd: onScrubEndProp,
       ...rest
     },
     ref,
@@ -90,6 +108,7 @@ export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
     const durationRef = React.useRef(0);
     const positionRef = React.useRef(0);
     const isScrubbingRef = React.useRef(false);
+    const wasPlayingBeforeScrubRef = React.useRef(false);
     const isBufferingRef = React.useRef(false);
     const videoRef = React.useRef<VideoRef | null>(null);
     const autoHideTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -215,6 +234,10 @@ export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
     );
 
     const resolvedPaused = pausedOverride ?? paused ?? !isPlaying;
+    // Ref kept in sync on every render so scrub callbacks can read the current
+    // paused state without being added to useCallback dependency arrays.
+    const resolvedPausedRef = React.useRef(resolvedPaused);
+    resolvedPausedRef.current = resolvedPaused;
     const hasVisibleSettingsSections =
       resolvedSettings.showPlaybackSpeed ||
       resolvedSettings.showMute ||
@@ -277,24 +300,40 @@ export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
 
     const handleScrubStart = React.useCallback(() => {
       isScrubbingRef.current = true;
+      // Pause video so audio stops while the user is picking a new position.
+      // Track whether we need to resume on scrub end.
+      wasPlayingBeforeScrubRef.current = !resolvedPausedRef.current;
+      if (!resolvedPausedRef.current) {
+        setPausedOverride(true);
+      }
       showControls();
       clearAutoHideTimer();
-    }, []);
+      onScrubStartProp?.();
+    }, [clearAutoHideTimer, onScrubStartProp, showControls]);
 
     const handleScrubSeek = React.useCallback((nextTime: number) => {
+      // Only update the ref — the scrub position is displayed inside Timeline's
+      // own scrub bubble, so we avoid a full MamoPlayerCore re-render on every
+      // pan-move event, which is the main cause of jank on low-end devices.
       positionRef.current = nextTime;
-      setPosition(nextTime);
-      showControls();
-      clearAutoHideTimer();
-    }, [clearAutoHideTimer, showControls]);
+      onScrubMoveProp?.(nextTime);
+    }, [onScrubMoveProp]);
 
     const handleScrubEnd = React.useCallback((nextTime: number) => {
       isScrubbingRef.current = false;
       positionRef.current = nextTime;
+      // Update visible position immediately so the time row reflects the new
+      // position before the first progress event fires after the seek.
       setPosition(nextTime);
       videoRef.current?.seek(nextTime);
+      // Resume playback if the video was playing when the user started scrubbing.
+      if (wasPlayingBeforeScrubRef.current) {
+        wasPlayingBeforeScrubRef.current = false;
+        setPausedOverride(null);
+      }
+      onScrubEndProp?.(nextTime);
       scheduleControlsAutoHide();
-    }, [scheduleControlsAutoHide]);
+    }, [onScrubEndProp, scheduleControlsAutoHide]);
 
     const handleTogglePlayback = React.useCallback(() => {
       const nextPaused = !resolvedPaused;
@@ -440,6 +479,7 @@ export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
                 onSeek={handleScrubSeek}
                 onScrubStart={handleScrubStart}
                 onScrubEnd={handleScrubEnd}
+                thumbnailUri={timelineConfig?.thumbnailUri}
               />
               <View style={styles.timeRow}>
                 <Text style={styles.timeText}>{formatTime(position)}</Text>

@@ -1,8 +1,10 @@
 import React from 'react';
 import {
+    Image,
     LayoutChangeEvent,
     PanResponder,
     StyleSheet,
+    Text,
     View,
 } from 'react-native';
 
@@ -15,6 +17,16 @@ const TRACK_COLOR = '#1F1F1F';
 const BUFFERED_COLOR = '#6B7280';
 const PLAYED_COLOR = '#E50914';
 const THUMB_COLOR = '#F5F5F5';
+const THUMBNAIL_WIDTH = 120;
+const THUMBNAIL_HEIGHT = 68; // 16:9 aspect at this width
+const SCRUB_PREVIEW_BOTTOM_OFFSET = TOUCH_TARGET_HEIGHT + 4;
+
+const formatScrubTime = (seconds: number): string => {
+  const safeSeconds = Math.max(0, Math.floor(Number.isFinite(seconds) ? seconds : 0));
+  const minutes = Math.floor(safeSeconds / 60);
+  const secs = safeSeconds % 60;
+  return `${minutes}:${secs.toString().padStart(2, '0')}`;
+};
 
 export interface TimelineProps {
   duration: number;
@@ -23,6 +35,9 @@ export interface TimelineProps {
   onSeek?: (time: number) => void;
   onScrubStart?: () => void;
   onScrubEnd?: (time: number) => void;
+  /** URI of the thumbnail image to show while scrubbing. When provided a preview
+   *  card (thumbnail + time label) floats above the thumb. */
+  thumbnailUri?: string;
 }
 
 const clamp = (value: number, min: number, max: number): number => {
@@ -36,6 +51,7 @@ export const Timeline: React.FC<TimelineProps> = ({
   onSeek,
   onScrubStart,
   onScrubEnd,
+  thumbnailUri,
 }) => {
   const [trackWidth, setTrackWidth] = React.useState(0);
   const [isScrubbing, setIsScrubbing] = React.useState(false);
@@ -122,8 +138,29 @@ export const Timeline: React.FC<TimelineProps> = ({
     setTrackWidth(event.nativeEvent.layout.width);
   }, []);
 
+  const scrubPreviewLeft = `${visibleRatio * 100}%` as `${number}%`;
+
   return (
     <View style={styles.container}>
+      {isScrubbing ? (
+        <View
+          pointerEvents="none"
+          style={[styles.scrubPreview, { left: scrubPreviewLeft }]}
+          testID="timeline-scrub-preview"
+        >
+          {thumbnailUri ? (
+            <Image
+              source={{ uri: thumbnailUri }}
+              style={styles.scrubThumbnail}
+              resizeMode="cover"
+              testID="timeline-scrub-thumbnail"
+            />
+          ) : null}
+          <Text style={styles.scrubTimeLabel} testID="timeline-scrub-time">
+            {formatScrubTime(scrubRatio * safeDuration)}
+          </Text>
+        </View>
+      ) : null}
       <View style={styles.touchArea} onLayout={handleLayout} {...panResponder.panHandlers}>
         <View style={styles.track}>
           {typeof buffered === 'number' ? (
@@ -179,5 +216,27 @@ const styles = StyleSheet.create({
     backgroundColor: THUMB_COLOR,
     top: '50%',
     marginTop: -THUMB_SIZE / 2,
+  },
+  scrubPreview: {
+    position: 'absolute',
+    bottom: SCRUB_PREVIEW_BOTTOM_OFFSET,
+    width: THUMBNAIL_WIDTH,
+    transform: [{ translateX: -(THUMBNAIL_WIDTH / 2) }],
+    alignItems: 'center',
+    gap: 4,
+  },
+  scrubThumbnail: {
+    width: THUMBNAIL_WIDTH,
+    height: THUMBNAIL_HEIGHT,
+    borderRadius: 4,
+    backgroundColor: '#111111',
+  },
+  scrubTimeLabel: {
+    color: '#F5F5F5',
+    fontSize: 12,
+    fontWeight: '600',
+    textShadowColor: 'rgba(0,0,0,0.8)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
 });
