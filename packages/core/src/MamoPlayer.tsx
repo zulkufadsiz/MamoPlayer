@@ -9,6 +9,7 @@ import Video, {
     type ReactVideoProps,
     type VideoRef,
 } from 'react-native-video';
+import { BufferingIndicator } from './components/BufferingIndicator';
 import { DoubleTapSeekOverlay } from './components/DoubleTapSeekOverlay';
 import {
     PlaybackOptions,
@@ -81,7 +82,7 @@ export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
     const [muted, setMuted] = React.useState<boolean>(false);
     const [controlsVisible, setControlsVisible] = React.useState<boolean>(true);
     const [pausedOverride, setPausedOverride] = React.useState<boolean | null>(null);
-    const [, setIsBuffering] = React.useState<boolean>(false);
+    const [isBuffering, setIsBuffering] = React.useState<boolean>(false);
     const resolvedAutoHide = controls?.autoHide ?? true;
     const resolvedAutoHideDelay = controls?.autoHideDelay ?? DEFAULT_AUTO_HIDE_DELAY_MS;
     const doubleTapSeekEnabled = gestures?.doubleTapSeek !== false;
@@ -378,6 +379,7 @@ export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
           onBuffer={handleBuffer}
         />
         {overlayContent}
+        <BufferingIndicator buffering={isBuffering} />
         {doubleTapSeekEnabled ? (
           <DoubleTapSeekOverlay
             onSeekBackward={handleSeekBackward}
