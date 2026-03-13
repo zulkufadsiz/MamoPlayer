@@ -1301,20 +1301,38 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
 
   const changeAudioTrack = React.useCallback(
     (audioTrackId: string) => {
-      const audioTrackExists = tracks?.audioTracks?.some(
-        (audioTrack) => audioTrack.id === audioTrackId,
-      );
+      const audioTrack = tracks?.audioTracks?.find((t) => t.id === audioTrackId);
 
-      if (!audioTrackExists || audioTrackId === currentAudioTrackId) {
+      if (!audioTrack || audioTrackId === currentAudioTrackId) {
         return;
       }
 
       setTracksState((prev) => ({ ...prev, currentAudioTrackId: audioTrackId }));
 
-      // TODO: Integrate native player-level audio track switching (HLS audio groups / rendition selection).
-      // TODO: Emit `audio_track_change` analytics once analytics types support custom track-change events.
+      console.log(
+        `[MamoPlayer Pro] Audio track changed: ${audioTrackId}${
+          audioTrack.label ? ` (${audioTrack.label})` : ''
+        }`,
+      );
+
+      const nativeLanguage = audioTrack.language?.trim();
+
+      if (!nativeLanguage) {
+        // Native player-level audio track switching requires a language identifier.
+        // Emit analytics so consumers can observe dub changes that are not reflected
+        // at the A/V renderer level.
+        emitAnalytics(analytics, {
+          type: 'audio_track_change',
+          position: positionRef.current,
+          duration: mediaDuration > 0 ? mediaDuration : undefined,
+          audioTrackId,
+          sessionId: analytics?.sessionId,
+        });
+      }
+      // When a language identifier is present, the derived selectedAudioTrack prop
+      // drives the native player switch; the renderer is the source of truth.
     },
-    [currentAudioTrackId, tracks?.audioTracks],
+    [analytics, currentAudioTrackId, mediaDuration, tracks?.audioTracks],
   );
 
   const changeSubtitleTrack = React.useCallback(
@@ -2083,6 +2101,22 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
   }, [currentPosition, currentSubtitleTrackId, parsedSubtitleCues]);
   const resolvedSubtitleText =
     currentSubtitleTrackId === 'off' ? undefined : activeSubtitleCueText ?? fallbackSubtitleCueText;
+
+  const selectedAudioTrackForPlayer = React.useMemo(() => {
+    if (!currentAudioTrackId || !tracks?.audioTracks) {
+      return undefined;
+    }
+
+    const audioTrack = tracks.audioTracks.find((t) => t.id === currentAudioTrackId);
+    const nativeLanguage = audioTrack?.language?.trim();
+
+    if (!nativeLanguage) {
+      return undefined;
+    }
+
+    return { type: 'language' as const, value: nativeLanguage };
+  }, [currentAudioTrackId, tracks?.audioTracks]);
+
   const selectedTextTrackForPlayer = React.useMemo(() => {
     if (isCoreFullscreen && currentSubtitleTrackId && currentSubtitleTrackId !== 'off') {
       return { type: 'disabled' as const };
@@ -2295,6 +2329,7 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
           selectedTextTrack={selectedTextTrackForPlayer as MamoPlayerProps['selectedTextTrack']}
           audioTracks={shouldShowAudioTrackSettings ? tracks?.audioTracks : undefined}
           defaultAudioTrackId={initialAudioTrackId ?? null}
+          selectedAudioTrack={selectedAudioTrackForPlayer}
           rate={rate}
           currentQualityId={shouldShowQualitySettings ? currentQualityId : undefined}
           currentAudioTrackId={shouldShowAudioTrackSettings ? currentAudioTrackId : undefined}

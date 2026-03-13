@@ -60,6 +60,7 @@ let latestVideoProps:
       defaultAudioTrackId?: string | null;
       currentAudioTrackId?: string;
       onAudioTrackChange?: (audioTrackId: string) => void;
+      selectedAudioTrack?: { type: 'language'; value: string } | { type: 'disabled' } | undefined;
       currentSubtitleTrackId?: string | 'off';
       onSubtitleTrackChange?: (subtitleTrackId: string | 'off') => void;
     }
@@ -134,6 +135,7 @@ jest.mock('@mamoplayer/core', () => {
         defaultAudioTrackId,
         currentAudioTrackId,
         onAudioTrackChange,
+        selectedAudioTrack,
         currentSubtitleTrackId,
         onSubtitleTrackChange,
         topRightActions,
@@ -181,6 +183,7 @@ jest.mock('@mamoplayer/core', () => {
         defaultAudioTrackId?: string | null;
         currentAudioTrackId?: string;
         onAudioTrackChange?: (audioTrackId: string) => void;
+        selectedAudioTrack?: { type: 'language'; value: string } | { type: 'disabled' } | undefined;
         currentSubtitleTrackId?: string | 'off';
         onSubtitleTrackChange?: (subtitleTrackId: string | 'off') => void;
         topRightActions?: React.ReactNode;
@@ -224,6 +227,7 @@ jest.mock('@mamoplayer/core', () => {
         defaultAudioTrackId,
         currentAudioTrackId,
         onAudioTrackChange,
+        selectedAudioTrack,
         currentSubtitleTrackId,
         onSubtitleTrackChange,
       };
@@ -968,6 +972,137 @@ describe('ProMamoPlayer', () => {
     });
 
     expect(latestVideoProps?.currentAudioTrackId).toBe('tr');
+  });
+
+  it('passes selectedAudioTrack with language type when the active track has a language', () => {
+    render(
+      <ProMamoPlayer
+        source={{ uri: 'https://example.com/audio-native.mp4' }}
+        tracks={{
+          audioTracks: [
+            { id: 'en', label: 'English', language: 'en' },
+            { id: 'tr', label: 'Türkçe', language: 'tr' },
+          ],
+          defaultAudioTrackId: 'en',
+        }}
+      />,
+    );
+
+    expect(latestVideoProps?.selectedAudioTrack).toEqual({ type: 'language', value: 'en' });
+
+    act(() => {
+      latestVideoProps?.onAudioTrackChange?.('tr');
+    });
+
+    expect(latestVideoProps?.selectedAudioTrack).toEqual({ type: 'language', value: 'tr' });
+  });
+
+  it('passes undefined selectedAudioTrack when the active track has no language', () => {
+    render(
+      <ProMamoPlayer
+        source={{ uri: 'https://example.com/audio-no-lang.mp4' }}
+        tracks={{
+          audioTracks: [
+            { id: 'en', label: 'English', language: '' },
+            { id: 'tr', label: 'Türkçe', language: '' },
+          ],
+          defaultAudioTrackId: 'en',
+        }}
+      />,
+    );
+
+    expect(latestVideoProps?.selectedAudioTrack).toBeUndefined();
+  });
+
+  it('emits audio_track_change analytics when native switching is unavailable (no language)', () => {
+    const onEvent = jest.fn();
+
+    render(
+      <ProMamoPlayer
+        source={{ uri: 'https://example.com/audio-analytics.mp4' }}
+        analytics={{ onEvent }}
+        tracks={{
+          audioTracks: [
+            { id: 'en', label: 'English', language: '' },
+            { id: 'tr', label: 'Türkçe', language: '' },
+          ],
+          defaultAudioTrackId: 'en',
+        }}
+      />,
+    );
+
+    act(() => {
+      latestVideoProps?.onAudioTrackChange?.('tr');
+    });
+
+    const audioTrackEvents = onEvent.mock.calls
+      .map(([event]) => event)
+      .filter((event) => event.type === 'audio_track_change');
+
+    expect(audioTrackEvents).toHaveLength(1);
+    expect(audioTrackEvents[0]).toMatchObject({
+      type: 'audio_track_change',
+      audioTrackId: 'tr',
+    });
+  });
+
+  it('does not emit audio_track_change analytics when native switching is available (language present)', () => {
+    const onEvent = jest.fn();
+
+    render(
+      <ProMamoPlayer
+        source={{ uri: 'https://example.com/audio-no-analytics.mp4' }}
+        analytics={{ onEvent }}
+        tracks={{
+          audioTracks: [
+            { id: 'en', label: 'English', language: 'en' },
+            { id: 'tr', label: 'Türkçe', language: 'tr' },
+          ],
+          defaultAudioTrackId: 'en',
+        }}
+      />,
+    );
+
+    act(() => {
+      latestVideoProps?.onAudioTrackChange?.('tr');
+    });
+
+    const audioTrackEvents = onEvent.mock.calls
+      .map(([event]) => event)
+      .filter((event) => event.type === 'audio_track_change');
+
+    expect(audioTrackEvents).toHaveLength(0);
+  });
+
+  it('highlights the active audio track via selectedOptionId in the settings overlay', () => {
+    render(
+      <ProMamoPlayer
+        source={{ uri: 'https://example.com/audio-highlight.mp4' }}
+        tracks={{
+          audioTracks: [
+            { id: 'en', label: 'English', language: 'en' },
+            { id: 'tr', label: 'Türkçe', language: 'tr' },
+          ],
+          defaultAudioTrackId: 'en',
+        }}
+      />,
+    );
+
+    const audioItem = latestVideoProps?.settingsOverlay?.extraMenuItems?.find(
+      (item) => item.key === 'audio',
+    );
+
+    expect(audioItem?.selectedOptionId).toBe('en');
+
+    act(() => {
+      latestVideoProps?.onAudioTrackChange?.('tr');
+    });
+
+    const audioItemAfterChange = latestVideoProps?.settingsOverlay?.extraMenuItems?.find(
+      (item) => item.key === 'audio',
+    );
+
+    expect(audioItemAfterChange?.selectedOptionId).toBe('tr');
   });
 
   it('switches to ad source and restores main source after ad ends', () => {

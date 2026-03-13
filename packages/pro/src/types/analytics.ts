@@ -12,7 +12,8 @@ export type AnalyticsEventType =
   | 'buffer_start'
   | 'buffer_end'
   | 'seek'
-  | 'quartile';
+  | 'quartile'
+  | 'audio_track_change';
 
 export interface AnalyticsEventBase {
   type: AnalyticsEventType;
@@ -29,6 +30,7 @@ export interface AnalyticsEvent extends AnalyticsEventBase {
   errorMessage?: string;
   mainContentPositionAtAdStart?: number;
   sessionId?: string;
+  audioTrackId?: string;
 }
 
 export interface AnalyticsConfig {
