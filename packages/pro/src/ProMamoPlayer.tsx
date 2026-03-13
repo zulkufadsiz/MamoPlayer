@@ -1282,16 +1282,21 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
       const previousPosition = positionRef.current;
       pendingQualitySeekPositionRef.current = previousPosition > 0 ? previousPosition : null;
 
+      // Pre-compute and cache the source so the sync-effect and completeAdPlayback
+      // both use exactly the same object, avoiding a second native video reload.
       const nextSource = resolveSourceWithQualityUri(rest.source, qualityVariant.uri);
       mainSourceRef.current = nextSource;
 
+      console.log(`[MamoPlayer Pro] Quality changed: ${qualityVariant.id}`);
+
       setTracksState((prev) => ({ ...prev, currentQualityId: qualityVariant.id }));
 
-      if (!isAdMode) {
-        setActiveSource(nextSource);
-      }
+      // Source update is handled exclusively by the source-sync effect below.
+      // Calling setActiveSource here too would trigger a second native reload
+      // (different object reference, same URI), causing duplicate ready events,
+      // double session_start analytics, and a transient positionRef reset to 0.
     },
-    [currentQualityId, isAdMode, rest.source, tracks?.qualities],
+    [currentQualityId, rest.source, tracks?.qualities],
   );
 
   const changeAudioTrack = React.useCallback(

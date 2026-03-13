@@ -2526,4 +2526,266 @@ describe('ProMamoPlayer', () => {
       });
     });
   });
+
+  // ─── Video quality switching ────────────────────────────────────────────────
+  describe('video quality switching', () => {
+    const QUALITIES = [
+      { id: 'auto' as const, label: 'Auto', uri: 'https://cdn.example.com/video-auto.m3u8', isDefault: true },
+      { id: '720p' as const, label: '720p', uri: 'https://cdn.example.com/video-720p.m3u8' },
+      { id: '1080p' as const, label: '1080p', uri: 'https://cdn.example.com/video-1080p.m3u8' },
+    ];
+
+    it('initialises with the default quality variant URI as the active source', () => {
+      render(
+        <ProMamoPlayer
+          source={{ uri: 'https://example.com/base.mp4' }}
+          tracks={{
+            qualities: QUALITIES,
+            defaultQualityId: '720p',
+          }}
+        />,
+      );
+
+      expect((latestVideoProps?.source as { uri?: string })?.uri).toBe(
+        'https://cdn.example.com/video-720p.m3u8',
+      );
+      expect(latestVideoProps?.currentQualityId).toBe('720p');
+    });
+
+    it('falls back to the isDefault-flagged variant when no defaultQualityId is given', () => {
+      render(
+        <ProMamoPlayer
+          source={{ uri: 'https://example.com/base.mp4' }}
+          tracks={{ qualities: QUALITIES }}
+        />,
+      );
+
+      expect((latestVideoProps?.source as { uri?: string })?.uri).toBe(
+        'https://cdn.example.com/video-auto.m3u8',
+      );
+      expect(latestVideoProps?.currentQualityId).toBe('auto');
+    });
+
+    it('changes the active source URI to the selected quality variant', () => {
+      render(
+        <ProMamoPlayer
+          source={{ uri: 'https://example.com/base.mp4' }}
+          tracks={{ qualities: QUALITIES }}
+        />,
+      );
+
+      expect((latestVideoProps?.source as { uri?: string })?.uri).toBe(
+        'https://cdn.example.com/video-auto.m3u8',
+      );
+
+      const qualityMenuItem = latestVideoProps?.settingsOverlay?.extraMenuItems?.find(
+        (item) => item.key === 'quality',
+      );
+
+      act(() => {
+        qualityMenuItem?.onSelectOption('720p');
+      });
+
+      expect((latestVideoProps?.source as { uri?: string })?.uri).toBe(
+        'https://cdn.example.com/video-720p.m3u8',
+      );
+      expect(latestVideoProps?.currentQualityId).toBe('720p');
+    });
+
+    it('seeks back to playback position after new quality source fires ready', () => {
+      render(
+        <ProMamoPlayer
+          source={{ uri: 'https://example.com/base.mp4' }}
+          tracks={{ qualities: QUALITIES }}
+        />,
+      );
+
+      // Simulate playback reaching 45 s.
+      act(() => {
+        emitPlayback({ type: 'ready', duration: 120, position: 0 });
+        emitPlayback({ type: 'time_update', duration: 120, position: 45 });
+      });
+
+      // User switches quality.
+      const qualityMenuItem = latestVideoProps?.settingsOverlay?.extraMenuItems?.find(
+        (item) => item.key === 'quality',
+      );
+
+      act(() => {
+        qualityMenuItem?.onSelectOption('720p');
+      });
+
+      // New source loads → ready fires at position 0.
+      act(() => {
+        emitPlayback({ type: 'ready', duration: 120, position: 0 });
+      });
+
+      expect(mockSeek).toHaveBeenCalledTimes(1);
+      expect(mockSeek).toHaveBeenCalledWith(45);
+    });
+
+    it('does not seek when quality is switched from position 0', () => {
+      render(
+        <ProMamoPlayer
+          source={{ uri: 'https://example.com/base.mp4' }}
+          tracks={{ qualities: QUALITIES }}
+        />,
+      );
+
+      const qualityMenuItem = latestVideoProps?.settingsOverlay?.extraMenuItems?.find(
+        (item) => item.key === 'quality',
+      );
+
+      // Position is 0 (default) — no seek should be queued.
+      act(() => {
+        qualityMenuItem?.onSelectOption('1080p');
+      });
+
+      act(() => {
+        emitPlayback({ type: 'ready', duration: 120, position: 0 });
+      });
+
+      expect(mockSeek).not.toHaveBeenCalled();
+    });
+
+    it('preserves paused state across a quality switch', () => {
+      render(
+        <ProMamoPlayer
+          source={{ uri: 'https://example.com/base.mp4' }}
+          tracks={{ qualities: QUALITIES }}
+          paused
+        />,
+      );
+
+      const qualityMenuItem = latestVideoProps?.settingsOverlay?.extraMenuItems?.find(
+        (item) => item.key === 'quality',
+      );
+
+      act(() => {
+        qualityMenuItem?.onSelectOption('720p');
+      });
+
+      // paused prop is propagated unchanged.
+      expect(latestVideoProps?.paused).toBe(true);
+    });
+
+    it('re-emits only a single ready event (no double source reload) after quality switch', () => {
+      const onPlaybackEvent = jest.fn();
+
+      render(
+        <ProMamoPlayer
+          source={{ uri: 'https://example.com/base.mp4' }}
+          tracks={{ qualities: QUALITIES }}
+          onPlaybackEvent={onPlaybackEvent}
+        />,
+      );
+
+      act(() => {
+        emitPlayback({ type: 'time_update', duration: 120, position: 30 });
+      });
+
+      const qualityMenuItem = latestVideoProps?.settingsOverlay?.extraMenuItems?.find(
+        (item) => item.key === 'quality',
+      );
+
+      act(() => {
+        qualityMenuItem?.onSelectOption('1080p');
+      });
+
+      // Only one ready event should result in one session_start analytic.
+      onPlaybackEvent.mockClear();
+
+      act(() => {
+        emitPlayback({ type: 'ready', duration: 120, position: 0 });
+      });
+
+      const readyEvents = onPlaybackEvent.mock.calls.filter(
+        ([ev]) => ev.type === 'ready',
+      );
+      expect(readyEvents).toHaveLength(1);
+    });
+
+    it('is a no-op when the same quality is re-selected', () => {
+      render(
+        <ProMamoPlayer
+          source={{ uri: 'https://example.com/base.mp4' }}
+          tracks={{ qualities: QUALITIES, defaultQualityId: 'auto' }}
+        />,
+      );
+
+      act(() => {
+        emitPlayback({ type: 'time_update', duration: 120, position: 20 });
+      });
+
+      const sourceBeforeReselect = latestVideoProps?.source;
+
+      const qualityMenuItem = latestVideoProps?.settingsOverlay?.extraMenuItems?.find(
+        (item) => item.key === 'quality',
+      );
+
+      // Re-select the already-active quality.
+      act(() => {
+        qualityMenuItem?.onSelectOption('auto');
+      });
+
+      // Source must not have changed and seek must not be called.
+      expect(latestVideoProps?.source).toBe(sourceBeforeReselect);
+      expect(mockSeek).not.toHaveBeenCalled();
+    });
+
+    it('updates the quality label in the settings menu after a quality change', () => {
+      render(
+        <ProMamoPlayer
+          source={{ uri: 'https://example.com/base.mp4' }}
+          tracks={{ qualities: QUALITIES, defaultQualityId: 'auto' }}
+        />,
+      );
+
+      const qualityMenuItem = () =>
+        latestVideoProps?.settingsOverlay?.extraMenuItems?.find(
+          (item) => item.key === 'quality',
+        );
+
+      expect(qualityMenuItem()?.value).toBe('Auto');
+      expect(qualityMenuItem()?.selectedOptionId).toBe('auto');
+
+      act(() => {
+        qualityMenuItem()?.onSelectOption('1080p');
+      });
+
+      expect(qualityMenuItem()?.value).toBe('1080p');
+      expect(qualityMenuItem()?.selectedOptionId).toBe('1080p');
+    });
+
+    it('marks the selected quality option with a checkmark in the Pro HD overlay', () => {
+      const { getByTestId } = render(
+        <ProMamoPlayer
+          source={{ uri: 'https://example.com/base.mp4' }}
+          tracks={{ qualities: QUALITIES, defaultQualityId: 'auto' }}
+        />,
+      );
+
+      fireEvent.press(getByTestId('pro-topright-hd-button'));
+
+      // 'auto' is default — its row should contain the check icon.
+      expect(
+        within(getByTestId('pro-settings-option-quality-auto')).queryByText('check'),
+      ).toBeTruthy();
+      expect(
+        within(getByTestId('pro-settings-option-quality-720p')).queryByText('check'),
+      ).toBeNull();
+
+      // Switch to 720p.
+      act(() => {
+        fireEvent.press(getByTestId('pro-settings-option-quality-720p'));
+      });
+
+      expect(
+        within(getByTestId('pro-settings-option-quality-720p')).queryByText('check'),
+      ).toBeTruthy();
+      expect(
+        within(getByTestId('pro-settings-option-quality-auto')).queryByText('check'),
+      ).toBeNull();
+    });
+  });
 });
