@@ -6,6 +6,7 @@ export type { TimelineProps } from './components/Timeline';
 export {
     MamoPlayerCore as MamoPlayer,
     MamoPlayerCore,
+    type ControlsConfig,
     type MamoPlayerCoreProps,
     type MamoPlayerCoreProps as MamoPlayerProps,
     type MamoPlayerSource
