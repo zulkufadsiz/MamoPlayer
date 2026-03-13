@@ -574,6 +574,161 @@ describe('ProMamoPlayer', () => {
     expect(latestVideoProps?.currentQualityId).toBe('720p');
   });
 
+  it('omits quality section from settings overlay when tracks.qualities is absent', () => {
+    render(
+      <ProMamoPlayer
+        source={{ uri: 'https://example.com/video-no-qualities.mp4' }}
+        tracks={{ subtitleTracks: [{ id: 'en', language: 'en', label: 'English', uri: 'https://example.com/en.vtt' }] }}
+      />,
+    );
+
+    const qualityMenuItem = latestVideoProps?.settingsOverlay?.extraMenuItems?.find(
+      (item) => item.key === 'quality',
+    );
+
+    expect(qualityMenuItem).toBeUndefined();
+  });
+
+  it('omits subtitle section from settings overlay when tracks.subtitleTracks is absent', () => {
+    render(
+      <ProMamoPlayer
+        source={{ uri: 'https://example.com/video-no-subtitles.mp4' }}
+        tracks={{
+          qualities: [{ id: 'auto', label: 'Auto', uri: 'https://example.com/auto.m3u8' }],
+        }}
+      />,
+    );
+
+    const subtitleMenuItem = latestVideoProps?.settingsOverlay?.extraMenuItems?.find(
+      (item) => item.key === 'subtitle',
+    );
+
+    expect(subtitleMenuItem).toBeUndefined();
+  });
+
+  it('omits audio section from settings overlay when tracks.audioTracks is absent', () => {
+    render(
+      <ProMamoPlayer
+        source={{ uri: 'https://example.com/video-no-audio-tracks.mp4' }}
+        tracks={{
+          qualities: [{ id: 'auto', label: 'Auto', uri: 'https://example.com/auto.m3u8' }],
+        }}
+      />,
+    );
+
+    const audioMenuItem = latestVideoProps?.settingsOverlay?.extraMenuItems?.find(
+      (item) => item.key === 'audio',
+    );
+
+    expect(audioMenuItem).toBeUndefined();
+  });
+
+  it('shows audio section when tracks.audioTracks has a single entry', () => {
+    render(
+      <ProMamoPlayer
+        source={{ uri: 'https://example.com/video-single-audio.mp4' }}
+        tracks={{
+          audioTracks: [{ id: 'en', label: 'English', language: 'en' }],
+        }}
+      />,
+    );
+
+    const audioMenuItem = latestVideoProps?.settingsOverlay?.extraMenuItems?.find(
+      (item) => item.key === 'audio',
+    );
+
+    expect(audioMenuItem).toBeDefined();
+    expect(audioMenuItem?.options).toEqual([
+      expect.objectContaining({ id: 'en', label: 'English' }),
+    ]);
+    expect(audioMenuItem?.selectedOptionId).toBe('en');
+  });
+
+  it('shows audio section when all audio tracks share the same language', () => {
+    render(
+      <ProMamoPlayer
+        source={{ uri: 'https://example.com/video-same-lang-audio.mp4' }}
+        tracks={{
+          audioTracks: [
+            { id: 'en-stereo', label: 'English Stereo', language: 'en' },
+            { id: 'en-51', label: 'English 5.1', language: 'en' },
+          ],
+          defaultAudioTrackId: 'en-stereo',
+        }}
+      />,
+    );
+
+    const audioMenuItem = latestVideoProps?.settingsOverlay?.extraMenuItems?.find(
+      (item) => item.key === 'audio',
+    );
+
+    expect(audioMenuItem).toBeDefined();
+    expect(audioMenuItem?.options).toHaveLength(2);
+    expect(audioMenuItem?.selectedOptionId).toBe('en-stereo');
+  });
+
+  it('updates selectedOptionId for quality section after quality change', () => {
+    render(
+      <ProMamoPlayer
+        source={{ uri: 'https://example.com/video-quality-highlight.mp4' }}
+        tracks={{
+          qualities: [
+            { id: 'auto', label: 'Auto', uri: 'https://example.com/auto.m3u8' },
+            { id: '720p', label: '720p', uri: 'https://example.com/720p.m3u8' },
+          ],
+          defaultQualityId: 'auto',
+        }}
+      />,
+    );
+
+    const qualityMenuItemBefore = latestVideoProps?.settingsOverlay?.extraMenuItems?.find(
+      (item) => item.key === 'quality',
+    );
+
+    expect(qualityMenuItemBefore?.selectedOptionId).toBe('auto');
+
+    act(() => {
+      qualityMenuItemBefore?.onSelectOption('720p');
+    });
+
+    const qualityMenuItemAfter = latestVideoProps?.settingsOverlay?.extraMenuItems?.find(
+      (item) => item.key === 'quality',
+    );
+
+    expect(qualityMenuItemAfter?.selectedOptionId).toBe('720p');
+  });
+
+  it('updates selectedOptionId for subtitle section after subtitle change', () => {
+    render(
+      <ProMamoPlayer
+        source={{ uri: 'https://example.com/video-subtitle-highlight.mp4' }}
+        tracks={{
+          subtitleTracks: [
+            { id: 'en', language: 'en', label: 'English', uri: 'https://example.com/en.vtt' },
+            { id: 'tr', language: 'tr', label: 'Turkish', uri: 'https://example.com/tr.vtt' },
+          ],
+          defaultSubtitleTrackId: 'en',
+        }}
+      />,
+    );
+
+    const subtitleMenuItemBefore = latestVideoProps?.settingsOverlay?.extraMenuItems?.find(
+      (item) => item.key === 'subtitle',
+    );
+
+    expect(subtitleMenuItemBefore?.selectedOptionId).toBe('en');
+
+    act(() => {
+      subtitleMenuItemBefore?.onSelectOption('tr');
+    });
+
+    const subtitleMenuItemAfter = latestVideoProps?.settingsOverlay?.extraMenuItems?.find(
+      (item) => item.key === 'subtitle',
+    );
+
+    expect(subtitleMenuItemAfter?.selectedOptionId).toBe('tr');
+  });
+
   it('emits PiP events and forwards picture-in-picture status callback', () => {
     const onPipEvent = jest.fn();
     const onPictureInPictureStatusChanged = jest.fn();
