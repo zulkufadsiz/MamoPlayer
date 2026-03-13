@@ -13,6 +13,8 @@ export type AnalyticsEventType =
   | 'buffer_end'
   | 'seek'
   | 'quartile'
+  | 'quality_change'
+  | 'subtitle_change'
   | 'audio_track_change';
 
 export interface AnalyticsEventBase {
@@ -31,6 +33,9 @@ export interface AnalyticsEvent extends AnalyticsEventBase {
   mainContentPositionAtAdStart?: number;
   sessionId?: string;
   audioTrackId?: string;
+  selectedQuality?: string;
+  selectedSubtitle?: string;
+  selectedAudioTrack?: string;
 }
 
 export interface AnalyticsConfig {

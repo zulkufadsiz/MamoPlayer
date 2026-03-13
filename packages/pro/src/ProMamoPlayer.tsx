@@ -1291,12 +1291,19 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
 
       setTracksState((prev) => ({ ...prev, currentQualityId: qualityVariant.id }));
 
+      emitAnalytics(analytics, {
+        type: 'quality_change',
+        position: positionRef.current,
+        selectedQuality: qualityVariant.id,
+        sessionId: analytics?.sessionId,
+      });
+
       // Source update is handled exclusively by the source-sync effect below.
       // Calling setActiveSource here too would trigger a second native reload
       // (different object reference, same URI), causing duplicate ready events,
       // double session_start analytics, and a transient positionRef reset to 0.
     },
-    [currentQualityId, rest.source, tracks?.qualities],
+    [analytics, currentQualityId, rest.source, tracks?.qualities],
   );
 
   const changeAudioTrack = React.useCallback(
@@ -1315,24 +1322,14 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
         }`,
       );
 
-      const nativeLanguage = audioTrack.language?.trim();
-
-      if (!nativeLanguage) {
-        // Native player-level audio track switching requires a language identifier.
-        // Emit analytics so consumers can observe dub changes that are not reflected
-        // at the A/V renderer level.
-        emitAnalytics(analytics, {
-          type: 'audio_track_change',
-          position: positionRef.current,
-          duration: mediaDuration > 0 ? mediaDuration : undefined,
-          audioTrackId,
-          sessionId: analytics?.sessionId,
-        });
-      }
-      // When a language identifier is present, the derived selectedAudioTrack prop
-      // drives the native player switch; the renderer is the source of truth.
+      emitAnalytics(analytics, {
+        type: 'audio_track_change',
+        position: positionRef.current,
+        selectedAudioTrack: audioTrackId,
+        sessionId: analytics?.sessionId,
+      });
     },
-    [analytics, currentAudioTrackId, mediaDuration, tracks?.audioTracks],
+    [analytics, currentAudioTrackId, tracks?.audioTracks],
   );
 
   const changeSubtitleTrack = React.useCallback(
@@ -1354,6 +1351,12 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
 
         console.log('[MamoPlayer Pro] Subtitle track changed: off');
         setTracksState((prev) => ({ ...prev, currentSubtitleTrackId: 'off' }));
+        emitAnalytics(analytics, {
+          type: 'subtitle_change',
+          position: positionRef.current,
+          selectedSubtitle: 'off',
+          sessionId: analytics?.sessionId,
+        });
         return;
       }
 
@@ -1374,8 +1377,14 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
         }`,
       );
       setTracksState((prev) => ({ ...prev, currentSubtitleTrackId: subtitleTrackId }));
+      emitAnalytics(analytics, {
+        type: 'subtitle_change',
+        position: positionRef.current,
+        selectedSubtitle: subtitleTrackId,
+        sessionId: analytics?.sessionId,
+      });
     },
-    [currentSubtitleTrackId, tracks?.subtitleTracks],
+    [analytics, currentSubtitleTrackId, tracks?.subtitleTracks],
   );
 
   const selectQualityOption = React.useCallback(
