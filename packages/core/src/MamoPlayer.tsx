@@ -1,5 +1,5 @@
 import React from 'react';
-import { Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, Easing, Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import Video, {
     type OnBufferData,
     type OnLoadData,
@@ -17,7 +17,7 @@ import { Timeline } from './components/Timeline';
 import { type PlaybackEvent } from './types/playback';
 import { type SettingsOverlayConfig } from './types/settings';
 
-const CONTROLS_AUTO_HIDE_DELAY_MS = 3000;
+const DEFAULT_AUTO_HIDE_DELAY_MS = 3000;
 
 const formatTime = (seconds: number): string => {
   const safeSeconds = Math.max(0, Math.floor(Number.isFinite(seconds) ? seconds : 0));
@@ -27,6 +27,11 @@ const formatTime = (seconds: number): string => {
 };
 
 export type MamoPlayerSource = NonNullable<ReactVideoProps['source']>;
+
+export interface ControlsConfig {
+  autoHide?: boolean;
+  autoHideDelay?: number;
+}
 
 export interface MamoPlayerCoreProps extends Omit<
   ReactVideoProps,
@@ -40,6 +45,7 @@ export interface MamoPlayerCoreProps extends Omit<
   overlayContent?: React.ReactNode;
   onFullscreenChange?: (isFullscreen: boolean) => void;
   onPlaybackEvent?: (event: PlaybackEvent) => void;
+  controls?: ControlsConfig;
 }
 
 export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
@@ -53,6 +59,7 @@ export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
       overlayContent,
       onFullscreenChange,
       onPlaybackEvent,
+      controls,
       style,
       ...rest
     },
@@ -69,12 +76,16 @@ export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
     const [controlsVisible, setControlsVisible] = React.useState<boolean>(true);
     const [pausedOverride, setPausedOverride] = React.useState<boolean | null>(null);
     const [, setIsBuffering] = React.useState<boolean>(false);
+    const resolvedAutoHide = controls?.autoHide ?? true;
+    const resolvedAutoHideDelay = controls?.autoHideDelay ?? DEFAULT_AUTO_HIDE_DELAY_MS;
+
     const durationRef = React.useRef(0);
     const positionRef = React.useRef(0);
     const isScrubbingRef = React.useRef(false);
     const isBufferingRef = React.useRef(false);
     const videoRef = React.useRef<VideoRef | null>(null);
     const autoHideTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+    const controlsOpacityAnim = React.useRef(new Animated.Value(1));
 
     const resolvedSettings = {
       enabled: settingsOverlay?.enabled ?? true,
@@ -213,27 +224,43 @@ export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
       }
     }, []);
 
+    const showControls = React.useCallback(() => {
+      setControlsVisible(true);
+      Animated.timing(controlsOpacityAnim.current, {
+        toValue: 1,
+        duration: 150,
+        useNativeDriver: true,
+      }).start();
+    }, []);
+
+    const hideControls = React.useCallback(() => {
+      Animated.timing(controlsOpacityAnim.current, {
+        toValue: 0,
+        duration: 200,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }).start(({ finished }) => {
+        if (finished) {
+          setControlsVisible(false);
+        }
+      });
+    }, []);
+
     const scheduleControlsAutoHide = React.useCallback(() => {
       clearAutoHideTimer();
 
-      if (resolvedPaused || isSettingsOpen || isScrubbingRef.current || !controlsVisible) {
+      if (!resolvedAutoHide || resolvedPaused || isSettingsOpen || isScrubbingRef.current || !controlsVisible) {
         return;
       }
 
-      autoHideTimerRef.current = setTimeout(() => {
-        setControlsVisible(false);
-      }, CONTROLS_AUTO_HIDE_DELAY_MS);
-    }, [clearAutoHideTimer, controlsVisible, isSettingsOpen, resolvedPaused]);
-
-    const showControls = React.useCallback(() => {
-      setControlsVisible(true);
-    }, []);
+      autoHideTimerRef.current = setTimeout(hideControls, resolvedAutoHideDelay);
+    }, [clearAutoHideTimer, controlsVisible, hideControls, isSettingsOpen, resolvedAutoHide, resolvedAutoHideDelay, resolvedPaused]);
 
     React.useEffect(() => {
       if (resolvedPaused || isSettingsOpen) {
-        setControlsVisible(true);
+        showControls();
       }
-    }, [isSettingsOpen, resolvedPaused]);
+    }, [isSettingsOpen, resolvedPaused, showControls]);
 
     React.useEffect(() => {
       scheduleControlsAutoHide();
@@ -353,8 +380,12 @@ export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
             testID="core-player-surface"
           />
         ) : null}
-        {controlsVisible && !isSettingsOpen ? (
-          <View style={[styles.controlsOverlay, isFullscreen && styles.controlsOverlayFullscreen]} testID="core-controls-overlay">
+        {!isSettingsOpen ? (
+          <Animated.View
+            style={[styles.controlsOverlay, isFullscreen && styles.controlsOverlayFullscreen, { opacity: controlsOpacityAnim.current }]}
+            pointerEvents={controlsVisible ? 'box-none' : 'none'}
+            testID="core-controls-overlay"
+          >
             <View style={[styles.topRightControls, isFullscreen && styles.topRightControlsFullscreen]}>
               {topRightActions ? <View style={styles.topRightActionsContainer}>{topRightActions}</View> : null}
               <PlaybackOptions
@@ -400,7 +431,7 @@ export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
                 <Text style={styles.timeText}>{formatTime(duration)}</Text>
               </View>
             </View>
-          </View>
+          </Animated.View>
         ) : null}
         {isSettingsOpen && resolvedSettings.enabled && hasVisibleSettingsSections ? (
           <SettingsOverlay
