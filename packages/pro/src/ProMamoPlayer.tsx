@@ -839,15 +839,16 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
   const [hasNativeIMAFailed, setHasNativeIMAFailed] = React.useState(false);
   const [isNativeAdPlaying, setIsNativeAdPlaying] = React.useState(false);
   const [isMainContentPausedByNativeAd, setIsMainContentPausedByNativeAd] = React.useState(false);
-  const [currentQualityId, setCurrentQualityId] = React.useState<VideoQualityId | undefined>(
-    initialQualityId,
-  );
-  const [currentAudioTrackId, setCurrentAudioTrackId] = React.useState<string | undefined>(
-    initialAudioTrackId,
-  );
-  const [currentSubtitleTrackId, setCurrentSubtitleTrackId] = React.useState<
-    string | 'off' | undefined
-  >(initialSubtitleTrackId);
+  const [tracksState, setTracksState] = React.useState<{
+    currentQualityId: VideoQualityId | undefined;
+    currentAudioTrackId: string | undefined;
+    currentSubtitleTrackId: string | 'off' | undefined;
+  }>({
+    currentQualityId: initialQualityId,
+    currentAudioTrackId: initialAudioTrackId,
+    currentSubtitleTrackId: initialSubtitleTrackId,
+  });
+  const { currentQualityId, currentAudioTrackId, currentSubtitleTrackId } = tracksState;
   const [pipState, setPipState] = React.useState<PipState>('inactive');
   const [isSettingsOpen, setIsSettingsOpen] = React.useState(false);
   const [pausedOverride, setPausedOverride] = React.useState<boolean | null>(null);
@@ -1210,7 +1211,7 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
   }, [rest.source]);
 
   React.useEffect(() => {
-    setCurrentQualityId(initialQualityId);
+    setTracksState((prev) => ({ ...prev, currentQualityId: initialQualityId }));
   }, [initialQualityId]);
 
   React.useEffect(() => {
@@ -1247,7 +1248,7 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
       : rest.source;
 
     if (qualityVariant?.id && qualityVariant.id !== currentQualityId) {
-      setCurrentQualityId(qualityVariant.id);
+      setTracksState((prev) => ({ ...prev, currentQualityId: qualityVariant.id }));
     }
 
     mainSourceRef.current = nextSource;
@@ -1255,11 +1256,11 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
   }, [currentQualityId, initialQualityId, isAdMode, rest.source, tracks?.qualities]);
 
   React.useEffect(() => {
-    setCurrentAudioTrackId(initialAudioTrackId);
+    setTracksState((prev) => ({ ...prev, currentAudioTrackId: initialAudioTrackId }));
   }, [initialAudioTrackId]);
 
   React.useEffect(() => {
-    setCurrentSubtitleTrackId(initialSubtitleTrackId);
+    setTracksState((prev) => ({ ...prev, currentSubtitleTrackId: initialSubtitleTrackId }));
   }, [initialSubtitleTrackId]);
 
   React.useEffect(() => {
@@ -1284,7 +1285,7 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
       const nextSource = resolveSourceWithQualityUri(rest.source, qualityVariant.uri);
       mainSourceRef.current = nextSource;
 
-      setCurrentQualityId(qualityVariant.id);
+      setTracksState((prev) => ({ ...prev, currentQualityId: qualityVariant.id }));
 
       if (!isAdMode) {
         setActiveSource(nextSource);
@@ -1303,7 +1304,7 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
         return;
       }
 
-      setCurrentAudioTrackId(audioTrackId);
+      setTracksState((prev) => ({ ...prev, currentAudioTrackId: audioTrackId }));
 
       // TODO: Integrate native player-level audio track switching (HLS audio groups / rendition selection).
       // TODO: Emit `audio_track_change` analytics once analytics types support custom track-change events.
@@ -1329,7 +1330,7 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
         }
 
         console.log('[MamoPlayer Pro] Subtitle track changed: off');
-        setCurrentSubtitleTrackId('off');
+        setTracksState((prev) => ({ ...prev, currentSubtitleTrackId: 'off' }));
         return;
       }
 
@@ -1349,7 +1350,7 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
           selectedSubtitleTrackLabel ? ` (${selectedSubtitleTrackLabel})` : ''
         }`,
       );
-      setCurrentSubtitleTrackId(subtitleTrackId);
+      setTracksState((prev) => ({ ...prev, currentSubtitleTrackId: subtitleTrackId }));
     },
     [currentSubtitleTrackId, tracks?.subtitleTracks],
   );
