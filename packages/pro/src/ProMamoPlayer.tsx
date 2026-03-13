@@ -1431,7 +1431,28 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
 
   const playerTextTracks = textTracks;
 
-  const sourceWithSubtitles = React.useMemo(() => activeSource, [activeSource]);
+  const sourceWithSubtitles = React.useMemo(() => {
+    if (!textTracks || textTracks.length === 0) {
+      return activeSource;
+    }
+
+    const sourceBase =
+      typeof activeSource === 'string'
+        ? { uri: activeSource }
+        : activeSource && typeof activeSource === 'object' && !Array.isArray(activeSource)
+          ? { ...(activeSource as object) }
+          : null;
+
+    if (!sourceBase) {
+      return activeSource;
+    }
+
+    return {
+      ...sourceBase,
+      textTracks,
+      selectedTextTrack,
+    };
+  }, [activeSource, textTracks, selectedTextTrack]);
 
   const completeAdPlayback = React.useCallback(
     (playbackEvent?: PlaybackEvent) => {
@@ -2277,8 +2298,11 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
           rate={rate}
           currentQualityId={shouldShowQualitySettings ? currentQualityId : undefined}
           currentAudioTrackId={shouldShowAudioTrackSettings ? currentAudioTrackId : undefined}
+          subtitleTracks={shouldShowSubtitleSettings ? tracks?.subtitleTracks : undefined}
+          currentSubtitleTrackId={shouldShowSubtitleSettings ? currentSubtitleTrackId : undefined}
           onQualityChange={shouldShowQualitySettings ? changeQuality : undefined}
           onAudioTrackChange={shouldShowAudioTrackSettings ? changeAudioTrack : undefined}
+          onSubtitleTrackChange={shouldShowSubtitleSettings ? changeSubtitleTrack : undefined}
           onTextTrackDataChanged={handleTextTrackDataChanged}
           onFullscreenChange={handleCoreFullscreenChange}
           overlayContent={
