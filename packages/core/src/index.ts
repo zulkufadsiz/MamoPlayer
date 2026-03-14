@@ -13,12 +13,13 @@ export {
     type MamoPlayerCoreProps as MamoPlayerProps,
     type MamoPlayerSource
 } from './MamoPlayer';
+export type { CastState, CastingConfig } from './types/casting';
 export type { DrmConfig } from './types/drm';
-export type { CastingConfig, CastState } from './types/casting';
 export type {
     PlaybackEvent,
     PlaybackEventBase,
     PlaybackEventType,
+    PlaybackSourceType,
     PlaybackTimePayload
 } from './types/playback';
 export type {
@@ -26,5 +27,6 @@ export type {
     SettingsOverlayExtraMenuItem,
     SettingsOverlayExtraMenuOption
 } from './types/settings';
+export { detectSourceType } from './utils/source';
 
 export { default } from './MamoPlayer';

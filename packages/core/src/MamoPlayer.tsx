@@ -1,3 +1,4 @@
+import MaterialIcons from '@react-native-vector-icons/material-icons';
 import React from 'react';
 import { Animated, Easing, Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import Video, {
@@ -10,9 +11,6 @@ import Video, {
     type ReactVideoProps,
     type VideoRef,
 } from 'react-native-video';
-import { useCasting } from './casting/useCasting';
-import { type DrmConfig } from './types/drm';
-import { type CastingConfig } from './types/casting';
 import { BufferingIndicator } from './components/BufferingIndicator';
 import { DebugOverlay } from './components/DebugOverlay';
 import { DoubleTapSeekOverlay } from './components/DoubleTapSeekOverlay';
@@ -21,9 +19,11 @@ import {
 } from './components/PlaybackOptions';
 import { SettingsOverlay } from './components/SettingsOverlay';
 import { Timeline } from './components/Timeline';
-import MaterialIcons from '@react-native-vector-icons/material-icons';
+import { type CastingConfig } from './types/casting';
+import { type DrmConfig } from './types/drm';
 import { type PlaybackEvent } from './types/playback';
 import { type SettingsOverlayConfig } from './types/settings';
+import { detectSourceType } from './utils/source';
 
 const DEFAULT_AUTO_HIDE_DELAY_MS = 3000;
 
@@ -191,6 +191,8 @@ export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
       };
     }, [drm, source]);
 
+    const sourceType = React.useMemo(() => detectSourceType(source), [source]);
+
     const durationRef = React.useRef(0);
     const positionRef = React.useRef(0);
     const isScrubbingRef = React.useRef(false);
@@ -240,13 +242,14 @@ export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
         setLastError(undefined);
 
         emit({ type: 'ready', duration: nextDuration });
+        emit({ type: 'source_type', sourceType });
 
         if (autoPlay) {
           setIsPlaying(true);
           emit({ type: 'play', reason: 'auto' });
         }
       },
-      [autoPlay, emit],
+      [autoPlay, emit, sourceType],
     );
 
     const handleProgress = React.useCallback(

@@ -1,7 +1,7 @@
 import React from 'react';
 
-import { getCastState, isCastNativeAvailable, showCastPicker, subscribeToCastEvents } from './nativeBridge';
 import type { CastState } from '../types/casting';
+import { getCastState, isCastNativeAvailable, showCastPicker, subscribeToCastEvents } from './nativeBridge';
 
 export interface UseCastingResult {
   /** Current state of the cast session. */
