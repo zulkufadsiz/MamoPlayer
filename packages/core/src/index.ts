@@ -11,6 +11,10 @@ export {
     type UseCorePlayerControllerOptions
 } from './hooks/useCorePlayerController';
 export {
+    useCoreSettingsSections,
+    type UseCoreSettingsSectionsOptions
+} from './hooks/useCoreSettingsSections';
+export {
     MamoPlayerCore as MamoPlayer,
     type ControlsConfig,
     type DebugConfig,

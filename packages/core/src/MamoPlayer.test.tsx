@@ -1,7 +1,18 @@
 import { act, fireEvent, render } from '@testing-library/react-native';
 import React from 'react';
-import { Text } from 'react-native';
+import { Animated, Text } from 'react-native';
 import type { ReactVideoProps, VideoRef } from 'react-native-video';
+
+jest.mock('@react-native-vector-icons/material-icons', () => {
+  const React = require('react');
+  const { Text: RNText } = require('react-native');
+
+  const MaterialIconsMock = ({ name }: { name?: string }) => <RNText>{name ?? 'icon'}</RNText>;
+
+  MaterialIconsMock.displayName = 'MaterialIconsMock';
+
+  return MaterialIconsMock;
+});
 
 let latestVideoProps: ReactVideoProps | null = null;
 let latestVideoInstance: VideoRef | null = null;
@@ -113,6 +124,8 @@ jest.mock('react-native-video', () => {
 const { MamoPlayerCore } = require('./MamoPlayer') as typeof import('./MamoPlayer');
 
 describe('MamoPlayerCore', () => {
+  let timingSpy: jest.SpyInstance;
+
   beforeEach(() => {
     latestVideoProps = null;
     latestVideoInstance = null;
@@ -120,6 +133,17 @@ describe('MamoPlayerCore', () => {
     latestPlaybackOptionsProps = null;
     jest.useRealTimers();
     jest.clearAllMocks();
+    timingSpy = jest.spyOn(Animated, 'timing').mockImplementation(() => ({
+      start: (cb?: (result: { finished: boolean }) => void) => {
+        cb?.({ finished: true });
+      },
+      stop: jest.fn(),
+      reset: jest.fn(),
+    }));
+  });
+
+  afterEach(() => {
+    timingSpy.mockRestore();
   });
 
   const setup = (props: Partial<React.ComponentProps<typeof MamoPlayerCore>> = {}) => {
@@ -147,7 +171,7 @@ describe('MamoPlayerCore', () => {
       latestVideoProps?.onLoad?.({ duration: 120 } as never);
     });
 
-    expect(onPlaybackEvent).toHaveBeenCalledTimes(2);
+    expect(onPlaybackEvent).toHaveBeenCalledTimes(3);
     expect(onPlaybackEvent).toHaveBeenNthCalledWith(
       1,
       expect.objectContaining({
@@ -167,6 +191,13 @@ describe('MamoPlayerCore', () => {
         timestamp: expect.any(Number),
       }),
     );
+    expect(onPlaybackEvent).toHaveBeenNthCalledWith(
+      3,
+      expect.objectContaining({
+        type: 'source_type',
+        timestamp: expect.any(Number),
+      }),
+    );
     expect(latestVideoProps?.paused).toBe(false);
   });
 
@@ -177,11 +208,19 @@ describe('MamoPlayerCore', () => {
       latestVideoProps?.onLoad?.({ duration: 55 } as never);
     });
 
-    expect(onPlaybackEvent).toHaveBeenCalledTimes(1);
-    expect(onPlaybackEvent).toHaveBeenCalledWith(
+    expect(onPlaybackEvent).toHaveBeenCalledTimes(2);
+    expect(onPlaybackEvent).toHaveBeenNthCalledWith(
+      1,
       expect.objectContaining({
         type: 'ready',
         duration: 55,
+        timestamp: expect.any(Number),
+      }),
+    );
+    expect(onPlaybackEvent).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        type: 'source_type',
         timestamp: expect.any(Number),
       }),
     );
