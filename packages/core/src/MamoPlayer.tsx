@@ -1,6 +1,7 @@
 import React from 'react';
 import { Animated, Easing, Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import Video, {
+    DRMType,
     type OnBufferData,
     type OnLoadData,
     type OnProgressData,
@@ -9,6 +10,7 @@ import Video, {
     type ReactVideoProps,
     type VideoRef,
 } from 'react-native-video';
+import { type DrmConfig } from './types/drm';
 import { BufferingIndicator } from './components/BufferingIndicator';
 import { DebugOverlay } from './components/DebugOverlay';
 import { DoubleTapSeekOverlay } from './components/DoubleTapSeekOverlay';
@@ -56,7 +58,7 @@ export interface DebugConfig {
 
 export interface MamoPlayerCoreProps extends Omit<
   ReactVideoProps,
-  'source' | 'paused' | 'controls' | 'onLoad' | 'onProgress' | 'onEnd' | 'onError' | 'onSeek' | 'onBuffer'
+  'source' | 'paused' | 'controls' | 'onLoad' | 'onProgress' | 'onEnd' | 'onError' | 'onSeek' | 'onBuffer' | 'drm'
 > {
   source: MamoPlayerSource;
   autoPlay?: boolean;
@@ -88,6 +90,11 @@ export interface MamoPlayerCoreProps extends Omit<
    * player; toggle it with a two-finger triple tap.
    */
   debug?: DebugConfig;
+  /**
+   * DRM configuration for protected streams. Supports Widevine (Android/DASH)
+   * and FairPlay (iOS/HLS).
+   */
+  drm?: DrmConfig;
 }
 
 export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
@@ -106,6 +113,7 @@ export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
       style,
       timelineConfig,
       debug,
+      drm,
       onScrubStart: onScrubStartProp,
       onScrubMove: onScrubMoveProp,
       onScrubEnd: onScrubEndProp,
@@ -130,6 +138,18 @@ export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
     const resolvedAutoHide = controls?.autoHide ?? true;
     const resolvedAutoHideDelay = controls?.autoHideDelay ?? DEFAULT_AUTO_HIDE_DELAY_MS;
     const doubleTapSeekEnabled = gestures?.doubleTapSeek !== false;
+
+    const resolvedSource = React.useMemo(() => {
+      if (!drm) return source;
+      return {
+        ...source,
+        drm: {
+          type: drm.type as DRMType,
+          licenseServer: drm.licenseServer,
+          ...(drm.headers ? { headers: drm.headers } : {}),
+        },
+      };
+    }, [drm, source]);
 
     const durationRef = React.useRef(0);
     const positionRef = React.useRef(0);
@@ -447,7 +467,7 @@ export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
           ref={videoRef}
           useTextureView={Platform.OS === 'android'}
           {...rest}
-          source={source as ReactVideoProps['source']}
+          source={resolvedSource as ReactVideoProps['source']}
           style={styles.video}
           controls={false}
           paused={resolvedPaused}
