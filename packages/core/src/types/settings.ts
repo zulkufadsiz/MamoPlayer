@@ -24,6 +24,28 @@ export interface SettingsOverlayExtraMenuItem {
   onSelectOption: (optionId: string) => void;
 }
 
+/** A single tappable row within a settings section. */
+export interface SettingsItem {
+  /** Unique identifier for this item. */
+  id: string;
+  /** Human-readable label displayed in the row. */
+  label: string;
+  /** Whether this item is currently selected (e.g. active quality / speed). */
+  selected?: boolean;
+  /** Called when the user taps the row. */
+  onPress: () => void;
+}
+
+/** A labelled group of {@link SettingsItem} rows. */
+export interface SettingsSection {
+  /** Unique identifier for this section. */
+  id: string;
+  /** Heading displayed above the section's items. */
+  title: string;
+  /** Ordered list of items belonging to this section. */
+  items: SettingsItem[];
+}
+
 /** Configuration for the slide-up settings overlay panel. */
 export interface SettingsOverlayConfig {
   /** Show or hide the entire settings button and overlay. Defaults to true. */
