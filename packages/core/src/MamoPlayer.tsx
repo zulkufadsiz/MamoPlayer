@@ -10,6 +10,7 @@ import Video, {
     type VideoRef,
 } from 'react-native-video';
 import { BufferingIndicator } from './components/BufferingIndicator';
+import { DebugOverlay } from './components/DebugOverlay';
 import { DoubleTapSeekOverlay } from './components/DoubleTapSeekOverlay';
 import {
     PlaybackOptions,
@@ -40,6 +41,19 @@ export interface GesturesConfig {
   doubleTapSeek?: boolean;
 }
 
+export interface DebugConfig {
+  /** Show the developer debug overlay. Toggle visibility with a two-finger triple tap. */
+  enabled?: boolean;
+  /** Current quality label forwarded from the host (e.g. ProMamoPlayer). */
+  quality?: string;
+  /** Current audio track label forwarded from the host. */
+  audioTrack?: string;
+  /** Current subtitle track label forwarded from the host. */
+  subtitleTrack?: string;
+  /** Current ad state label forwarded from the host. */
+  adState?: string;
+}
+
 export interface MamoPlayerCoreProps extends Omit<
   ReactVideoProps,
   'source' | 'paused' | 'controls' | 'onLoad' | 'onProgress' | 'onEnd' | 'onError' | 'onSeek' | 'onBuffer'
@@ -68,6 +82,12 @@ export interface MamoPlayerCoreProps extends Omit<
   onScrubMove?: (time: number) => void;
   /** Called when the scrub gesture ends with the final seek time in seconds. */
   onScrubEnd?: (time: number) => void;
+  /**
+   * Developer debug overlay configuration. When `enabled` is true a
+   * semi-transparent panel with playback diagnostics is rendered on top of the
+   * player; toggle it with a two-finger triple tap.
+   */
+  debug?: DebugConfig;
 }
 
 export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
@@ -81,8 +101,11 @@ export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
       overlayContent,
       onFullscreenChange,
       onPlaybackEvent,
-      controls,      gestures,      style,
+      controls,
+      gestures,
+      style,
       timelineConfig,
+      debug,
       onScrubStart: onScrubStartProp,
       onScrubMove: onScrubMoveProp,
       onScrubEnd: onScrubEndProp,
@@ -101,6 +124,9 @@ export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
     const [controlsVisible, setControlsVisible] = React.useState<boolean>(true);
     const [pausedOverride, setPausedOverride] = React.useState<boolean | null>(null);
     const [isBuffering, setIsBuffering] = React.useState<boolean>(false);
+    const [hasEnded, setHasEnded] = React.useState<boolean>(false);
+    const [rebufferCount, setRebufferCount] = React.useState<number>(0);
+    const [lastError, setLastError] = React.useState<string | undefined>(undefined);
     const resolvedAutoHide = controls?.autoHide ?? true;
     const resolvedAutoHideDelay = controls?.autoHideDelay ?? DEFAULT_AUTO_HIDE_DELAY_MS;
     const doubleTapSeekEnabled = gestures?.doubleTapSeek !== false;
@@ -110,6 +136,7 @@ export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
     const isScrubbingRef = React.useRef(false);
     const wasPlayingBeforeScrubRef = React.useRef(false);
     const isBufferingRef = React.useRef(false);
+    const hasLoadedRef = React.useRef(false);
     const videoRef = React.useRef<VideoRef | null>(null);
     const autoHideTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
     const controlsOpacityAnim = React.useRef(new Animated.Value(1));
@@ -147,6 +174,10 @@ export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
 
         durationRef.current = nextDuration;
         setDuration(nextDuration);
+        hasLoadedRef.current = true;
+        setHasEnded(false);
+        setRebufferCount(0);
+        setLastError(undefined);
 
         emit({ type: 'ready', duration: nextDuration });
 
@@ -179,6 +210,7 @@ export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
 
     const handleEnd = React.useCallback(() => {
       setIsPlaying(false);
+      setHasEnded(true);
       setPausedOverride(true);
       emit({ type: 'ended' });
     }, [emit]);
@@ -196,6 +228,7 @@ export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
           }
         }
 
+        setLastError(message);
         emit({
           type: 'error',
           error: {
@@ -228,6 +261,9 @@ export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
 
         isBufferingRef.current = buffering;
         setIsBuffering(buffering);
+        if (buffering && hasLoadedRef.current) {
+          setRebufferCount((prev) => prev + 1);
+        }
         emit({ type: buffering ? 'buffer_start' : 'buffer_end' });
       },
       [emit],
@@ -243,6 +279,13 @@ export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
       resolvedSettings.showMute ||
       Boolean(resolvedSettings.extraItems) ||
       Boolean(resolvedSettings.extraMenuItems?.length);
+
+    const playbackState =
+      hasEnded ? 'ended'
+      : isBuffering ? 'buffering'
+      : resolvedPaused ? 'paused'
+      : isPlaying ? 'playing'
+      : 'idle';
 
     React.useEffect(() => {
       setPausedOverride(null);
@@ -500,6 +543,22 @@ export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
             onSelectPlaybackRate={setPlaybackRate}
             onToggleMuted={() => setMuted(prev => !prev)}
             onClose={() => setIsSettingsOpen(false)}
+          />
+        ) : null}
+        {debug?.enabled === true ? (
+          <DebugOverlay
+            info={{
+              playbackState,
+              position,
+              duration,
+              buffered,
+              rebufferCount,
+              lastError,
+              quality: debug.quality,
+              audioTrack: debug.audioTrack,
+              subtitleTrack: debug.subtitleTrack,
+              adState: debug.adState,
+            }}
           />
         ) : null}
       </>

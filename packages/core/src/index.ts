@@ -7,6 +7,7 @@ export {
     MamoPlayerCore as MamoPlayer,
     MamoPlayerCore,
     type ControlsConfig,
+    type DebugConfig,
     type GesturesConfig,
     type MamoPlayerCoreProps,
     type MamoPlayerCoreProps as MamoPlayerProps,
