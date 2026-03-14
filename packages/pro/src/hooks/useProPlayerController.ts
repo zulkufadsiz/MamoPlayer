@@ -2,7 +2,7 @@ import React from 'react';
 
 import { requestPictureInPicture, subscribeToPipEvents } from '../pip/nativeBridge';
 import type { AnalyticsConfig, AnalyticsEvent } from '../types/analytics';
-import type { PipConfig, PipState } from '../types/pip';
+import type { PipConfig, PipEvent, PipState } from '../types/pip';
 import type { ThumbnailsConfig } from '../types/thumbnails';
 import type { TracksConfig, VideoQualityId } from '../types/tracks';
 
@@ -36,6 +36,31 @@ export interface UseProPlayerControllerOptions {
    * with the current playback position and duration.
    */
   coreController?: CorePositionValues;
+  /**
+   * Pre-computed initial quality ID (e.g. from `getInitialQualityId`).
+   * Falls back to `tracks.defaultQualityId ?? 'auto'` when omitted.
+   * Re-setting this value resets the selection without firing analytics.
+   */
+  initialQualityId?: VideoQualityId;
+  /**
+   * Pre-computed initial audio track ID.
+   * Falls back to `tracks.defaultAudioTrackId` when omitted.
+   * Re-setting this value resets the selection without firing analytics.
+   */
+  initialAudioTrackId?: string | null;
+  /**
+   * Pre-computed initial subtitle track ID (`'off'` to start with subtitles
+   * disabled). Falls back to `tracks.defaultSubtitleTrackId` when omitted.
+   * Re-setting this value resets the selection without firing analytics.
+   */
+  initialSubtitleTrackId?: string | 'off' | null;
+  /**
+   * Called whenever the PiP window state changes due to native events
+   * (entering active / returning to inactive).
+   * Wire this up to `ProMamoPlayerProps.onPipEvent` to forward state changes
+   * to consumers.
+   */
+  onPipEvent?: (event: PipEvent) => void;
 }
 
 /** Pro-specific player state managed by this hook. */
@@ -82,6 +107,13 @@ export interface ProPlayerActions {
    * Call this from the ads subsystem when an ad starts or finishes.
    */
   setIsAdPlaying: (playing: boolean) => void;
+  /**
+   * Directly update the PiP window state.
+   * Use this from the host component to reflect state changes that originate
+   * outside the hook's native event subscription (e.g. optimistic 'entering'
+   * from a custom `requestPip` implementation, or 'inactive' on error).
+   */
+  setPipState: (state: PipState) => void;
 }
 
 /** Full controller object returned by `useProPlayerController`. */
@@ -128,23 +160,62 @@ export function useProPlayerController(options: UseProPlayerControllerOptions): 
   const coreControllerRef = React.useRef(coreController);
   coreControllerRef.current = coreController;
 
+  const onPipEventRef = React.useRef(options.onPipEvent);
+  onPipEventRef.current = options.onPipEvent;
+
   // ─── Pro feature state ────────────────────────────────────────────────────
 
   const [currentQualityId, setCurrentQualityId] = React.useState<VideoQualityId>(
-    tracks?.defaultQualityId ?? 'auto',
+    options.initialQualityId ?? tracks?.defaultQualityId ?? 'auto',
   );
 
   const [currentSubtitleTrackId, setCurrentSubtitleTrackId] = React.useState<
     string | 'off' | null
-  >(tracks?.defaultSubtitleTrackId ?? null);
+  >(options.initialSubtitleTrackId ?? tracks?.defaultSubtitleTrackId ?? null);
 
   const [currentAudioTrackId, setCurrentAudioTrackId] = React.useState<string | null>(
-    tracks?.defaultAudioTrackId ?? null,
+    options.initialAudioTrackId ?? tracks?.defaultAudioTrackId ?? null,
   );
 
   const [isAdPlaying, setIsAdPlaying] = React.useState<boolean>(false);
   const [pipState, setPipState] = React.useState<PipState>('inactive');
   const [debugVisible, setDebugVisible] = React.useState<boolean>(false);
+
+  // Track-state refs so analytics callbacks always read the latest selection
+  // without triggering callback re-creation on every state change.
+  const currentQualityIdRef = React.useRef(currentQualityId);
+  currentQualityIdRef.current = currentQualityId;
+
+  const currentSubtitleTrackIdRef = React.useRef(currentSubtitleTrackId);
+  currentSubtitleTrackIdRef.current = currentSubtitleTrackId;
+
+  const currentAudioTrackIdRef = React.useRef(currentAudioTrackId);
+  currentAudioTrackIdRef.current = currentAudioTrackId;
+
+  // ─── Initial-ID sync effects ──────────────────────────────────────────────
+  // When the host component recomputes initial IDs (e.g. because the `tracks`
+  // prop changed), silently reset state without firing analytics events.
+
+  React.useEffect(() => {
+    if (options.initialQualityId != null) {
+      setCurrentQualityId(options.initialQualityId);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [options.initialQualityId]);
+
+  React.useEffect(() => {
+    if (options.initialAudioTrackId !== undefined) {
+      setCurrentAudioTrackId(options.initialAudioTrackId ?? null);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [options.initialAudioTrackId]);
+
+  React.useEffect(() => {
+    if (options.initialSubtitleTrackId !== undefined) {
+      setCurrentSubtitleTrackId(options.initialSubtitleTrackId ?? null);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [options.initialSubtitleTrackId]);
 
   // ─── PiP event subscription ────────────────────────────────────────────────
 
@@ -154,10 +225,12 @@ export function useProPlayerController(options: UseProPlayerControllerOptions): 
     const unsubscribe = subscribeToPipEvents((eventName) => {
       if (eventName === 'mamo_pip_active') {
         setPipState('active');
+        onPipEventRef.current?.({ state: 'active' });
       } else if (eventName === 'mamo_pip_exiting') {
-        // The PiP window is animating back to inline; treat as inactive once
-        // the transition begins so the UI reflects inline playback immediately.
-        setPipState('inactive');
+        // The PiP window is animating back to inline; emit 'exiting' so the UI
+        // can distinguish the transition from the fully-returned 'inactive' state.
+        setPipState('exiting');
+        onPipEventRef.current?.({ state: 'exiting' });
       }
     });
 
@@ -191,6 +264,8 @@ export function useProPlayerController(options: UseProPlayerControllerOptions): 
         type: 'quality_change',
         selectedQuality:
           tracksRef.current?.qualities?.find((q) => q.id === qualityId)?.label ?? qualityId,
+        selectedSubtitle: currentSubtitleTrackIdRef.current ?? undefined,
+        selectedAudioTrack: currentAudioTrackIdRef.current ?? undefined,
       });
     },
     [emitAnalytics],
@@ -205,6 +280,8 @@ export function useProPlayerController(options: UseProPlayerControllerOptions): 
           id === 'off'
             ? 'off'
             : (tracksRef.current?.subtitleTracks?.find((t) => t.id === id)?.label ?? id),
+        selectedQuality: currentQualityIdRef.current,
+        selectedAudioTrack: currentAudioTrackIdRef.current ?? undefined,
       });
     },
     [emitAnalytics],
@@ -218,6 +295,8 @@ export function useProPlayerController(options: UseProPlayerControllerOptions): 
         audioTrackId: id,
         selectedAudioTrack:
           tracksRef.current?.audioTracks?.find((t) => t.id === id)?.label ?? id,
+        selectedQuality: currentQualityIdRef.current,
+        selectedSubtitle: currentSubtitleTrackIdRef.current ?? undefined,
       });
     },
     [emitAnalytics],
@@ -256,5 +335,6 @@ export function useProPlayerController(options: UseProPlayerControllerOptions): 
     showDebugOverlay,
     hideDebugOverlay,
     setIsAdPlaying,
+    setPipState,
   };
 }
