@@ -1,5 +1,6 @@
 import { fireEvent, render } from '@testing-library/react-native';
 import { Animated } from 'react-native';
+import type { SettingsSection } from '../types/settings';
 import { SettingsOverlay } from './SettingsOverlay';
 
 jest.mock('@react-native-vector-icons/material-icons', () => {
@@ -13,13 +14,30 @@ jest.mock('@react-native-vector-icons/material-icons', () => {
   return MaterialIconsMock;
 });
 
+const onPressMock = jest.fn();
+
+const SPEED_SECTION: SettingsSection = {
+  id: 'playback-speed',
+  title: 'Playback Speed',
+  items: [
+    { id: '0.5', label: '0.5x', selected: false, onPress: onPressMock },
+    { id: '1', label: 'Normal', selected: true, onPress: onPressMock },
+    { id: '1.5', label: '1.5x', selected: false, onPress: onPressMock },
+    { id: '2', label: '2x', selected: false, onPress: onPressMock },
+  ],
+};
+
+const MUTE_SECTION: SettingsSection = {
+  id: 'mute',
+  title: 'Mute',
+  items: [
+    { id: 'unmuted', label: 'Unmuted', selected: true, onPress: onPressMock },
+    { id: 'muted', label: 'Muted', selected: false, onPress: onPressMock },
+  ],
+};
+
 const BASE_PROPS = {
-  showPlaybackSpeed: true,
-  showMute: true,
-  playbackRate: 1,
-  muted: false,
-  onSelectPlaybackRate: jest.fn(),
-  onToggleMuted: jest.fn(),
+  sections: [SPEED_SECTION],
   onClose: jest.fn(),
 };
 
@@ -33,6 +51,8 @@ describe('SettingsOverlay', () => {
       start: (cb?: (result: { finished: boolean }) => void) => {
         cb?.({ finished: true });
       },
+      stop: jest.fn(),
+      reset: jest.fn(),
     }));
   });
 
@@ -40,116 +60,68 @@ describe('SettingsOverlay', () => {
     timingSpy.mockRestore();
   });
 
-  describe('playback speed', () => {
-    it('renders the playback speed menu item when showPlaybackSpeed is true', () => {
-      const { getByTestId } = render(<SettingsOverlay {...BASE_PROPS} />);
+  describe('rendering sections', () => {
+    it('renders the section title', () => {
+      const { getByText } = render(<SettingsOverlay {...BASE_PROPS} />);
 
-      expect(getByTestId('settings-menu-playback-speed')).toBeTruthy();
+      expect(getByText('Playback Speed')).toBeTruthy();
     });
 
-    it('does not render the playback speed menu item when showPlaybackSpeed is false', () => {
-      const { queryByTestId } = render(
-        <SettingsOverlay {...BASE_PROPS} showPlaybackSpeed={false} />,
-      );
-
-      expect(queryByTestId('settings-menu-playback-speed')).toBeNull();
-    });
-
-    it('shows all speed options after pressing the playback speed menu item', () => {
-      const { getByTestId, getByLabelText } = render(<SettingsOverlay {...BASE_PROPS} />);
-
-      fireEvent.press(getByTestId('settings-menu-playback-speed'));
+    it('renders all items in a section', () => {
+      const { getByLabelText } = render(<SettingsOverlay {...BASE_PROPS} />);
 
       expect(getByLabelText('0.5x')).toBeTruthy();
-      expect(getByLabelText('1x')).toBeTruthy();
-      expect(getByLabelText('1.25x')).toBeTruthy();
+      expect(getByLabelText('Normal')).toBeTruthy();
       expect(getByLabelText('1.5x')).toBeTruthy();
       expect(getByLabelText('2x')).toBeTruthy();
     });
 
-    it('calls onSelectPlaybackRate with the selected rate', () => {
-      const onSelectPlaybackRate = jest.fn();
-      const { getByTestId, getByLabelText } = render(
-        <SettingsOverlay {...BASE_PROPS} onSelectPlaybackRate={onSelectPlaybackRate} />,
+    it('renders multiple sections', () => {
+      const { getByText } = render(
+        <SettingsOverlay {...BASE_PROPS} sections={[SPEED_SECTION, MUTE_SECTION]} />,
       );
 
-      fireEvent.press(getByTestId('settings-menu-playback-speed'));
-      fireEvent.press(getByLabelText('1.5x'));
-
-      expect(onSelectPlaybackRate).toHaveBeenCalledWith(1.5);
+      expect(getByText('Playback Speed')).toBeTruthy();
+      expect(getByText('Mute')).toBeTruthy();
     });
 
-    it('calls onSelectPlaybackRate(0.5) when 0.5x is selected', () => {
-      const onSelectPlaybackRate = jest.fn();
-      const { getByTestId, getByLabelText } = render(
-        <SettingsOverlay {...BASE_PROPS} onSelectPlaybackRate={onSelectPlaybackRate} />,
-      );
+    it('renders a testID for each item using section.id and item.id', () => {
+      const { getByTestId } = render(<SettingsOverlay {...BASE_PROPS} />);
 
-      fireEvent.press(getByTestId('settings-menu-playback-speed'));
-      fireEvent.press(getByLabelText('0.5x'));
-
-      expect(onSelectPlaybackRate).toHaveBeenCalledWith(0.5);
-    });
-
-    it('calls onSelectPlaybackRate(2) when 2x is selected', () => {
-      const onSelectPlaybackRate = jest.fn();
-      const { getByTestId, getByLabelText } = render(
-        <SettingsOverlay {...BASE_PROPS} onSelectPlaybackRate={onSelectPlaybackRate} />,
-      );
-
-      fireEvent.press(getByTestId('settings-menu-playback-speed'));
-      fireEvent.press(getByLabelText('2x'));
-
-      expect(onSelectPlaybackRate).toHaveBeenCalledWith(2);
+      expect(getByTestId('settings-item-playback-speed-1')).toBeTruthy();
+      expect(getByTestId('settings-item-playback-speed-0.5')).toBeTruthy();
     });
   });
 
-  describe('mute', () => {
-    it('renders the mute menu item when showMute is true', () => {
-      const { getByTestId } = render(<SettingsOverlay {...BASE_PROPS} />);
+  describe('selected item highlighting', () => {
+    it('marks the selected item with accessibilityState selected=true', () => {
+      const { getByLabelText } = render(<SettingsOverlay {...BASE_PROPS} />);
 
-      expect(getByTestId('settings-menu-mute')).toBeTruthy();
+      expect(getByLabelText('Normal').props.accessibilityState.selected).toBe(true);
     });
 
-    it('does not render the mute menu item when showMute is false', () => {
-      const { queryByTestId } = render(
-        <SettingsOverlay {...BASE_PROPS} showMute={false} />,
+    it('marks unselected items with accessibilityState selected=false or undefined', () => {
+      const { getByLabelText } = render(<SettingsOverlay {...BASE_PROPS} />);
+
+      expect(getByLabelText('0.5x').props.accessibilityState.selected).toBeFalsy();
+    });
+  });
+
+  describe('item press', () => {
+    it('calls item.onPress when an item is pressed', () => {
+      const onPress = jest.fn();
+      const section: SettingsSection = {
+        id: 'speed',
+        title: 'Speed',
+        items: [{ id: '1.5', label: '1.5x', selected: false, onPress }],
+      };
+      const { getByLabelText } = render(
+        <SettingsOverlay sections={[section]} onClose={jest.fn()} />,
       );
 
-      expect(queryByTestId('settings-menu-mute')).toBeNull();
-    });
+      fireEvent.press(getByLabelText('1.5x'));
 
-    it('shows Muted and Unmuted options after pressing the mute menu item', () => {
-      const { getByTestId, getByLabelText } = render(<SettingsOverlay {...BASE_PROPS} />);
-
-      fireEvent.press(getByTestId('settings-menu-mute'));
-
-      expect(getByLabelText('Unmuted')).toBeTruthy();
-      expect(getByLabelText('Muted')).toBeTruthy();
-    });
-
-    it('calls onToggleMuted when Muted option is selected while currently unmuted', () => {
-      const onToggleMuted = jest.fn();
-      const { getByTestId, getByLabelText } = render(
-        <SettingsOverlay {...BASE_PROPS} muted={false} onToggleMuted={onToggleMuted} />,
-      );
-
-      fireEvent.press(getByTestId('settings-menu-mute'));
-      fireEvent.press(getByLabelText('Muted'));
-
-      expect(onToggleMuted).toHaveBeenCalledTimes(1);
-    });
-
-    it('calls onToggleMuted when Unmuted option is selected while currently muted', () => {
-      const onToggleMuted = jest.fn();
-      const { getByTestId, getByLabelText } = render(
-        <SettingsOverlay {...BASE_PROPS} muted={true} onToggleMuted={onToggleMuted} />,
-      );
-
-      fireEvent.press(getByTestId('settings-menu-mute'));
-      fireEvent.press(getByLabelText('Unmuted'));
-
-      expect(onToggleMuted).toHaveBeenCalledTimes(1);
+      expect(onPress).toHaveBeenCalledTimes(1);
     });
   });
 

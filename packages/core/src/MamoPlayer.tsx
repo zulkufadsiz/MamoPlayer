@@ -20,8 +20,73 @@ import { useCorePlayerController } from './hooks/useCorePlayerController';
 import { type CastingConfig } from './types/casting';
 import { type DrmConfig } from './types/drm';
 import { type PlaybackEvent } from './types/playback';
-import { type SettingsOverlayConfig } from './types/settings';
+import { type SettingsOverlayConfig, type SettingsOverlayExtraMenuItem, type SettingsSection } from './types/settings';
 import { detectSourceType } from './utils/source';
+
+const SPEED_OPTIONS = [0.5, 1, 1.25, 1.5, 2] as const;
+
+const getSpeedLabel = (rate: number): string => (rate === 1 ? 'Normal' : `${rate}x`);
+
+interface BuildSettingsSectionsArgs {
+  showPlaybackSpeed: boolean;
+  showMute: boolean;
+  extraMenuItems?: SettingsOverlayExtraMenuItem[];
+  playbackRate: number;
+  isMuted: boolean;
+  toggleMute: () => void;
+  setPlaybackRate: (rate: number) => void;
+}
+
+const buildSettingsSections = ({
+  showPlaybackSpeed,
+  showMute,
+  extraMenuItems,
+  playbackRate,
+  isMuted,
+  toggleMute,
+  setPlaybackRate,
+}: BuildSettingsSectionsArgs): SettingsSection[] => {
+  const sections: SettingsSection[] = [];
+
+  if (showPlaybackSpeed) {
+    sections.push({
+      id: 'playback-speed',
+      title: 'Playback Speed',
+      items: SPEED_OPTIONS.map((rate) => ({
+        id: String(rate),
+        label: getSpeedLabel(rate),
+        selected: playbackRate === rate,
+        onPress: () => setPlaybackRate(rate),
+      })),
+    });
+  }
+
+  if (showMute) {
+    sections.push({
+      id: 'mute',
+      title: 'Mute',
+      items: [
+        { id: 'unmuted', label: 'Unmuted', selected: !isMuted, onPress: toggleMute },
+        { id: 'muted', label: 'Muted', selected: isMuted, onPress: toggleMute },
+      ],
+    });
+  }
+
+  for (const extraMenuItem of extraMenuItems ?? []) {
+    sections.push({
+      id: extraMenuItem.key,
+      title: extraMenuItem.title,
+      items: extraMenuItem.options.map((opt) => ({
+        id: opt.id,
+        label: opt.label,
+        selected: extraMenuItem.selectedOptionId === opt.id,
+        onPress: () => extraMenuItem.onSelectOption(opt.id),
+      })),
+    });
+  }
+
+  return sections;
+};
 
 const formatTime = (seconds: number): string => {
   const safeSeconds = Math.max(0, Math.floor(Number.isFinite(seconds) ? seconds : 0));
@@ -206,7 +271,6 @@ export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
     const hasVisibleSettingsSections =
       resolvedSettings.showPlaybackSpeed ||
       resolvedSettings.showMute ||
-      Boolean(resolvedSettings.extraItems) ||
       Boolean(resolvedSettings.extraMenuItems?.length);
 
     // ─── Controller ───────────────────────────────────────────────────────
@@ -433,15 +497,16 @@ export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
         ) : null}
         {isSettingsOpen && resolvedSettings.enabled && hasVisibleSettingsSections ? (
           <SettingsOverlay
-            showPlaybackSpeed={resolvedSettings.showPlaybackSpeed}
-            showMute={resolvedSettings.showMute}
-            extraItems={resolvedSettings.extraItems}
-            extraMenuItems={resolvedSettings.extraMenuItems}
-            playbackRate={playbackRate}
-            muted={isMuted}
+            sections={buildSettingsSections({
+              showPlaybackSpeed: resolvedSettings.showPlaybackSpeed,
+              showMute: resolvedSettings.showMute,
+              extraMenuItems: resolvedSettings.extraMenuItems,
+              playbackRate,
+              isMuted,
+              toggleMute,
+              setPlaybackRate,
+            })}
             isFullscreen={isFullscreen}
-            onSelectPlaybackRate={setPlaybackRate}
-            onToggleMuted={toggleMute}
             onClose={closeSettings}
           />
         ) : null}
