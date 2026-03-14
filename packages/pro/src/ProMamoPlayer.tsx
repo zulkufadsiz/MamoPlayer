@@ -10,10 +10,11 @@ import React, { useRef } from 'react';
 import { Animated, Easing, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { VideoRef } from 'react-native-video';
 import { AdStateMachine } from './ads/AdState';
+import { useProPlayerController } from './hooks/useProPlayerController';
 import { loadAds, releaseAds, subscribeToAdsEvents } from './ima/nativeBridge';
 import { getThumbnailForTime } from './internal/thumbnails';
 import { validateLicenseKey } from './licensing/license';
-import { requestPictureInPicture, subscribeToPipEvents } from './pip/nativeBridge';
+import { requestPictureInPicture } from './pip/nativeBridge';
 import { ThemeProvider, usePlayerTheme } from './theme/ThemeContext';
 import type { AdBreak, AdsConfig } from './types/ads';
 import type { AnalyticsConfig, AnalyticsEvent } from './types/analytics';
@@ -924,19 +925,34 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
   const [hasNativeIMAFailed, setHasNativeIMAFailed] = React.useState(false);
   const [isNativeAdPlaying, setIsNativeAdPlaying] = React.useState(false);
   const [isMainContentPausedByNativeAd, setIsMainContentPausedByNativeAd] = React.useState(false);
-  const [tracksState, setTracksState] = React.useState<{
-    currentQualityId: VideoQualityId | undefined;
-    currentAudioTrackId: string | undefined;
-    currentSubtitleTrackId: string | 'off' | undefined;
-  }>({
-    currentQualityId: initialQualityId,
-    currentAudioTrackId: initialAudioTrackId,
-    currentSubtitleTrackId: initialSubtitleTrackId,
+
+  // ─── Pro controller ───────────────────────────────────────────────────────
+  // Delegates quality / subtitle / audio-track state, PiP state, debug
+  // visibility, and their associated analytics to `useProPlayerController`.
+  const proController = useProPlayerController({
+    tracks,
+    pip,
+    thumbnails,
+    analytics,
+    // Provide live position/duration so analytics events are enriched.
+    // positionRef / durationRef are updated in handlePlaybackEvent so the
+    // ref values are always current when an action callback fires.
+    coreController: { position: positionRef.current, duration: durationRef.current ?? 0 },
+    initialQualityId,
+    initialAudioTrackId: initialAudioTrackId ?? null,
+    initialSubtitleTrackId: initialSubtitleTrackId ?? null,
+    onPipEvent: (event) => {
+      onPipEvent?.(event);
+    },
   });
-  const { currentQualityId, currentAudioTrackId, currentSubtitleTrackId } = tracksState;
-  const tracksStateRef = React.useRef(tracksState);
-  tracksStateRef.current = tracksState;
-  const [pipState, setPipState] = React.useState<PipState>('inactive');
+
+  // Stable ref so async callbacks (analytics in handlePlaybackEvent) always
+  // read the latest track selection without stale-closure issues.
+  const proControllerRef = React.useRef(proController);
+  proControllerRef.current = proController;
+
+  const { currentQualityId, currentAudioTrackId, currentSubtitleTrackId } = proController;
+
   const [isSettingsOpen, setIsSettingsOpen] = React.useState(false);
   const [pausedOverride, setPausedOverride] = React.useState<boolean | null>(null);
   const [isInlinePlaybackPaused, setIsInlinePlaybackPaused] = React.useState<boolean | undefined>(
@@ -1070,21 +1086,16 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
     },
     [],
   );
-  const emitPipEvent = React.useCallback(
-    (event: PipEvent) => {
-      setPipState(event.state);
-      onPipEvent?.(event);
-    },
-    [onPipEvent],
-  );
   const requestPip = React.useCallback(() => {
     if (pip?.enabled === false) {
       return;
     }
 
-    emitPipEvent({
-      state: 'entering',
-    });
+    // Optimistically enter the 'entering' state and notify the consumer.
+    // Native subscription in useProPlayerController handles 'active'/'inactive'
+    // transitions once the animation completes.
+    proController.setPipState('entering');
+    onPipEvent?.({ state: 'entering' });
 
     let lastPipError: unknown;
 
@@ -1110,61 +1121,25 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
           ? lastPipError.message
           : 'Unable to enter picture in picture.';
       console.warn(`[MamoPlayer Pro] ${reason}`);
-      emitPipEvent({
-        state: 'inactive',
-        reason,
-      });
+      proController.setPipState('inactive');
+      onPipEvent?.({ state: 'inactive', reason });
     }
-  }, [emitPipEvent, pip?.enabled]);
-  const handleNativePipStateChange = React.useCallback(
-    (state: Extract<PipState, 'active' | 'exiting'>) => {
-      emitPipEvent({ state });
-    },
-    [emitPipEvent],
-  );
+  }, [onPipEvent, pip?.enabled, proController]);
 
-  React.useEffect(() => {
-    if (pip?.enabled !== true) {
-      return;
-    }
-
-    let unsubscribe: (() => void) | null = null;
-
-    try {
-      unsubscribe = subscribeToPipEvents((eventName) => {
-        if (eventName === 'mamo_pip_active') {
-          handleNativePipStateChange('active');
-          return;
-        }
-
-        if (eventName === 'mamo_pip_exiting') {
-          handleNativePipStateChange('exiting');
-        }
-      });
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : 'Unable to subscribe to native PiP events.';
-      console.warn(`[MamoPlayer Pro] ${message}`);
-    }
-
-    return () => {
-      unsubscribe?.();
-    };
-  }, [handleNativePipStateChange, pip?.enabled]);
+  // Native PiP events ('mamo_pip_active' / 'mamo_pip_exiting') are handled
+  // inside useProPlayerController which owns the pipState.
+  // The Video component's onPictureInPictureStatusChanged is also forwarded to
+  // the consumer via onPipEvent so existing API consumers keep working.
   const handlePictureInPictureStatusChanged = React.useCallback(
     (event: Readonly<{ isActive: boolean }>) => {
-      const isActive = event.isActive;
-      const shouldEmitPipEvents = pip?.enabled !== false;
-
-      if (shouldEmitPipEvents) {
-        emitPipEvent({
-          state: isActive ? 'active' : 'inactive',
-        });
+      if (pip?.enabled !== false) {
+        const state = event.isActive ? 'active' : 'inactive';
+        proController.setPipState(state);
+        onPipEvent?.({ state });
       }
-
       onPictureInPictureStatusChanged?.(event);
     },
-    [emitPipEvent, onPictureInPictureStatusChanged, pip?.enabled],
+    [onPictureInPictureStatusChanged, onPipEvent, pip?.enabled, proController],
   );
   const useNativeIMA = shouldUseNativeIMA && !hasNativeIMAFailed;
   const hasConfiguredPreroll = React.useMemo(
@@ -1215,6 +1190,7 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
       setIsMainContentPausedByNativeAd(false);
       setResumeMainAfterAd(true);
       setHasNativeIMAFailed(true);
+      proControllerRef.current.setIsAdPlaying(false);
 
       if (unsubscribe) {
         unsubscribe();
@@ -1239,6 +1215,7 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
             setIsNativeAdPlaying(true);
             setIsMainContentPausedByNativeAd(true);
             setResumeMainAfterAd(false);
+            proControllerRef.current.setIsAdPlaying(true);
 
             const mainContentPositionAtAdStart = positionRef.current;
             adMainContentStartPositionRef.current = mainContentPositionAtAdStart;
@@ -1256,6 +1233,7 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
             setIsNativeAdPlaying(false);
             setIsMainContentPausedByNativeAd(false);
             setResumeMainAfterAd(true);
+            proControllerRef.current.setIsAdPlaying(false);
 
             emitAdAnalytics(analytics, 'ad_complete', {
               fallbackPosition: positionRef.current,
@@ -1307,10 +1285,6 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
   }, [rest.source]);
 
   React.useEffect(() => {
-    setTracksState((prev) => ({ ...prev, currentQualityId: initialQualityId }));
-  }, [initialQualityId]);
-
-  React.useEffect(() => {
     const adBreaks = ads?.adBreaks;
 
     if (!adBreaks) {
@@ -1335,29 +1309,17 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
       return;
     }
 
-    const qualityVariant =
-      tracks?.qualities?.find((quality) => quality.id === currentQualityId) ??
-      tracks?.qualities?.find((quality) => quality.id === initialQualityId);
+    const qualityVariant = tracks?.qualities?.find(
+      (quality) => quality.id === currentQualityId,
+    );
 
     const nextSource = qualityVariant?.uri
       ? resolveSourceWithQualityUri(rest.source, qualityVariant.uri)
       : rest.source;
 
-    if (qualityVariant?.id && qualityVariant.id !== currentQualityId) {
-      setTracksState((prev) => ({ ...prev, currentQualityId: qualityVariant.id }));
-    }
-
     mainSourceRef.current = nextSource;
     setActiveSource(nextSource);
-  }, [currentQualityId, initialQualityId, isAdMode, rest.source, tracks?.qualities]);
-
-  React.useEffect(() => {
-    setTracksState((prev) => ({ ...prev, currentAudioTrackId: initialAudioTrackId }));
-  }, [initialAudioTrackId]);
-
-  React.useEffect(() => {
-    setTracksState((prev) => ({ ...prev, currentSubtitleTrackId: initialSubtitleTrackId }));
-  }, [initialSubtitleTrackId]);
+  }, [currentQualityId, isAdMode, rest.source, tracks?.qualities]);
 
   React.useEffect(() => {
     setActiveSubtitleCueText(undefined);
@@ -1371,7 +1333,7 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
         return;
       }
 
-      if (qualityVariant.id === currentQualityId) {
+      if (qualityVariant.id === proControllerRef.current.currentQualityId) {
         return;
       }
 
@@ -1385,35 +1347,24 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
 
       console.log(`[MamoPlayer Pro] Quality changed: ${qualityVariant.id}`);
 
-      setTracksState((prev) => ({ ...prev, currentQualityId: qualityVariant.id }));
-
-      emitAnalytics(analytics, {
-        type: 'quality_change',
-        position: positionRef.current,
-        duration: durationRef.current,
-        selectedQuality: qualityVariant.id,
-        selectedSubtitle: currentSubtitleTrackId,
-        selectedAudioTrack: currentAudioTrackId,
-        sessionId: analytics?.sessionId,
-      });
+      // Delegates state update and analytics to the controller hook.
+      proControllerRef.current.changeQuality(qualityVariant.id);
 
       // Source update is handled exclusively by the source-sync effect below.
       // Calling setActiveSource here too would trigger a second native reload
       // (different object reference, same URI), causing duplicate ready events,
       // double session_start analytics, and a transient positionRef reset to 0.
     },
-    [analytics, currentAudioTrackId, currentQualityId, currentSubtitleTrackId, rest.source, tracks?.qualities],
+    [rest.source, tracks?.qualities],
   );
 
   const changeAudioTrack = React.useCallback(
     (audioTrackId: string) => {
       const audioTrack = tracks?.audioTracks?.find((t) => t.id === audioTrackId);
 
-      if (!audioTrack || audioTrackId === currentAudioTrackId) {
+      if (!audioTrack || audioTrackId === proControllerRef.current.currentAudioTrackId) {
         return;
       }
-
-      setTracksState((prev) => ({ ...prev, currentAudioTrackId: audioTrackId }));
 
       console.log(
         `[MamoPlayer Pro] Audio track changed: ${audioTrackId}${
@@ -1421,17 +1372,10 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
         }`,
       );
 
-      emitAnalytics(analytics, {
-        type: 'audio_track_change',
-        position: positionRef.current,
-        duration: durationRef.current,
-        selectedQuality: currentQualityId,
-        selectedSubtitle: currentSubtitleTrackId,
-        selectedAudioTrack: audioTrackId,
-        sessionId: analytics?.sessionId,
-      });
+      // Delegates state update and analytics to the controller hook.
+      proControllerRef.current.changeAudioTrack(audioTrackId);
     },
-    [analytics, currentAudioTrackId, currentQualityId, currentSubtitleTrackId, tracks?.audioTracks],
+    [tracks?.audioTracks],
   );
 
   const changeSubtitleTrack = React.useCallback(
@@ -1446,22 +1390,16 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
         return;
       }
 
+      const currentSubtitleId = proControllerRef.current.currentSubtitleTrackId;
+
       if (subtitleTrackId === 'off') {
-        if (currentSubtitleTrackId === 'off') {
+        if (currentSubtitleId === 'off') {
           return;
         }
 
         console.log('[MamoPlayer Pro] Subtitle track changed: off');
-        setTracksState((prev) => ({ ...prev, currentSubtitleTrackId: 'off' }));
-        emitAnalytics(analytics, {
-          type: 'subtitle_change',
-          position: positionRef.current,
-          duration: durationRef.current,
-          selectedQuality: currentQualityId,
-          selectedSubtitle: 'off',
-          selectedAudioTrack: currentAudioTrackId,
-          sessionId: analytics?.sessionId,
-        });
+        // Delegates state update and analytics to the controller hook.
+        proControllerRef.current.changeSubtitleTrack('off');
         return;
       }
 
@@ -1469,7 +1407,7 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
         (subtitleTrack) => subtitleTrack.id === subtitleTrackId,
       );
 
-      if (!subtitleTrackExists || subtitleTrackId === currentSubtitleTrackId) {
+      if (!subtitleTrackExists || subtitleTrackId === currentSubtitleId) {
         return;
       }
 
@@ -1481,18 +1419,10 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
           selectedSubtitleTrackLabel ? ` (${selectedSubtitleTrackLabel})` : ''
         }`,
       );
-      setTracksState((prev) => ({ ...prev, currentSubtitleTrackId: subtitleTrackId }));
-      emitAnalytics(analytics, {
-        type: 'subtitle_change',
-        position: positionRef.current,
-        duration: durationRef.current,
-        selectedQuality: currentQualityId,
-        selectedSubtitle: subtitleTrackId,
-        selectedAudioTrack: currentAudioTrackId,
-        sessionId: analytics?.sessionId,
-      });
+      // Delegates state update and analytics to the controller hook.
+      proControllerRef.current.changeSubtitleTrack(subtitleTrackId);
     },
-    [analytics, currentAudioTrackId, currentQualityId, currentSubtitleTrackId, tracks?.subtitleTracks],
+    [tracks?.subtitleTracks],
   );
 
   const selectQualityOption = React.useCallback(
@@ -1608,6 +1538,7 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
       setActiveSource(mainSourceRef.current);
       setResumeMainAfterAd(true);
       setAdStartedAt(null);
+      proControllerRef.current.setIsAdPlaying(false);
 
       emitAdAnalytics(analytics, 'ad_complete', {
         playbackEvent,
@@ -1632,6 +1563,7 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
       setActiveSource(mainSourceRef.current);
       setResumeMainAfterAd(true);
       setAdStartedAt(null);
+      proControllerRef.current.setIsAdPlaying(false);
 
       emitAdAnalytics(analytics, 'ad_error', {
         playbackEvent,
@@ -1657,6 +1589,7 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
       setIsAdMode(true);
       setAdStartedAt(Date.now());
       setOverlayTimestamp(Date.now());
+      proControllerRef.current.setIsAdPlaying(true);
 
       const mainContentPositionAtAdStart = playbackEvent?.position ?? positionRef.current;
       adMainContentStartPositionRef.current = mainContentPositionAtAdStart;
@@ -1858,9 +1791,9 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
               type: 'buffering_start',
               position: playbackEvent.position,
               duration: playbackEvent.duration,
-              selectedQuality: tracksStateRef.current.currentQualityId,
-              selectedSubtitle: tracksStateRef.current.currentSubtitleTrackId,
-              selectedAudioTrack: tracksStateRef.current.currentAudioTrackId,
+              selectedQuality: proControllerRef.current.currentQualityId,
+              selectedSubtitle: proControllerRef.current.currentSubtitleTrackId ?? undefined,
+              selectedAudioTrack: proControllerRef.current.currentAudioTrackId ?? undefined,
               playbackEvent,
               sessionId: analytics?.sessionId,
             });
@@ -1876,9 +1809,9 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
               type: 'buffering_end',
               position: playbackEvent.position,
               duration: playbackEvent.duration,
-              selectedQuality: tracksStateRef.current.currentQualityId,
-              selectedSubtitle: tracksStateRef.current.currentSubtitleTrackId,
-              selectedAudioTrack: tracksStateRef.current.currentAudioTrackId,
+              selectedQuality: proControllerRef.current.currentQualityId,
+              selectedSubtitle: proControllerRef.current.currentSubtitleTrackId ?? undefined,
+              selectedAudioTrack: proControllerRef.current.currentAudioTrackId ?? undefined,
               playbackEvent,
               sessionId: analytics?.sessionId,
             });
@@ -1888,9 +1821,9 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
               type: 'playback_error',
               position: playbackEvent.position,
               duration: playbackEvent.duration,
-              selectedQuality: tracksStateRef.current.currentQualityId,
-              selectedSubtitle: tracksStateRef.current.currentSubtitleTrackId,
-              selectedAudioTrack: tracksStateRef.current.currentAudioTrackId,
+              selectedQuality: proControllerRef.current.currentQualityId,
+              selectedSubtitle: proControllerRef.current.currentSubtitleTrackId ?? undefined,
+              selectedAudioTrack: proControllerRef.current.currentAudioTrackId ?? undefined,
               errorMessage: playbackEvent.error?.message,
               playbackEvent,
               sessionId: analytics?.sessionId,
@@ -2091,9 +2024,9 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
             type: 'buffering_start',
             position: playbackEvent.position,
             duration: playbackEvent.duration,
-            selectedQuality: tracksStateRef.current.currentQualityId,
-            selectedSubtitle: tracksStateRef.current.currentSubtitleTrackId,
-            selectedAudioTrack: tracksStateRef.current.currentAudioTrackId,
+            selectedQuality: proControllerRef.current.currentQualityId,
+            selectedSubtitle: proControllerRef.current.currentSubtitleTrackId ?? undefined,
+            selectedAudioTrack: proControllerRef.current.currentAudioTrackId ?? undefined,
             playbackEvent,
             sessionId: analytics?.sessionId,
           });
@@ -2109,9 +2042,9 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
             type: 'buffering_end',
             position: playbackEvent.position,
             duration: playbackEvent.duration,
-            selectedQuality: tracksStateRef.current.currentQualityId,
-            selectedSubtitle: tracksStateRef.current.currentSubtitleTrackId,
-            selectedAudioTrack: tracksStateRef.current.currentAudioTrackId,
+            selectedQuality: proControllerRef.current.currentQualityId,
+            selectedSubtitle: proControllerRef.current.currentSubtitleTrackId ?? undefined,
+            selectedAudioTrack: proControllerRef.current.currentAudioTrackId ?? undefined,
             playbackEvent,
             sessionId: analytics?.sessionId,
           });
@@ -2121,9 +2054,9 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
             type: 'playback_error',
             position: playbackEvent.position,
             duration: playbackEvent.duration,
-            selectedQuality: tracksStateRef.current.currentQualityId,
-            selectedSubtitle: tracksStateRef.current.currentSubtitleTrackId,
-            selectedAudioTrack: tracksStateRef.current.currentAudioTrackId,
+            selectedQuality: proControllerRef.current.currentQualityId,
+            selectedSubtitle: proControllerRef.current.currentSubtitleTrackId ?? undefined,
+            selectedAudioTrack: proControllerRef.current.currentAudioTrackId ?? undefined,
             errorMessage: playbackEvent.error?.message,
             playbackEvent,
             sessionId: analytics?.sessionId,
@@ -2426,7 +2359,7 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
     return {
       key: 'subtitle',
       title: 'Subtitle',
-      value: getSubtitleLabels(selectedSubtitle, currentSubtitleTrackId),
+      value: getSubtitleLabels(selectedSubtitle, currentSubtitleTrackId ?? undefined),
       options: [
         ...tracks.subtitleTracks.map((subtitleTrack) => ({
           id: subtitleTrack.id,
@@ -2461,7 +2394,7 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
         id: audioTrack.id,
         label: audioTrack.label,
       })),
-      selectedOptionId: currentAudioTrackId,
+      selectedOptionId: currentAudioTrackId ?? undefined,
       onSelectOption: (optionId: string) => {
         changeAudioTrack(optionId);
       },
@@ -2577,7 +2510,7 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
           skipSecondsRemaining={skipSecondsRemaining}
           handleSkipAd={handleSkipAd}
           showPipButton={pip?.enabled === true}
-          pipState={pipState}
+          pipState={proController.pipState}
           requestPip={requestPip}
           showSettingsButton={hasQualityOptions}
           isSettingsOpen={isSettingsOpen}
