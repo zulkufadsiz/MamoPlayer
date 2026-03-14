@@ -1,7 +1,7 @@
 import {
-    MamoPlayerCore,
-    detectSourceType,
+    MamoPlayer as MamoPlayerCore,
     type MamoPlayerProps,
+    type MamoPlayerSource,
     type PlaybackEvent,
     type SettingsOverlayConfig
 } from '@mamoplayer/core';
@@ -27,21 +27,89 @@ import type { ThumbnailFrame, ThumbnailsConfig } from './types/thumbnails';
 import type { TracksConfig, VideoQualityId } from './types/tracks';
 import type { WatermarkConfig } from './types/watermark';
 
+/** Internal helper: returns whether a source points to a local/offline file. */
+const detectSourceType = (source: MamoPlayerSource): 'offline' | 'streaming' => {
+  const isOfflineUri = (uri: string) =>
+    uri.startsWith('file://') ||
+    uri.startsWith('asset://') ||
+    uri.startsWith('content://') ||
+    uri.startsWith('ph://') ||
+    uri.startsWith('/');
+
+  if (typeof source === 'number') return 'offline';
+  if (typeof source === 'string') return isOfflineUri(source) ? 'offline' : 'streaming';
+  if (Array.isArray(source)) {
+    const first = source[0];
+    if (first && typeof first === 'object' && 'uri' in first && typeof first.uri === 'string') {
+      return isOfflineUri(first.uri) ? 'offline' : 'streaming';
+    }
+    return 'streaming';
+  }
+  if (source && typeof source === 'object') {
+    const uri = (source as { uri?: string }).uri;
+    if (typeof uri === 'string') return isOfflineUri(uri) ? 'offline' : 'streaming';
+  }
+  return 'streaming';
+};
+
+/**
+ * Props for `ProMamoPlayer` — the full-featured Pro video player component.
+ *
+ * Extends all `MamoPlayerProps` from `@mamoplayer/core` with Pro-exclusive
+ * capabilities: ads, analytics, multi-track support, theming, PiP, and more.
+ */
 export interface ProMamoPlayerProps extends MamoPlayerProps {
+  /**
+   * Your MamoPlayer Pro license key (format: `MAMO-...`).
+   * Required in production. Omitting it logs a warning and disables Pro features.
+   */
   licenseKey?: string;
+  /**
+   * Custom (non-IMA) ad break configuration.
+   * Mutually exclusive with `ima` — when both are set `ima` takes precedence.
+   */
   ads?: AdsConfig;
+  /**
+   * Google IMA SDK ad integration.
+   * When `ima.enabled` is `true` the native MamoAdsModule handles ad scheduling.
+   * Mutually exclusive with `ads`.
+   */
   ima?: IMAConfig;
+  /** Analytics event listener configuration. All playback and ad lifecycle events are forwarded to `onEvent`. */
   analytics?: AnalyticsConfig;
+  /**
+   * Override the quality variants, audio tracks, and subtitle tracks available to the user.
+   * When omitted the player relies on what the media manifest exposes natively.
+   */
   tracks?: TracksConfig;
+  /**
+   * Pre-generated thumbnail frames for the scrubber preview card.
+   * Provide an array of `{ time, uri }` frames; the player shows the closest
+   * frame to the scrub position while the user is dragging the timeline.
+   */
   thumbnails?: ThumbnailsConfig;
+  /** Enforce playback restrictions in the player UI (e.g. disable forward seeking). */
   restrictions?: PlaybackRestrictions;
+  /** Text watermark rendered on top of the video to deter unauthorised recording. */
   watermark?: WatermarkConfig;
+  /** Built-in preset theme name. When provided alongside `theme`, used as the base. */
   themeName?: ThemeName;
+  /** Full custom theme token set. Takes precedence over `themeName`. */
   theme?: PlayerThemeConfig;
+  /** Custom icon components to replace the default Material icon set (partial overrides are supported). */
   icons?: PlayerIconSet;
+  /**
+   * Player UI layout variant.
+   * - `'compact'`  — Minimal controls for small embedded players.
+   * - `'standard'` — Full controls with transport buttons and timeline (default).
+   * - `'ott'`      — OTT streaming-app style with larger scrubber and bottom controls.
+   */
   layoutVariant?: PlayerLayoutVariant;
+  /** Picture-in-picture configuration. */
   pip?: PipConfig;
+  /** Settings overlay configuration (merged with Pro-generated quality/subtitle/audio entries). */
   settingsOverlay?: SettingsOverlayConfig;
+  /** Called whenever the picture-in-picture window state changes. */
   onPipEvent?: (event: PipEvent) => void;
 }
 

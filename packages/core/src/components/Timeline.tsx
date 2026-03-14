@@ -29,11 +29,17 @@ const formatScrubTime = (seconds: number): string => {
 };
 
 export interface TimelineProps {
+  /** Total duration of the video in seconds. */
   duration: number;
+  /** Current playback position in seconds. */
   position: number;
+  /** Amount of video buffered ahead of the current position, in seconds. */
   buffered?: number;
+  /** Called when the user taps or lifts their finger at a new position. Receives the target time in seconds. */
   onSeek?: (time: number) => void;
+  /** Called once when a scrub gesture begins (before any position change). */
   onScrubStart?: () => void;
+  /** Called when the scrub gesture ends with the final seek target in seconds. */
   onScrubEnd?: (time: number) => void;
   /** URI of the thumbnail image to show while scrubbing. When provided a preview
    *  card (thumbnail + time label) floats above the thumb. */

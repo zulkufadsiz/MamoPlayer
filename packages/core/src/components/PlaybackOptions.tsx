@@ -6,16 +6,27 @@ import { Animated, Easing, Pressable, StyleSheet, View } from 'react-native';
 import type { CastState } from '../types/casting';
 
 export interface PlaybackOptionsProps {
+  /** Whether the player is currently playing. */
   isPlaying: boolean;
+  /** Whether the player is currently in fullscreen mode. */
   isFullscreen?: boolean;
+  /** Called when the user taps the seek-back button (−10 s). */
   onSeekBack: () => void;
+  /** Called when the user taps the play/pause button. */
   onTogglePlayPause: () => void;
+  /** Called when the user taps the seek-forward button (+10 s). */
   onSeekForward: () => void;
+  /** Called when the user taps the fullscreen toggle button. */
   onToggleFullscreen?: () => void;
+  /** Called when the user taps the settings (gear) button. */
   onToggleSettingsMenu?: () => void;
+  /** Whether to render the fullscreen toggle button. Defaults to `true` when `onToggleFullscreen` is provided. */
   showFullscreenButton?: boolean;
+  /** Whether to render the settings (gear) button. Defaults to `true` when `onToggleSettingsMenu` is provided. */
   showSettingsMenuButton?: boolean;
+  /** Whether to render the seek-back / play-pause / seek-forward transport row. Defaults to `true`. */
   showTransportButtons?: boolean;
+  /** Render in compact mode with smaller tap targets. Used in the top-right inline controls bar. */
   compact?: boolean;
   /** Current cast session state. Controls icon appearance. */
   castState?: CastState;
