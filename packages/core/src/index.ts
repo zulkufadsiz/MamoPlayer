@@ -13,6 +13,7 @@ export {
     type MamoPlayerCoreProps as MamoPlayerProps,
     type MamoPlayerSource
 } from './MamoPlayer';
+export type { DrmConfig } from './types/drm';
 export type {
     PlaybackEvent,
     PlaybackEventBase,
