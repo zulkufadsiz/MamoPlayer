@@ -16,7 +16,7 @@ const DEFAULT_AUTO_HIDE_DELAY_MS = 3000;
 
 export interface UseCorePlayerControllerOptions {
   /** Ref to the underlying `react-native-video` `VideoRef`. */
-  videoRef: React.RefObject<VideoRef>;
+  videoRef: React.RefObject<VideoRef | null>;
   /** Controls bar auto-hide configuration. */
   controls?: ControlsConfig;
   /** Start playback automatically when the video loads. Defaults to `true`. */
