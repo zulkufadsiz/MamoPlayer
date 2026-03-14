@@ -7,12 +7,15 @@ export interface SettingsOverlayProps {
   sections: SettingsSection[];
   isFullscreen?: boolean;
   onClose: () => void;
+  /** Optional content rendered at the bottom of the settings panel, below all sections. */
+  extraContent?: React.ReactNode;
 }
 
 export const SettingsOverlay: React.FC<SettingsOverlayProps> = ({
   sections,
   isFullscreen = false,
   onClose,
+  extraContent,
 }) => {
   const entrance = React.useRef(new Animated.Value(0)).current;
   const isClosingRef = React.useRef(false);
@@ -94,7 +97,7 @@ export const SettingsOverlay: React.FC<SettingsOverlayProps> = ({
           testID="settings-menu-root-scroll"
         >
           {sections.map((section, index) => (
-            <View key={section.id} style={index > 0 ? styles.sectionSeparator : undefined}>
+            <View key={section.id} testID={`settings-menu-${section.id}`} style={index > 0 ? styles.sectionSeparator : undefined}>
               <Text style={styles.sectionTitle}>{section.title}</Text>
               {section.items.map((item) => (
                 <Pressable
@@ -122,6 +125,7 @@ export const SettingsOverlay: React.FC<SettingsOverlayProps> = ({
               ))}
             </View>
           ))}
+          {extraContent}
         </ScrollView>
       </Animated.View>
     </View>
