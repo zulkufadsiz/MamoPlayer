@@ -3,6 +3,14 @@ export type { PlaybackOptionsProps } from './components/PlaybackOptions';
 export { Timeline } from './components/Timeline';
 export type { TimelineProps } from './components/Timeline';
 export {
+    useCorePlayerController,
+    type CorePlayerActions,
+    type CorePlayerController,
+    type CorePlayerHandlers,
+    type CorePlayerState,
+    type UseCorePlayerControllerOptions
+} from './hooks/useCorePlayerController';
+export {
     MamoPlayerCore as MamoPlayer,
     type ControlsConfig,
     type DebugConfig,
