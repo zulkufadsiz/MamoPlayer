@@ -28,9 +28,9 @@ export type {
     PlaybackTimePayload
 } from './types/playback';
 export type {
-    SettingsOverlayConfig,
+    SettingsItem, SettingsOverlayConfig,
     SettingsOverlayExtraMenuItem,
-    SettingsOverlayExtraMenuOption
+    SettingsOverlayExtraMenuOption, SettingsSection
 } from './types/settings';
 
 export { default } from './MamoPlayer';
