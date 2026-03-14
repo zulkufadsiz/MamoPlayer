@@ -1,22 +1,3 @@
-export type {
-    MamoPlayerSource,
-    PlaybackEvent,
-    PlaybackEventBase,
-    PlaybackEventType,
-    PlaybackTimePayload,
-    SettingsOverlayConfig,
-    SettingsOverlayExtraMenuItem,
-    SettingsOverlayExtraMenuOption
-} from '@mamoplayer/core';
-export {
-    PremiumFeatureError,
-    addPremiumEntitlements,
-    clearPremiumEntitlements,
-    hasPremiumEntitlement,
-    requirePremiumEntitlement,
-    setPremiumEntitlements,
-    type PremiumFeature
-} from './licensing/entitlements';
 export {
     ProMamoPlayer,
     default,

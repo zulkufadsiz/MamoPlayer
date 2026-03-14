@@ -65,10 +65,14 @@ const castingBannerStyles = StyleSheet.create({
   },
 });
 
+/** Source type accepted by `MamoPlayer`. Supports all shapes accepted by `react-native-video`: a numeric `require()` asset, a URI string, a `{ uri }` object, or an array of source objects. */
 export type MamoPlayerSource = NonNullable<ReactVideoProps['source']>;
 
+/** Configuration for the controls bar auto-hide behaviour. */
 export interface ControlsConfig {
+  /** Automatically hide the controls overlay after a period of inactivity. Defaults to `true`. */
   autoHide?: boolean;
+  /** Milliseconds of inactivity before the controls overlay fades out. Defaults to `3000`. */
   autoHideDelay?: number;
 }
 
@@ -94,15 +98,25 @@ export interface MamoPlayerCoreProps extends Omit<
   ReactVideoProps,
   'source' | 'paused' | 'controls' | 'onLoad' | 'onProgress' | 'onEnd' | 'onError' | 'onSeek' | 'onBuffer' | 'drm'
 > {
+  /** The video source. Accepts a `require()` asset, a URI string, a `{ uri }` object, or a source-array. */
   source: MamoPlayerSource;
+  /** Start playback automatically when the player mounts. Defaults to `true`. */
   autoPlay?: boolean;
+  /** Controlled paused state. When provided the player operates as a controlled component. */
   paused?: boolean;
+  /** Configuration for the slide-up settings overlay. */
   settingsOverlay?: SettingsOverlayConfig;
+  /** React node(s) rendered in the top-right corner of the controls overlay (e.g. a custom action button). */
   topRightActions?: React.ReactNode;
+  /** React node(s) rendered on top of the video frame but below the controls overlay. */
   overlayContent?: React.ReactNode;
+  /** Called whenever the player enters or exits fullscreen mode. */
   onFullscreenChange?: (isFullscreen: boolean) => void;
+  /** Called for every playback lifecycle event (play, pause, seek, error, …). */
   onPlaybackEvent?: (event: PlaybackEvent) => void;
+  /** Controls bar auto-hide configuration. */
   controls?: ControlsConfig;
+  /** Touch-gesture configuration. */
   gestures?: GesturesConfig;
   /**
    * Optional thumbnail URI and other per-scrub configuration forwarded to the
