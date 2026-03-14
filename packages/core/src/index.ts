@@ -14,6 +14,7 @@ export {
     type MamoPlayerSource
 } from './MamoPlayer';
 export type { DrmConfig } from './types/drm';
+export type { CastingConfig, CastState } from './types/casting';
 export type {
     PlaybackEvent,
     PlaybackEventBase,

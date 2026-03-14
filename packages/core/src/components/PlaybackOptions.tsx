@@ -1,7 +1,9 @@
 
 import MaterialIcons from '@react-native-vector-icons/material-icons';
 import React from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Animated, Easing, Pressable, StyleSheet, View } from 'react-native';
+
+import type { CastState } from '../types/casting';
 
 export interface PlaybackOptionsProps {
   isPlaying: boolean;
@@ -15,7 +17,50 @@ export interface PlaybackOptionsProps {
   showSettingsMenuButton?: boolean;
   showTransportButtons?: boolean;
   compact?: boolean;
+  /** Current cast session state. Controls icon appearance. */
+  castState?: CastState;
+  /** Called when the user taps the cast button. */
+  onPressCast?: () => void;
+  /** Show the cast button. Defaults to false. */
+  showCastButton?: boolean;
 }
+
+/** Maps a CastState to a tint colour for the cast icon. */
+const castIconColor = (state: CastState | undefined): string => {
+  if (state === 'connected') return '#5BB5FF';
+  if (state === 'connecting') return '#FFC840';
+  return 'white';
+};
+
+/** Animated cast icon that pulses while connecting. */
+const CastIcon: React.FC<{ state: CastState | undefined; size: number }> = ({ state, size }) => {
+  const opacity = React.useRef(new Animated.Value(1));
+
+  React.useEffect(() => {
+    if (state !== 'connecting') {
+      opacity.current.setValue(1);
+      return;
+    }
+    const anim = Animated.loop(
+      Animated.sequence([
+        Animated.timing(opacity.current, { toValue: 0.35, duration: 600, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+        Animated.timing(opacity.current, { toValue: 1, duration: 600, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+      ]),
+    );
+    anim.start();
+    return () => anim.stop();
+  }, [state]);
+
+  return (
+    <Animated.View style={{ opacity: opacity.current }}>
+      <MaterialIcons
+        name={state === 'connected' ? 'cast-connected' : 'cast'}
+        color={castIconColor(state)}
+        size={size}
+      />
+    </Animated.View>
+  );
+};
 
 export const PlaybackOptions: React.FC<PlaybackOptionsProps> = ({
   isPlaying,
@@ -29,6 +74,9 @@ export const PlaybackOptions: React.FC<PlaybackOptionsProps> = ({
   showSettingsMenuButton = Boolean(onToggleSettingsMenu),
   showTransportButtons = true,
   compact = false,
+  castState,
+  onPressCast,
+  showCastButton = false,
 }) => {
   return (
     <View style={[styles.container, compact && styles.containerCompact]}>
@@ -101,6 +149,27 @@ export const PlaybackOptions: React.FC<PlaybackOptionsProps> = ({
             size={compact ? 20 : 24}
             style={[styles.fullscreenIcon, compact && styles.fullscreenIconCompact]}
           />
+        </Pressable>
+      ) : null}
+      {showCastButton && onPressCast && castState !== 'unavailable' ? (
+        <Pressable
+          style={({ pressed }) => [
+            styles.optionButton,
+            compact && styles.optionButtonCompact,
+            pressed && styles.optionButtonPressed,
+          ]}
+          onPress={onPressCast}
+          accessibilityRole="button"
+          accessibilityLabel={
+            castState === 'connected'
+              ? 'Casting — tap to disconnect'
+              : castState === 'connecting'
+                ? 'Connecting to cast device'
+                : 'Cast to device'
+          }
+          testID="core-cast-button"
+        >
+          <CastIcon state={castState} size={compact ? 20 : 24} />
         </Pressable>
       ) : null}
     </View>

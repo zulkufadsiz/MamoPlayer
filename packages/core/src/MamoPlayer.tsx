@@ -10,7 +10,9 @@ import Video, {
     type ReactVideoProps,
     type VideoRef,
 } from 'react-native-video';
+import { useCasting } from './casting/useCasting';
 import { type DrmConfig } from './types/drm';
+import { type CastingConfig } from './types/casting';
 import { BufferingIndicator } from './components/BufferingIndicator';
 import { DebugOverlay } from './components/DebugOverlay';
 import { DoubleTapSeekOverlay } from './components/DoubleTapSeekOverlay';
@@ -19,6 +21,7 @@ import {
 } from './components/PlaybackOptions';
 import { SettingsOverlay } from './components/SettingsOverlay';
 import { Timeline } from './components/Timeline';
+import MaterialIcons from '@react-native-vector-icons/material-icons';
 import { type PlaybackEvent } from './types/playback';
 import { type SettingsOverlayConfig } from './types/settings';
 
@@ -30,6 +33,37 @@ const formatTime = (seconds: number): string => {
   const remainingSeconds = safeSeconds % 60;
   return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
 };
+
+/** Small banner shown in the top controls bar when a cast session is active. */
+const CastingStatusBanner: React.FC<{ castState: 'connected' | 'connecting' }> = ({ castState }) => {
+  const label = castState === 'connected' ? 'Casting to TV' : 'Connecting…';
+  const iconName = castState === 'connected' ? 'cast-connected' : 'cast';
+  const color = castState === 'connected' ? '#5BB5FF' : '#FFC840';
+  return (
+    <View style={castingBannerStyles.row} accessibilityLiveRegion="polite">
+      <MaterialIcons name={iconName} color={color} size={14} />
+      <Text style={[castingBannerStyles.text, { color }]}>{label}</Text>
+    </View>
+  );
+};
+
+const castingBannerStyles = StyleSheet.create({
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 10,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    marginRight: 4,
+  },
+  text: {
+    fontSize: 11,
+    fontWeight: '600',
+    letterSpacing: 0.2,
+  },
+});
 
 export type MamoPlayerSource = NonNullable<ReactVideoProps['source']>;
 
@@ -95,6 +129,12 @@ export interface MamoPlayerCoreProps extends Omit<
    * and FairPlay (iOS/HLS).
    */
   drm?: DrmConfig;
+  /**
+   * Casting configuration.  When `enabled` is true a cast button appears in
+   * the top-right controls bar and the player enables AirPlay (iOS) /
+   * Chromecast (Android) via the MamoCastModule native bridge.
+   */
+  casting?: CastingConfig;
 }
 
 export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
@@ -473,6 +513,7 @@ export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
           paused={resolvedPaused}
           rate={playbackRate}
           muted={muted}
+          allowsExternalPlayback={castingEnabled}
           onLoad={handleLoad}
           onProgress={handleProgress}
           onEnd={handleEnd}
@@ -504,6 +545,9 @@ export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
             testID="core-controls-overlay"
           >
             <View style={[styles.topRightControls, isFullscreen && styles.topRightControlsFullscreen]}>
+              {castingEnabled && (castState === 'connected' || castState === 'connecting') ? (
+                <CastingStatusBanner castState={castState} />
+              ) : null}
               {topRightActions ? <View style={styles.topRightActionsContainer}>{topRightActions}</View> : null}
               <PlaybackOptions
                 isPlaying={!resolvedPaused}
@@ -517,6 +561,9 @@ export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
                 showSettingsMenuButton={resolvedSettings.enabled && hasVisibleSettingsSections}
                 showTransportButtons={false}
                 compact
+                showCastButton={castingEnabled}
+                castState={castState}
+                onPressCast={showCastPicker}
               />
             </View>
 
