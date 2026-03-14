@@ -1,59 +1,21 @@
 import MaterialIcons from '@react-native-vector-icons/material-icons';
 import React from 'react';
 import { Animated, Easing, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import type { SettingsOverlayExtraMenuItem } from '../types/settings';
-
-const SPEED_OPTIONS = [0.5, 1, 1.25, 1.5, 2] as const;
-const ROOT_MENU_KEY = 'root';
-const PLAYBACK_SPEED_MENU_KEY = 'playback-speed';
-const MUTE_MENU_KEY = 'mute';
-const EXTRA_MENU_PREFIX = 'extra:';
-
-const getSpeedLabel = (rate: number): string => {
-  if (rate === 1) {
-    return 'Normal';
-  }
-
-  return `${rate}x`;
-};
+import type { SettingsSection } from '../types/settings';
 
 export interface SettingsOverlayProps {
-  showPlaybackSpeed: boolean;
-  showMute: boolean;
-  extraItems?: React.ReactNode;
-  extraMenuItems?: SettingsOverlayExtraMenuItem[];
-  playbackRate: number;
-  muted: boolean;
+  sections: SettingsSection[];
   isFullscreen?: boolean;
-  onSelectPlaybackRate: (rate: number) => void;
-  onToggleMuted: () => void;
   onClose: () => void;
 }
 
 export const SettingsOverlay: React.FC<SettingsOverlayProps> = ({
-  showPlaybackSpeed,
-  showMute,
-  extraItems,
-  extraMenuItems,
-  playbackRate,
-  muted,
+  sections,
   isFullscreen = false,
-  onSelectPlaybackRate,
-  onToggleMuted,
   onClose,
 }) => {
-  const [activeMenu, setActiveMenu] = React.useState<string>(ROOT_MENU_KEY);
   const entrance = React.useRef(new Animated.Value(0)).current;
   const isClosingRef = React.useRef(false);
-  const resolvedExtraMenuItems = extraMenuItems ?? [];
-
-  const activeExtraMenuItem = React.useMemo(
-    () =>
-      resolvedExtraMenuItems.find(
-        (extraMenuItem) => activeMenu === `${EXTRA_MENU_PREFIX}${extraMenuItem.key}`,
-      ),
-    [activeMenu, resolvedExtraMenuItems],
-  );
 
   const animateTo = React.useCallback((toValue: number, onDone?: () => void) => {
     Animated.timing(entrance, {
@@ -73,47 +35,6 @@ export const SettingsOverlay: React.FC<SettingsOverlayProps> = ({
   React.useEffect(() => {
     animateTo(1);
   }, [animateTo]);
-
-  const menuTitle = React.useMemo(() => {
-    if (activeMenu === PLAYBACK_SPEED_MENU_KEY) {
-      return 'Playback speed';
-    }
-
-    if (activeMenu === MUTE_MENU_KEY) {
-      return 'Mute';
-    }
-
-    if (activeExtraMenuItem) {
-      return activeExtraMenuItem.title;
-    }
-
-    return 'Settings';
-  }, [activeExtraMenuItem, activeMenu]);
-
-  const handleSelectMuted = React.useCallback((nextMuted: boolean) => {
-    if (nextMuted !== muted) {
-      onToggleMuted();
-      return;
-    }
-
-    onToggleMuted();
-  }, [muted, onToggleMuted]);
-
-  const goToRoot = React.useCallback(() => {
-    setActiveMenu(ROOT_MENU_KEY);
-  }, []);
-
-  const goToPlaybackSpeed = React.useCallback(() => {
-    setActiveMenu(PLAYBACK_SPEED_MENU_KEY);
-  }, []);
-
-  const goToMute = React.useCallback(() => {
-    setActiveMenu(MUTE_MENU_KEY);
-  }, []);
-
-  const goToExtraMenu = React.useCallback((menuKey: string) => {
-    setActiveMenu(`${EXTRA_MENU_PREFIX}${menuKey}`);
-  }, []);
 
   const requestClose = React.useCallback(() => {
     if (isClosingRef.current) {
@@ -153,22 +74,8 @@ export const SettingsOverlay: React.FC<SettingsOverlayProps> = ({
       />
       <Animated.View style={[styles.panel, isFullscreen && styles.panelFullscreen, panelAnimatedStyle]}>
         <View style={styles.headerRow}>
-          {activeMenu !== ROOT_MENU_KEY ? (
-            <Pressable
-              onPress={goToRoot}
-              accessibilityRole="button"
-              accessibilityLabel="Back to settings menu"
-              style={({ pressed }) => [styles.iconButton, pressed && styles.buttonPressed]}
-              testID="settings-menu-back"
-            >
-              <MaterialIcons name="chevron-left" color="#E5E7EB" size={28} />
-            </Pressable>
-          ) : (
-            <View style={styles.iconButtonPlaceholder} />
-          )}
-
-          <Text style={styles.title}>{menuTitle}</Text>
-
+          <View style={styles.iconButtonPlaceholder} />
+          <Text style={styles.title}>Settings</Text>
           <Pressable
             onPress={requestClose}
             accessibilityRole="button"
@@ -179,183 +86,43 @@ export const SettingsOverlay: React.FC<SettingsOverlayProps> = ({
           </Pressable>
         </View>
 
-        {activeMenu === ROOT_MENU_KEY ? (
-          <ScrollView
-            style={styles.menuList}
-            contentContainerStyle={styles.menuListContent}
-            showsVerticalScrollIndicator={false}
-            bounces={false}
-            testID="settings-menu-root-scroll"
-          >
-            {showPlaybackSpeed ? (
-              <Pressable
-                onPress={goToPlaybackSpeed}
-                style={({ pressed }) => [styles.menuItem, pressed && styles.buttonPressed]}
-                accessibilityRole="button"
-                accessibilityLabel="Open playback speed settings"
-                testID="settings-menu-playback-speed"
-              >
-                <Text style={styles.menuItemTitle}>Playback Speed</Text>
-                <View style={styles.menuItemRight}>
-                  <Text style={styles.menuItemValue}>{getSpeedLabel(playbackRate)}</Text>
-                  <MaterialIcons name="chevron-right" color="#9CA3AF" size={20} />
-                </View>
-              </Pressable>
-            ) : null}
-
-            {showMute ? (
-              <Pressable
-                onPress={goToMute}
-                style={({ pressed }) => [styles.menuItem, pressed && styles.buttonPressed]}
-                accessibilityRole="button"
-                accessibilityLabel="Open mute settings"
-                testID="settings-menu-mute"
-              >
-                <Text style={styles.menuItemTitle}>Mute</Text>
-                <View style={styles.menuItemRight}>
-                  <Text style={styles.menuItemValue}>{muted ? 'Muted' : 'Unmuted'}</Text>
-                  <MaterialIcons name="chevron-right" color="#9CA3AF" size={20} />
-                </View>
-              </Pressable>
-            ) : null}
-
-            {resolvedExtraMenuItems.map((extraMenuItem) => (
-              <Pressable
-                key={extraMenuItem.key}
-                onPress={() => goToExtraMenu(extraMenuItem.key)}
-                style={({ pressed }) => [styles.menuItem, pressed && styles.buttonPressed]}
-                accessibilityRole="button"
-                accessibilityLabel={`Open ${extraMenuItem.title} settings`}
-                testID={`settings-menu-extra-${extraMenuItem.key}`}
-              >
-                <Text style={styles.menuItemTitle}>{extraMenuItem.title}</Text>
-                <View style={styles.menuItemRight}>
-                  {extraMenuItem.value ? (
-                    <Text style={styles.menuItemValue}>{extraMenuItem.value}</Text>
-                  ) : null}
-                  <MaterialIcons name="chevron-right" color="#9CA3AF" size={20} />
-                </View>
-              </Pressable>
-            ))}
-
-            {extraItems ? <View style={styles.extraItemsContainer}>{extraItems}</View> : null}
-          </ScrollView>
-        ) : null}
-
-        {activeMenu === PLAYBACK_SPEED_MENU_KEY ? (
-          <ScrollView
-            style={styles.menuList}
-            contentContainerStyle={styles.menuListContent}
-            showsVerticalScrollIndicator={false}
-            bounces={false}
-          >
-            {SPEED_OPTIONS.map(rate => {
-              const selected = playbackRate === rate;
-              return (
+        <ScrollView
+          style={styles.menuList}
+          contentContainerStyle={styles.menuListContent}
+          showsVerticalScrollIndicator={false}
+          bounces={false}
+          testID="settings-menu-root-scroll"
+        >
+          {sections.map((section, index) => (
+            <View key={section.id} style={index > 0 ? styles.sectionSeparator : undefined}>
+              <Text style={styles.sectionTitle}>{section.title}</Text>
+              {section.items.map((item) => (
                 <Pressable
-                  key={rate}
-                  onPress={() => onSelectPlaybackRate(rate)}
+                  key={item.id}
+                  onPress={item.onPress}
                   style={({ pressed }) => [
                     styles.menuItem,
-                    selected && styles.menuItemSelected,
+                    item.selected && styles.menuItemSelected,
                     pressed && styles.buttonPressed,
                   ]}
                   accessibilityRole="button"
-                  accessibilityLabel={`${rate}x`}
-                  accessibilityState={{ selected }}
+                  accessibilityLabel={item.label}
+                  accessibilityState={{ selected: item.selected }}
+                  testID={`settings-item-${section.id}-${item.id}`}
                 >
-                  <Text style={[styles.menuItemTitle, selected && styles.menuItemTitleSelected]}>
-                    {getSpeedLabel(rate)}
+                  <Text style={[styles.menuItemTitle, item.selected && styles.menuItemTitleSelected]}>
+                    {item.label}
                   </Text>
-                  {selected ? (
+                  {item.selected ? (
                     <MaterialIcons name="check" color="#F3F4F6" size={24} />
                   ) : (
                     <View style={styles.checkPlaceholder} />
                   )}
                 </Pressable>
-              );
-            })}
-          </ScrollView>
-        ) : null}
-
-        {activeMenu === MUTE_MENU_KEY ? (
-          <View style={styles.menuList}>
-            <Pressable
-              onPress={() => handleSelectMuted(false)}
-              style={({ pressed }) => [
-                styles.menuItem,
-                !muted && styles.menuItemSelected,
-                pressed && styles.buttonPressed,
-              ]}
-              accessibilityRole="button"
-              accessibilityLabel="Unmuted"
-              accessibilityState={{ selected: !muted }}
-            >
-              <Text style={[styles.menuItemTitle, !muted && styles.menuItemTitleSelected]}>Unmuted</Text>
-              {!muted ? (
-                <MaterialIcons name="check" color="#F3F4F6" size={24} />
-              ) : (
-                <View style={styles.checkPlaceholder} />
-              )}
-            </Pressable>
-
-            <Pressable
-              onPress={() => handleSelectMuted(true)}
-              style={({ pressed }) => [
-                styles.menuItem,
-                muted && styles.menuItemSelected,
-                pressed && styles.buttonPressed,
-              ]}
-              accessibilityRole="button"
-              accessibilityLabel="Muted"
-              accessibilityState={{ selected: muted }}
-            >
-              <Text style={[styles.menuItemTitle, muted && styles.menuItemTitleSelected]}>Muted</Text>
-              {muted ? (
-                <MaterialIcons name="check" color="#F3F4F6" size={24} />
-              ) : (
-                <View style={styles.checkPlaceholder} />
-              )}
-            </Pressable>
-          </View>
-        ) : null}
-
-        {activeExtraMenuItem ? (
-          <ScrollView
-            style={styles.menuList}
-            contentContainerStyle={styles.menuListContent}
-            showsVerticalScrollIndicator={false}
-            bounces={false}
-          >
-            {activeExtraMenuItem.options.map((option) => {
-              const selected = activeExtraMenuItem.selectedOptionId === option.id;
-              return (
-                <Pressable
-                  key={option.id}
-                  onPress={() => activeExtraMenuItem.onSelectOption(option.id)}
-                  style={({ pressed }) => [
-                    styles.menuItem,
-                    selected && styles.menuItemSelected,
-                    pressed && styles.buttonPressed,
-                  ]}
-                  accessibilityRole="button"
-                  accessibilityLabel={option.label}
-                  accessibilityState={{ selected }}
-                  testID={`settings-extra-option-${activeExtraMenuItem.key}-${option.id}`}
-                >
-                  <Text style={[styles.menuItemTitle, selected && styles.menuItemTitleSelected]}>
-                    {option.label}
-                  </Text>
-                  {selected ? (
-                    <MaterialIcons name="check" color="#F3F4F6" size={24} />
-                  ) : (
-                    <View style={styles.checkPlaceholder} />
-                  )}
-                </Pressable>
-              );
-            })}
-          </ScrollView>
-        ) : null}
+              ))}
+            </View>
+          ))}
+        </ScrollView>
       </Animated.View>
     </View>
   );
@@ -437,8 +204,20 @@ const styles = StyleSheet.create({
   menuListContent: {
     paddingBottom: 4,
   },
-  extraItemsContainer: {
-    marginTop: 8,
+  sectionSeparator: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: 'rgba(148, 163, 184, 0.35)',
+  },
+  sectionTitle: {
+    color: '#9CA3AF',
+    fontSize: 11,
+    lineHeight: 16,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+    marginBottom: 2,
   },
   menuItem: {
     paddingHorizontal: 0,
@@ -457,16 +236,6 @@ const styles = StyleSheet.create({
   },
   menuItemTitleSelected: {
     fontWeight: '600',
-  },
-  menuItemRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  menuItemValue: {
-    color: '#9CA3AF',
-    fontSize: 14,
-    lineHeight: 20,
   },
   checkPlaceholder: {
     width: 24,
