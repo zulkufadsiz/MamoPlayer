@@ -811,6 +811,7 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
   const adRef = useRef(new AdStateMachine());
   const quartileStateRef = React.useRef<Record<Quartile, boolean>>(createQuartileState());
   const positionRef = React.useRef(0);
+  const durationRef = React.useRef<number | undefined>(undefined);
   // Tracks the last thumbnail frame URI that triggered a setScrubThumbnailFrame call so
   // we can bail out early when the thumbnail hasn't actually changed, avoiding unnecessary
   // re-renders of ProMamoPlayer (and its entire subtree) on every pan-move event.
@@ -857,6 +858,8 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
     currentSubtitleTrackId: initialSubtitleTrackId,
   });
   const { currentQualityId, currentAudioTrackId, currentSubtitleTrackId } = tracksState;
+  const tracksStateRef = React.useRef(tracksState);
+  tracksStateRef.current = tracksState;
   const [pipState, setPipState] = React.useState<PipState>('inactive');
   const [isSettingsOpen, setIsSettingsOpen] = React.useState(false);
   const [pausedOverride, setPausedOverride] = React.useState<boolean | null>(null);
@@ -1311,7 +1314,10 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
       emitAnalytics(analytics, {
         type: 'quality_change',
         position: positionRef.current,
+        duration: durationRef.current,
         selectedQuality: qualityVariant.id,
+        selectedSubtitle: currentSubtitleTrackId,
+        selectedAudioTrack: currentAudioTrackId,
         sessionId: analytics?.sessionId,
       });
 
@@ -1320,7 +1326,7 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
       // (different object reference, same URI), causing duplicate ready events,
       // double session_start analytics, and a transient positionRef reset to 0.
     },
-    [analytics, currentQualityId, rest.source, tracks?.qualities],
+    [analytics, currentAudioTrackId, currentQualityId, currentSubtitleTrackId, rest.source, tracks?.qualities],
   );
 
   const changeAudioTrack = React.useCallback(
@@ -1342,11 +1348,14 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
       emitAnalytics(analytics, {
         type: 'audio_track_change',
         position: positionRef.current,
+        duration: durationRef.current,
+        selectedQuality: currentQualityId,
+        selectedSubtitle: currentSubtitleTrackId,
         selectedAudioTrack: audioTrackId,
         sessionId: analytics?.sessionId,
       });
     },
-    [analytics, currentAudioTrackId, tracks?.audioTracks],
+    [analytics, currentAudioTrackId, currentQualityId, currentSubtitleTrackId, tracks?.audioTracks],
   );
 
   const changeSubtitleTrack = React.useCallback(
@@ -1371,7 +1380,10 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
         emitAnalytics(analytics, {
           type: 'subtitle_change',
           position: positionRef.current,
+          duration: durationRef.current,
+          selectedQuality: currentQualityId,
           selectedSubtitle: 'off',
+          selectedAudioTrack: currentAudioTrackId,
           sessionId: analytics?.sessionId,
         });
         return;
@@ -1397,11 +1409,14 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
       emitAnalytics(analytics, {
         type: 'subtitle_change',
         position: positionRef.current,
+        duration: durationRef.current,
+        selectedQuality: currentQualityId,
         selectedSubtitle: subtitleTrackId,
+        selectedAudioTrack: currentAudioTrackId,
         sessionId: analytics?.sessionId,
       });
     },
-    [analytics, currentSubtitleTrackId, tracks?.subtitleTracks],
+    [analytics, currentAudioTrackId, currentQualityId, currentSubtitleTrackId, tracks?.subtitleTracks],
   );
 
   const selectQualityOption = React.useCallback(
@@ -1690,6 +1705,7 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
 
       if (typeof playbackEvent.duration === 'number' && playbackEvent.duration > 0) {
         setMediaDuration(playbackEvent.duration);
+        durationRef.current = playbackEvent.duration;
       }
 
       if (playbackEvent.type === 'play') {
@@ -1762,6 +1778,16 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
               duration: playbackEvent.duration,
               playbackEvent,
             });
+            emitAnalytics(analytics, {
+              type: 'buffering_start',
+              position: playbackEvent.position,
+              duration: playbackEvent.duration,
+              selectedQuality: tracksStateRef.current.currentQualityId,
+              selectedSubtitle: tracksStateRef.current.currentSubtitleTrackId,
+              selectedAudioTrack: tracksStateRef.current.currentAudioTrackId,
+              playbackEvent,
+              sessionId: analytics?.sessionId,
+            });
             break;
           case 'buffer_end':
             emitAnalytics(analytics, {
@@ -1769,6 +1795,29 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
               position: playbackEvent.position,
               duration: playbackEvent.duration,
               playbackEvent,
+            });
+            emitAnalytics(analytics, {
+              type: 'buffering_end',
+              position: playbackEvent.position,
+              duration: playbackEvent.duration,
+              selectedQuality: tracksStateRef.current.currentQualityId,
+              selectedSubtitle: tracksStateRef.current.currentSubtitleTrackId,
+              selectedAudioTrack: tracksStateRef.current.currentAudioTrackId,
+              playbackEvent,
+              sessionId: analytics?.sessionId,
+            });
+            break;
+          case 'error':
+            emitAnalytics(analytics, {
+              type: 'playback_error',
+              position: playbackEvent.position,
+              duration: playbackEvent.duration,
+              selectedQuality: tracksStateRef.current.currentQualityId,
+              selectedSubtitle: tracksStateRef.current.currentSubtitleTrackId,
+              selectedAudioTrack: tracksStateRef.current.currentAudioTrackId,
+              errorMessage: playbackEvent.error?.message,
+              playbackEvent,
+              sessionId: analytics?.sessionId,
             });
             break;
           case 'seek':
@@ -1962,6 +2011,16 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
             duration: playbackEvent.duration,
             playbackEvent,
           });
+          emitAnalytics(analytics, {
+            type: 'buffering_start',
+            position: playbackEvent.position,
+            duration: playbackEvent.duration,
+            selectedQuality: tracksStateRef.current.currentQualityId,
+            selectedSubtitle: tracksStateRef.current.currentSubtitleTrackId,
+            selectedAudioTrack: tracksStateRef.current.currentAudioTrackId,
+            playbackEvent,
+            sessionId: analytics?.sessionId,
+          });
           break;
         case 'buffer_end':
           emitAnalytics(analytics, {
@@ -1969,6 +2028,29 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
             position: playbackEvent.position,
             duration: playbackEvent.duration,
             playbackEvent,
+          });
+          emitAnalytics(analytics, {
+            type: 'buffering_end',
+            position: playbackEvent.position,
+            duration: playbackEvent.duration,
+            selectedQuality: tracksStateRef.current.currentQualityId,
+            selectedSubtitle: tracksStateRef.current.currentSubtitleTrackId,
+            selectedAudioTrack: tracksStateRef.current.currentAudioTrackId,
+            playbackEvent,
+            sessionId: analytics?.sessionId,
+          });
+          break;
+        case 'error':
+          emitAnalytics(analytics, {
+            type: 'playback_error',
+            position: playbackEvent.position,
+            duration: playbackEvent.duration,
+            selectedQuality: tracksStateRef.current.currentQualityId,
+            selectedSubtitle: tracksStateRef.current.currentSubtitleTrackId,
+            selectedAudioTrack: tracksStateRef.current.currentAudioTrackId,
+            errorMessage: playbackEvent.error?.message,
+            playbackEvent,
+            sessionId: analytics?.sessionId,
           });
           break;
         case 'seek':
