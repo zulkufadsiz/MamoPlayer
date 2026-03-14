@@ -15,7 +15,10 @@ export type AnalyticsEventType =
   | 'quartile'
   | 'quality_change'
   | 'subtitle_change'
-  | 'audio_track_change';
+  | 'audio_track_change'
+  | 'buffering_start'
+  | 'buffering_end'
+  | 'playback_error';
 
 export interface AnalyticsEventBase {
   type: AnalyticsEventType;
