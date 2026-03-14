@@ -1,3 +1,5 @@
+export type PlaybackSourceType = 'streaming' | 'offline';
+
 export type PlaybackEventType =
   | 'ready'
   | 'play'
@@ -7,6 +9,7 @@ export type PlaybackEventType =
   | 'buffer_end'
   | 'seek'
   | 'time_update'
+  | 'source_type'
   | 'error';
 
 export type PlaybackEventBase = {
@@ -22,6 +25,7 @@ export type PlaybackTimePayload = {
 export type PlaybackEvent = PlaybackEventBase &
   PlaybackTimePayload & {
     reason?: 'user' | 'auto' | 'programmatic';
+    sourceType?: PlaybackSourceType;
     error?: {
       message: string;
       code?: string | number;

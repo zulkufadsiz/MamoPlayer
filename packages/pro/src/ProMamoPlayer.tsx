@@ -1,5 +1,6 @@
 import {
     MamoPlayerCore,
+    detectSourceType,
     type MamoPlayerProps,
     type PlaybackEvent,
     type SettingsOverlayConfig
@@ -739,7 +740,7 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
   licenseKey,
   ads,
   ima,
-  analytics,
+  analytics: analyticsProp,
   tracks,
   thumbnails,
   restrictions,
@@ -774,6 +775,13 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
     showSubtitles: settingsOverlay?.showSubtitles ?? true,
     showAudioTracks: settingsOverlay?.showAudioTracks ?? true,
   };
+
+  const isOfflineSource = React.useMemo(
+    () => detectSourceType(rest.source) === 'offline',
+    [rest.source],
+  );
+  // Analytics are network-dependent; suppress them for offline/local sources.
+  const analytics = isOfflineSource ? undefined : analyticsProp;
 
   const hasMultipleDubLanguageOptions = React.useMemo(() => {
     const audioTracks = tracks?.audioTracks;
@@ -844,7 +852,7 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
   const [watermarkPosition, setWatermarkPosition] = React.useState({ top: 10, left: 10 });
   const [adStartedAt, setAdStartedAt] = React.useState<number | null>(null);
   const [overlayTimestamp, setOverlayTimestamp] = React.useState(() => Date.now());
-  const shouldUseNativeIMA = Boolean(ima?.enabled && ima.adTagUrl);
+  const shouldUseNativeIMA = Boolean(ima?.enabled && ima.adTagUrl && !isOfflineSource);
   const [hasNativeIMAFailed, setHasNativeIMAFailed] = React.useState(false);
   const [isNativeAdPlaying, setIsNativeAdPlaying] = React.useState(false);
   const [isMainContentPausedByNativeAd, setIsMainContentPausedByNativeAd] = React.useState(false);
@@ -1876,7 +1884,7 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
       if (playbackEvent.type === 'ready') {
         const preroll = ads?.adBreaks.find((adBreak) => adBreak.type === 'preroll');
 
-        if (preroll?.source && !adRef.current.hasPlayedPreroll) {
+        if (preroll?.source && !adRef.current.hasPlayedPreroll && !isOfflineSource) {
           const prerollBreak = { type: 'preroll' as const };
 
           beginAdPlayback(prerollBreak, preroll.source, playbackEvent);
@@ -1896,7 +1904,7 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
 
           const adBreak = adSourceMapRef.current.get(createAdBreakKey(ad.type, ad.offset));
 
-          if (adBreak?.source) {
+          if (adBreak?.source && !isOfflineSource) {
             if (typeof offset === 'number') {
               adRef.current.playedMidrolls.add(offset);
             }
@@ -1917,7 +1925,7 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
           createAdBreakKey(shouldPlayAd.type, shouldPlayAd.offset),
         );
 
-        if (adBreak?.source) {
+        if (adBreak?.source && !isOfflineSource) {
           if (shouldPlayAd.type === 'postroll' && !adRef.current.hasPlayedPostroll) {
             emitAnalytics(analytics, {
               type: 'ended',
@@ -2074,6 +2082,7 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
       completeAdPlayback,
       failAdPlayback,
       isAdMode,
+      isOfflineSource,
       onPlaybackEvent,
       restrictions,
       restorePendingSeekPosition,
@@ -2100,7 +2109,7 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
       return true;
     }
 
-    if (hasConfiguredPreroll && !adRef.current.hasPlayedPreroll) {
+    if (hasConfiguredPreroll && !adRef.current.hasPlayedPreroll && !isOfflineSource) {
       return false;
     }
 
@@ -2113,6 +2122,7 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
     hasConfiguredPreroll,
     isAdMode,
     isMainContentPausedByNativeAd,
+    isOfflineSource,
     resumeMainAfterAd,
     rest.autoPlay,
     useNativeIMA,

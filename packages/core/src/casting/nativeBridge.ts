@@ -1,8 +1,8 @@
 import {
-  NativeEventEmitter,
-  NativeModules,
-  type EmitterSubscription,
-  type NativeModule,
+    NativeEventEmitter,
+    NativeModules,
+    type EmitterSubscription,
+    type NativeModule,
 } from 'react-native';
 
 import type { CastState } from '../types/casting';
