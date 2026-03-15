@@ -61,6 +61,12 @@ export interface UseProPlayerControllerOptions {
    * to consumers.
    */
   onPipEvent?: (event: PipEvent) => void;
+  /**
+   * Ref to the underlying video element. When provided, `requestPip` will
+   * first attempt the react-native-video `enterPictureInPicture()` API before
+   * falling back to the native MamoCastModule bridge.
+   */
+  videoRef?: React.RefObject<{ enterPictureInPicture?: () => void } | null>;
 }
 
 /** Pro-specific player state managed by this hook. */
@@ -148,6 +154,9 @@ export type ProPlayerController = ProPlayerState & ProPlayerActions;
  */
 export function useProPlayerController(options: UseProPlayerControllerOptions): ProPlayerController {
   const { tracks, pip, analytics, coreController } = options;
+
+  const videoRefRef = React.useRef(options.videoRef);
+  videoRefRef.current = options.videoRef;
 
   // Keep mutable refs so callbacks always access the latest config values
   // without needing to be recreated on every render.
@@ -304,9 +313,36 @@ export function useProPlayerController(options: UseProPlayerControllerOptions): 
 
   const requestPip = React.useCallback(() => {
     if (!pip?.enabled) return;
+
     // Optimistically transition to 'entering' while the native animation starts.
     setPipState('entering');
-    requestPictureInPicture();
+    onPipEventRef.current?.({ state: 'entering' });
+
+    let lastError: unknown;
+
+    if (typeof videoRefRef.current?.current?.enterPictureInPicture === 'function') {
+      try {
+        videoRefRef.current.current.enterPictureInPicture();
+        return;
+      } catch (error) {
+        lastError = error;
+      }
+    }
+
+    try {
+      requestPictureInPicture();
+      return;
+    } catch (error) {
+      lastError = error;
+    }
+
+    if (lastError) {
+      const reason =
+        lastError instanceof Error ? lastError.message : 'Unable to enter picture in picture.';
+      console.warn(`[MamoPlayer Pro] ${reason}`);
+      setPipState('inactive');
+      onPipEventRef.current?.({ state: 'inactive', reason });
+    }
   }, [pip?.enabled]);
 
   const showDebugOverlay = React.useCallback(() => {
