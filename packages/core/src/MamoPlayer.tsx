@@ -202,12 +202,14 @@ export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
       showMute: settingsOverlay?.showMute ?? true,
       extraItems: settingsOverlay?.extraItems,
       extraMenuItems: settingsOverlay?.extraMenuItems,
+      extraSections: settingsOverlay?.extraSections,
     };
 
     const hasVisibleSettingsSections =
       resolvedSettings.showPlaybackSpeed ||
       resolvedSettings.showMute ||
       Boolean(resolvedSettings.extraMenuItems?.length) ||
+      Boolean(resolvedSettings.extraSections?.length) ||
       Boolean(resolvedSettings.extraItems);
 
     // ─── Controller ───────────────────────────────────────────────────────
@@ -233,6 +235,7 @@ export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
       showPlaybackSpeed: resolvedSettings.showPlaybackSpeed,
       showMute: resolvedSettings.showMute,
       extraMenuItems: resolvedSettings.extraMenuItems,
+      extraSections: resolvedSettings.extraSections,
     });
 
     const {

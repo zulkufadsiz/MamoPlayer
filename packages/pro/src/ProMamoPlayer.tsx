@@ -3,7 +3,8 @@ import {
     type MamoPlayerProps,
     type MamoPlayerSource,
     type PlaybackEvent,
-    type SettingsOverlayConfig
+    type SettingsOverlayConfig,
+    type SettingsSection
 } from '@mamoplayer/core';
 import MaterialIcons from '@react-native-vector-icons/material-icons';
 import React, { useRef } from 'react';
@@ -11,6 +12,7 @@ import { Animated, Easing, Platform, Pressable, ScrollView, StyleSheet, Text, Vi
 import type { VideoRef } from 'react-native-video';
 import { AdStateMachine } from './ads/AdState';
 import { useProPlayerController } from './hooks/useProPlayerController';
+import { useProSettingsSections } from './hooks/useProSettingsSections';
 import { loadAds, releaseAds, subscribeToAdsEvents } from './ima/nativeBridge';
 import { getThumbnailForTime } from './internal/thumbnails';
 import { validateLicenseKey } from './licensing/license';
@@ -2274,164 +2276,26 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
     [consumerOnTextTrackDataChanged, currentSubtitleTrackId, shouldShowSubtitleSettings],
   );
 
-  const getAudioLabels = React.useCallback(
-    (audioTrack?: { label: string; language?: string }) => {
-      if (audioTrack?.label) {
-        return audioTrack.label;
-      }
-
-      if (audioTrack?.language) {
-        return audioTrack.language.toUpperCase();
-      }
-
-      return 'Auto';
-    },
-    [],
-  );
-
-  const getQualityLabel = React.useCallback(
-    (qualityId?: VideoQualityId) => {
-      if (!qualityId) {
-        return 'Auto';
-      }
-
-      const selectedQuality = tracks?.qualities?.find((quality) => quality.id === qualityId);
-
-      if (selectedQuality?.label) {
-        return selectedQuality.label;
-      }
-
-      return qualityId;
-    },
-    [tracks?.qualities],
-  );
-
-  const getSubtitleLabels = React.useCallback(
-    (subtitleTrack?: { label: string; language?: string }, subtitleTrackId?: string | 'off') => {
-      if (subtitleTrackId === 'off') {
-        return 'Off';
-      }
-
-      if (subtitleTrack?.label) {
-        return subtitleTrack.label;
-      }
-
-      if (subtitleTrack?.language) {
-        return subtitleTrack.language.toUpperCase();
-      }
-
-      return 'Off';
-    },
-    [],
-  );
-
-  const proQualityExtraMenuItem = React.useMemo(() => {
-    if (!shouldShowQualitySettings || !tracks?.qualities?.length) {
-      return undefined;
-    }
-
-    return {
-      key: 'quality',
-      title: 'Quality',
-      value: getQualityLabel(currentQualityId),
-      options: tracks.qualities.map((quality) => ({
-        id: quality.id,
-        label: quality.label,
-      })),
-      selectedOptionId: currentQualityId,
-      onSelectOption: (optionId: string) => {
-        changeQuality(optionId as VideoQualityId);
-      },
-    };
-  }, [
-    changeQuality,
+  const proSettingsSections: SettingsSection[] = useProSettingsSections({
+    tracks,
+    shouldShowQuality: shouldShowQualitySettings,
+    shouldShowSubtitles: shouldShowSubtitleSettings,
+    shouldShowAudio: hasAudioSectionOptions,
     currentQualityId,
-    getQualityLabel,
-    shouldShowQualitySettings,
-    tracks?.qualities,
-  ]);
-
-  const proSubtitleExtraMenuItem = React.useMemo(() => {
-    if (!shouldShowSubtitleSettings || !tracks?.subtitleTracks?.length) {
-      return undefined;
-    }
-    console.log('Current subtitle track ID:', currentSubtitleTrackId);
-    return {
-      key: 'subtitle',
-      title: 'Subtitle',
-      value: getSubtitleLabels(selectedSubtitle, currentSubtitleTrackId ?? undefined),
-      options: [
-        ...tracks.subtitleTracks.map((subtitleTrack) => ({
-          id: subtitleTrack.id,
-          label: subtitleTrack.label,
-        })),
-        { id: 'off', label: 'Off' },
-      ],
-      selectedOptionId: currentSubtitleTrackId ?? 'off',
-      onSelectOption: (optionId: string) => {
-        changeSubtitleTrack(optionId as string | 'off');
-      },
-    };
-  }, [
-    changeSubtitleTrack,
     currentSubtitleTrackId,
-    getSubtitleLabels,
-    selectedSubtitle,
-    shouldShowSubtitleSettings,
-    tracks?.subtitleTracks,
-  ]);
-
-  const proAudioExtraMenuItem = React.useMemo(() => {
-    if (!hasAudioSectionOptions) {
-      return undefined;
-    }
-
-    return {
-      key: 'audio',
-      title: 'Audio',
-      value: getAudioLabels(selectedAudio),
-      options: tracks!.audioTracks!.map((audioTrack) => ({
-        id: audioTrack.id,
-        label: audioTrack.label,
-      })),
-      selectedOptionId: currentAudioTrackId ?? undefined,
-      onSelectOption: (optionId: string) => {
-        changeAudioTrack(optionId);
-      },
-    };
-  }, [
-    changeAudioTrack,
     currentAudioTrackId,
-    getAudioLabels,
-    hasAudioSectionOptions,
-    selectedAudio,
-    tracks?.audioTracks,
-  ]);
+    changeQuality,
+    changeSubtitleTrack,
+    changeAudioTrack,
+  });
 
   const coreSettingsOverlayConfig = React.useMemo<SettingsOverlayConfig | undefined>(() => {
-    const consumerExtraItems = settingsOverlay?.extraItems;
-    const consumerExtraMenuItems = settingsOverlay?.extraMenuItems ?? [];
-    const proExtraMenuItems = [
-      proQualityExtraMenuItem,
-      proSubtitleExtraMenuItem,
-      proAudioExtraMenuItem,
-    ].filter(
-      (menuItem): menuItem is NonNullable<typeof menuItem> => Boolean(menuItem),
-    );
-    const mergedExtraMenuItems = [...consumerExtraMenuItems, ...proExtraMenuItems];
-
     return {
       ...settingsOverlay,
       showSubtitles: false,
-      extraItems: consumerExtraItems,
-      extraMenuItems: mergedExtraMenuItems,
+      extraSections: proSettingsSections,
     };
-  }, [
-    proAudioExtraMenuItem,
-    proQualityExtraMenuItem,
-    proSubtitleExtraMenuItem,
-    settingsOverlay,
-  ]);
+  }, [settingsOverlay, proSettingsSections]);
 
   return (
     <ThemeProvider theme={theme} themeName={themeName}>

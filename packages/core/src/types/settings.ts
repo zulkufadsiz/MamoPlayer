@@ -64,4 +64,11 @@ export interface SettingsOverlayConfig {
   extraItems?: ReactNode;
   /** Additional custom menu items with sub-menus rendered above `extraItems`. */
   extraMenuItems?: SettingsOverlayExtraMenuItem[];
+  /**
+   * Pre-built settings sections injected by the Pro player (quality, subtitles,
+   * audio). Appended after the core sections (speed, mute) and any
+   * `extraMenuItems`. Sections are omitted at the source when their track list
+   * is empty, so no filtering is required here.
+   */
+  extraSections?: SettingsSection[];
 }
