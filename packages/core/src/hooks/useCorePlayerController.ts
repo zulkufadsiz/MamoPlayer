@@ -102,6 +102,13 @@ export interface CorePlayerActions {
   hideControls: () => void;
   /** Toggle controls visibility: show when hidden, hide when visible. */
   toggleControls: () => void;
+  /**
+   * Start (or restart) the auto-hide countdown. Safe to call from custom UI
+   * after any interaction that should reset the inactivity timer.
+   * No-op when `autoHide` is disabled, the video is paused, the user is
+   * scrubbing, or the settings overlay is open.
+   */
+  scheduleAutoHide: () => void;
   /** Open the settings panel (no-op when `hasVisibleSettingsSections` is falsy). */
   openSettings: () => void;
   /** Close the settings panel. */
@@ -294,12 +301,14 @@ export function useCorePlayerController(options: UseCorePlayerControllerOptions)
     }
   }, [controlsVisible, hideControls, scheduleControlsAutoHide, showControls]);
 
-  // Keep controls visible while paused or while settings are open.
+  // Keep controls visible while paused or while settings are open, and
+  // cancel any pending auto-hide timer so controls cannot disappear.
   React.useEffect(() => {
     if (resolvedPaused || isSettingsOpen) {
+      clearAutoHideTimer();
       showControls();
     }
-  }, [isSettingsOpen, resolvedPaused, showControls]);
+  }, [clearAutoHideTimer, isSettingsOpen, resolvedPaused, showControls]);
 
   // Re-schedule the auto-hide whenever relevant state changes.
   React.useEffect(() => {
@@ -350,8 +359,10 @@ export function useCorePlayerController(options: UseCorePlayerControllerOptions)
   const handleEnd = React.useCallback(() => {
     setIsPlaying(false);
     setPausedOverride(true);
+    showControls();
+    clearAutoHideTimer();
     emit({ type: 'ended' });
-  }, [emit]);
+  }, [clearAutoHideTimer, emit, showControls]);
 
   const handleError = React.useCallback(
     (error: OnVideoErrorData) => {
@@ -462,8 +473,9 @@ export function useCorePlayerController(options: UseCorePlayerControllerOptions)
       setPausedOverride(true);
     }
     emit({ type: 'pause', reason: 'programmatic' });
+    clearAutoHideTimer();
     showControls();
-  }, [emit, paused, showControls]);
+  }, [clearAutoHideTimer, emit, paused, showControls]);
 
   const togglePlayPause = React.useCallback(() => {
     const nextPaused = !resolvedPausedRef.current;
@@ -580,6 +592,7 @@ export function useCorePlayerController(options: UseCorePlayerControllerOptions)
     showControls,
     hideControls,
     toggleControls,
+    scheduleAutoHide: scheduleControlsAutoHide,
     openSettings,
     closeSettings,
 
