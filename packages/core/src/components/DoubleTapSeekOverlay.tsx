@@ -36,8 +36,17 @@ export const DoubleTapSeekOverlay = ({
 }: DoubleTapSeekOverlayProps) => {
   const leftTapTimeRef = React.useRef<number>(0);
   const rightTapTimeRef = React.useRef<number>(0);
+  const leftSingleTapTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const rightSingleTapTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const leftAnimValue = React.useRef(new Animated.Value(0)).current;
   const rightAnimValue = React.useRef(new Animated.Value(0)).current;
+
+  React.useEffect(() => {
+    return () => {
+      if (leftSingleTapTimerRef.current !== null) clearTimeout(leftSingleTapTimerRef.current);
+      if (rightSingleTapTimerRef.current !== null) clearTimeout(rightSingleTapTimerRef.current);
+    };
+  }, []);
 
   const showIndicator = React.useCallback(
     (side: 'left' | 'right') => {
@@ -66,12 +75,23 @@ export const DoubleTapSeekOverlay = ({
     const elapsed = now - leftTapTimeRef.current;
 
     if (elapsed < DOUBLE_TAP_DELAY_MS && leftTapTimeRef.current !== 0) {
+      // Double-tap: cancel pending single-tap and seek backward
+      if (leftSingleTapTimerRef.current !== null) {
+        clearTimeout(leftSingleTapTimerRef.current);
+        leftSingleTapTimerRef.current = null;
+      }
       leftTapTimeRef.current = 0;
       onSeekBackward();
       showIndicator('left');
     } else {
+      // First tap: record time and wait to see if a second tap arrives
       leftTapTimeRef.current = now;
-      onSingleTap();
+      if (leftSingleTapTimerRef.current !== null) clearTimeout(leftSingleTapTimerRef.current);
+      leftSingleTapTimerRef.current = setTimeout(() => {
+        leftTapTimeRef.current = 0;
+        leftSingleTapTimerRef.current = null;
+        onSingleTap();
+      }, DOUBLE_TAP_DELAY_MS);
     }
   }, [onSeekBackward, onSingleTap, showIndicator]);
 
@@ -80,12 +100,23 @@ export const DoubleTapSeekOverlay = ({
     const elapsed = now - rightTapTimeRef.current;
 
     if (elapsed < DOUBLE_TAP_DELAY_MS && rightTapTimeRef.current !== 0) {
+      // Double-tap: cancel pending single-tap and seek forward
+      if (rightSingleTapTimerRef.current !== null) {
+        clearTimeout(rightSingleTapTimerRef.current);
+        rightSingleTapTimerRef.current = null;
+      }
       rightTapTimeRef.current = 0;
       onSeekForward();
       showIndicator('right');
     } else {
+      // First tap: record time and wait to see if a second tap arrives
       rightTapTimeRef.current = now;
-      onSingleTap();
+      if (rightSingleTapTimerRef.current !== null) clearTimeout(rightSingleTapTimerRef.current);
+      rightSingleTapTimerRef.current = setTimeout(() => {
+        rightTapTimeRef.current = 0;
+        rightSingleTapTimerRef.current = null;
+        onSingleTap();
+      }, DOUBLE_TAP_DELAY_MS);
     }
   }, [onSeekForward, onSingleTap, showIndicator]);
 
