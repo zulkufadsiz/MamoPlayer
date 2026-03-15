@@ -591,6 +591,85 @@ describe('MamoPlayerCore', () => {
     );
   });
 
+  // ─── gestures config ─────────────────────────────────────────────────────
+
+  it('renders double-tap zones by default (doubleTapSeek defaults to true)', () => {
+    const { getByTestId } = render(
+      <MamoPlayerCore source={{ uri: 'https://example.com/video.mp4' }} />,
+    );
+    expect(getByTestId('double-tap-left')).toBeTruthy();
+    expect(getByTestId('double-tap-right')).toBeTruthy();
+  });
+
+  it('renders double-tap zones when gestures.doubleTapSeek is true', () => {
+    const { getByTestId } = render(
+      <MamoPlayerCore
+        source={{ uri: 'https://example.com/video.mp4' }}
+        gestures={{ doubleTapSeek: true }}
+      />,
+    );
+    expect(getByTestId('double-tap-left')).toBeTruthy();
+    expect(getByTestId('double-tap-right')).toBeTruthy();
+  });
+
+  it('renders plain surface tap area and no double-tap zones when doubleTapSeek is false', () => {
+    const { getByTestId, queryByTestId } = render(
+      <MamoPlayerCore
+        source={{ uri: 'https://example.com/video.mp4' }}
+        gestures={{ doubleTapSeek: false }}
+      />,
+    );
+    expect(queryByTestId('double-tap-left')).toBeNull();
+    expect(queryByTestId('double-tap-right')).toBeNull();
+    expect(getByTestId('core-player-surface')).toBeTruthy();
+  });
+
+  it('seeks forward 10 s on double-tap of right zone', () => {
+    jest.useFakeTimers();
+    setup();
+    act(() => {
+      latestVideoProps?.onLoad?.({ duration: 120 } as never);
+      latestVideoProps?.onProgress?.({ currentTime: 30 } as never);
+    });
+
+    const { getByTestId } = render(
+      <MamoPlayerCore source={{ uri: 'https://example.com/video.mp4' }} />,
+    );
+
+    act(() => {
+      latestVideoProps?.onLoad?.({ duration: 120 } as never);
+      latestVideoProps?.onProgress?.({ currentTime: 30 } as never);
+    });
+
+    const videoInstance = latestVideoInstance;
+
+    act(() => { fireEvent.press(getByTestId('double-tap-right')); });
+    act(() => { fireEvent.press(getByTestId('double-tap-right')); });
+
+    expect(videoInstance?.seek).toHaveBeenCalledWith(40);
+    jest.useRealTimers();
+  });
+
+  it('seeks backward 10 s on double-tap of left zone', () => {
+    jest.useFakeTimers();
+    const { getByTestId } = render(
+      <MamoPlayerCore source={{ uri: 'https://example.com/video.mp4' }} />,
+    );
+
+    act(() => {
+      latestVideoProps?.onLoad?.({ duration: 120 } as never);
+      latestVideoProps?.onProgress?.({ currentTime: 30 } as never);
+    });
+
+    const videoInstance = latestVideoInstance;
+
+    act(() => { fireEvent.press(getByTestId('double-tap-left')); });
+    act(() => { fireEvent.press(getByTestId('double-tap-left')); });
+
+    expect(videoInstance?.seek).toHaveBeenCalledWith(20);
+    jest.useRealTimers();
+  });
+
   it('toggles playback from center controls when paused prop is provided', () => {
     const onPlaybackEvent = jest.fn();
     const { getByTestId } = render(
