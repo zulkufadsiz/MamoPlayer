@@ -100,6 +100,8 @@ export interface CorePlayerActions {
   showControls: () => void;
   /** Dismiss the controls overlay. */
   hideControls: () => void;
+  /** Toggle controls visibility: show when hidden, hide when visible. */
+  toggleControls: () => void;
   /** Open the settings panel (no-op when `hasVisibleSettingsSections` is falsy). */
   openSettings: () => void;
   /** Close the settings panel. */
@@ -283,6 +285,15 @@ export function useCorePlayerController(options: UseCorePlayerControllerOptions)
     autoHideTimerRef.current = setTimeout(hideControls, resolvedAutoHideDelay);
   }, [clearAutoHideTimer, controlsVisible, hideControls, isSettingsOpen, resolvedAutoHide, resolvedAutoHideDelay]);
 
+  const toggleControls = React.useCallback(() => {
+    if (controlsVisible) {
+      hideControls();
+    } else {
+      showControls();
+      scheduleControlsAutoHide();
+    }
+  }, [controlsVisible, hideControls, scheduleControlsAutoHide, showControls]);
+
   // Keep controls visible while paused or while settings are open.
   React.useEffect(() => {
     if (resolvedPaused || isSettingsOpen) {
@@ -430,11 +441,8 @@ export function useCorePlayerController(options: UseCorePlayerControllerOptions)
   // ─── Surface press handler ────────────────────────────────────────────────
 
   const handleSurfacePress = React.useCallback(() => {
-    if (!controlsVisible) {
-      showControls();
-    }
-    scheduleControlsAutoHide();
-  }, [controlsVisible, scheduleControlsAutoHide, showControls]);
+    toggleControls();
+  }, [toggleControls]);
 
   // ─── Player actions ───────────────────────────────────────────────────────
 
@@ -571,6 +579,7 @@ export function useCorePlayerController(options: UseCorePlayerControllerOptions)
     toggleFullscreen,
     showControls,
     hideControls,
+    toggleControls,
     openSettings,
     closeSettings,
 
