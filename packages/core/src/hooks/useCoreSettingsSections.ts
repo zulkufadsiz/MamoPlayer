@@ -21,6 +21,11 @@ export interface UseCoreSettingsSectionsOptions {
   showMute: boolean;
   /** Additional custom menu items to append as extra sections. */
   extraMenuItems?: SettingsOverlayExtraMenuItem[];
+  /**
+   * Pre-built sections injected by the Pro layer (quality, subtitles, audio).
+   * Appended after the core sections and any `extraMenuItems`-derived sections.
+   */
+  extraSections?: SettingsSection[];
 }
 
 /**
@@ -39,6 +44,7 @@ export function useCoreSettingsSections({
   showPlaybackSpeed,
   showMute,
   extraMenuItems,
+  extraSections,
 }: UseCoreSettingsSectionsOptions): SettingsSection[] {
   return React.useMemo(() => {
     const sections: SettingsSection[] = [];
@@ -80,6 +86,10 @@ export function useCoreSettingsSections({
       });
     }
 
+    for (const extraSection of extraSections ?? []) {
+      sections.push(extraSection);
+    }
+
     return sections;
-  }, [playbackRate, isMuted, setPlaybackRate, toggleMute, showPlaybackSpeed, showMute, extraMenuItems]);
+  }, [playbackRate, isMuted, setPlaybackRate, toggleMute, showPlaybackSpeed, showMute, extraMenuItems, extraSections]);
 }
