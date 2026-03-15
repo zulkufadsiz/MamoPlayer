@@ -259,21 +259,22 @@ export function useCorePlayerController(options: UseCorePlayerControllerOptions)
     Animated.timing(controlsOpacityAnim.current, {
       toValue: 1,
       duration: 150,
+      easing: Easing.out(Easing.ease),
       useNativeDriver: true,
     }).start();
   }, []);
 
   const hideControls = React.useCallback(() => {
+    // Switch pointer-events off immediately so fading-out controls cannot
+    // intercept taps; the surface Pressable / DoubleTapSeekOverlay becomes
+    // available right away while the visual fade-out continues.
+    setControlsVisible(false);
     Animated.timing(controlsOpacityAnim.current, {
       toValue: 0,
       duration: 200,
       easing: Easing.out(Easing.cubic),
       useNativeDriver: true,
-    }).start(({ finished }) => {
-      if (finished) {
-        setControlsVisible(false);
-      }
-    });
+    }).start();
   }, []);
 
   const scheduleControlsAutoHide = React.useCallback(() => {
