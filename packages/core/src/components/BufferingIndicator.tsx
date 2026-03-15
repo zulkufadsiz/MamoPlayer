@@ -1,5 +1,5 @@
 import React from 'react';
-import { ActivityIndicator, Animated, StyleSheet } from 'react-native';
+import { ActivityIndicator, Animated, StyleSheet, View } from 'react-native';
 
 interface BufferingIndicatorProps {
   buffering: boolean;
@@ -20,8 +20,11 @@ export const BufferingIndicator = ({ buffering }: BufferingIndicatorProps) => {
     <Animated.View
       style={[styles.container, { opacity: opacityAnim }]}
       pointerEvents="none"
+      testID="buffering-indicator"
     >
-      <ActivityIndicator size="large" color="#FFFFFF" />
+      <View style={styles.backdrop}>
+        <ActivityIndicator size="large" color="#FFFFFF" />
+      </View>
     </Animated.View>
   );
 };
@@ -29,6 +32,14 @@ export const BufferingIndicator = ({ buffering }: BufferingIndicatorProps) => {
 const styles = StyleSheet.create({
   container: {
     ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  backdrop: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: 'rgba(0, 0, 0, 0.55)',
     justifyContent: 'center',
     alignItems: 'center',
   },
