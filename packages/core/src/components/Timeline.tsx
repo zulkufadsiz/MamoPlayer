@@ -61,97 +61,124 @@ export const Timeline: React.FC<TimelineProps> = ({
 }) => {
   const [trackWidth, setTrackWidth] = React.useState(0);
   const [isScrubbing, setIsScrubbing] = React.useState(false);
-  const [scrubRatio, setScrubRatio] = React.useState(0);
+  // scrubTime tracks the user's drag position in seconds (same unit as `position`).
+  const [scrubTime, setScrubTime] = React.useState(0);
 
-  const safeDuration = duration > 0 ? duration : 0;
+  // ── Stable refs so the PanResponder is created exactly once ──────────────
+  // Assigning directly in the render body (not in an effect) ensures the ref
+  // is always current before any synchronous event handler fires.
+  const onSeekRef = React.useRef(onSeek);
+  const onScrubStartRef = React.useRef(onScrubStart);
+  const onScrubEndRef = React.useRef(onScrubEnd);
+  const trackWidthRef = React.useRef(trackWidth);
+  const safeDurationRef = React.useRef(duration > 0 ? duration : 0);
+  // Lets onPanResponderTerminate read the latest scrub time without a stale closure.
+  const scrubTimeRef = React.useRef(0);
+
+  onSeekRef.current = onSeek;
+  onScrubStartRef.current = onScrubStart;
+  onScrubEndRef.current = onScrubEnd;
+  safeDurationRef.current = duration > 0 ? duration : 0;
+  // trackWidthRef is also updated synchronously inside handleLayout.
+
+  const safeDuration = safeDurationRef.current;
   const playedRatio = safeDuration > 0 ? clamp(position / safeDuration, 0, 1) : 0;
   const bufferedRatio =
     safeDuration > 0 && typeof buffered === 'number' ? clamp(buffered / safeDuration, 0, 1) : 0;
 
+  // While scrubbing, freeze the visual indicator to the local scrub position
+  // so that incoming `position` prop updates (normal playback progress) do not
+  // move the thumb or played-fill.
+  const scrubRatio = safeDuration > 0 ? clamp(scrubTime / safeDuration, 0, 1) : 0;
   const visibleRatio = isScrubbing ? scrubRatio : playedRatio;
 
-  const ratioToTime = React.useCallback(
-    (ratio: number) => {
-      if (safeDuration <= 0) {
-        return 0;
-      }
-
-      return clamp(ratio, 0, 1) * safeDuration;
-    },
-    [safeDuration],
-  );
-
-  const locationToRatio = React.useCallback(
-    (locationX: number) => {
-      if (trackWidth <= 0) {
-        return 0;
-      }
-
-      return clamp(locationX / trackWidth, 0, 1);
-    },
-    [trackWidth],
-  );
-
-  const updateScrub = React.useCallback(
-    (locationX: number) => {
-      const nextRatio = locationToRatio(locationX);
-      const nextTime = ratioToTime(nextRatio);
-
-      setScrubRatio(nextRatio);
-      onSeek?.(nextTime);
-
-      return nextTime;
-    },
-    [locationToRatio, onSeek, ratioToTime],
-  );
-
+  // ── PanResponder ─────────────────────────────────────────────────────────
+  // Created exactly ONCE (empty dep array). All volatile values are read
+  // through refs so the gesture handler is never torn down mid-drag.
   const panResponder = React.useMemo(
     () =>
       PanResponder.create({
         onStartShouldSetPanResponder: () => true,
         onMoveShouldSetPanResponder: () => true,
+
         onPanResponderGrant: event => {
           const locationX = event.nativeEvent.locationX;
+          const w = trackWidthRef.current;
+          const d = safeDurationRef.current;
+          const ratio = w > 0 ? clamp(locationX / w, 0, 1) : 0;
+          const time = ratio * d;
 
+          scrubTimeRef.current = time;
           setIsScrubbing(true);
-          onScrubStart?.();
-          updateScrub(typeof locationX === 'number' ? locationX : 0);
+          setScrubTime(time);
+          onScrubStartRef.current?.();
+          // Seek immediately to the tapped position so the player responds
+          // to a simple tap (no drag) as well as the start of a drag.
+          onSeekRef.current?.(time);
         },
+
         onPanResponderMove: event => {
           const locationX = event.nativeEvent.locationX;
+          const w = trackWidthRef.current;
+          const d = safeDurationRef.current;
+          const ratio = w > 0 ? clamp(locationX / w, 0, 1) : 0;
+          const time = ratio * d;
 
-          updateScrub(typeof locationX === 'number' ? locationX : 0);
+          scrubTimeRef.current = time;
+          // Update local position only – do NOT call onSeek during the drag.
+          // Continuous seeks cause playback interruptions and conflict with
+          // the locally-frozen scrub state set above.
+          setScrubTime(time);
         },
+
         onPanResponderRelease: event => {
           const locationX = event.nativeEvent.locationX;
-          const finalTime = updateScrub(typeof locationX === 'number' ? locationX : 0);
+          const w = trackWidthRef.current;
+          const d = safeDurationRef.current;
+          const ratio = w > 0 ? clamp(locationX / w, 0, 1) : 0;
+          const finalTime = ratio * d;
 
+          scrubTimeRef.current = finalTime;
+          setScrubTime(finalTime);
           setIsScrubbing(false);
-          onScrubEnd?.(finalTime);
+          // Commit the final scrub position to the player.
+          onSeekRef.current?.(finalTime);
+          onScrubEndRef.current?.(finalTime);
         },
-        onPanResponderTerminate: event => {
-          const locationX = event.nativeEvent.locationX;
-          const finalTime = updateScrub(typeof locationX === 'number' ? locationX : 0);
 
+        onPanResponderTerminate: () => {
+          // Gesture stolen by OS / parent (e.g. a ScrollView). Commit whatever
+          // position was last tracked so the seek is not silently dropped.
+          const finalTime = scrubTimeRef.current;
           setIsScrubbing(false);
-          onScrubEnd?.(finalTime);
+          onScrubEndRef.current?.(finalTime);
         },
       }),
-    [onScrubEnd, onScrubStart, updateScrub],
+    [], // Empty deps – reads live values via refs.
   );
 
   const handleLayout = React.useCallback((event: LayoutChangeEvent) => {
-    setTrackWidth(event.nativeEvent.layout.width);
+    const w = event.nativeEvent.layout.width;
+    trackWidthRef.current = w;
+    setTrackWidth(w);
   }, []);
 
-  const scrubPreviewLeft = `${visibleRatio * 100}%` as `${number}%`;
+  // ── Scrub-preview position ────────────────────────────────────────────────
+  // Clamp the floating card so it never overflows the track edges.
+  // The stylesheet's translateX(-THUMBNAIL_WIDTH/2) centres the 120 px-wide
+  // card on the thumb, so `left` here is the thumb's centre in pixels.
+  const halfPreview = THUMBNAIL_WIDTH / 2;
+  const clampedPreviewX =
+    trackWidth > 0
+      ? clamp(visibleRatio * trackWidth, halfPreview, trackWidth - halfPreview)
+      : visibleRatio * trackWidth;
 
   return (
     <View style={styles.container}>
       {isScrubbing ? (
         <View
           pointerEvents="none"
-          style={[styles.scrubPreview, { left: scrubPreviewLeft }]}
+          style={[styles.scrubPreview, { left: clampedPreviewX }]}
           testID="timeline-scrub-preview"
         >
           {thumbnailUri ? (
@@ -163,7 +190,7 @@ export const Timeline: React.FC<TimelineProps> = ({
             />
           ) : null}
           <Text style={styles.scrubTimeLabel} testID="timeline-scrub-time">
-            {formatScrubTime(scrubRatio * safeDuration)}
+            {formatScrubTime(scrubTime)}
           </Text>
         </View>
       ) : null}
