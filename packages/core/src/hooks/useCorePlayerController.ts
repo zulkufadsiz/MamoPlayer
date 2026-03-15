@@ -453,8 +453,13 @@ export function useCorePlayerController(options: UseCorePlayerControllerOptions)
   // ─── Surface press handler ────────────────────────────────────────────────
 
   const handleSurfacePress = React.useCallback(() => {
+    // Ignore taps while the user is scrubbing the timeline or the settings
+    // overlay is open — those interactions own the surface at that point.
+    if (isScrubbingRef.current || isSettingsOpen) {
+      return;
+    }
     toggleControls();
-  }, [toggleControls]);
+  }, [isSettingsOpen, toggleControls]);
 
   // ─── Player actions ───────────────────────────────────────────────────────
 
