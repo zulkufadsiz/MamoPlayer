@@ -357,7 +357,6 @@ export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
           onBuffer={handleBuffer}
         />
         {overlayContent}
-        <BufferingIndicator buffering={isBuffering} />
         {doubleTapSeekEnabled ? (
           <DoubleTapSeekOverlay
             onSeekBackward={seekBackward}
@@ -441,6 +440,7 @@ export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
             extraContent={resolvedSettings.extraItems}
           />
         ) : null}
+        <BufferingIndicator buffering={isBuffering} />
         {debug?.enabled === true ? (
           <DebugOverlay
             info={{
