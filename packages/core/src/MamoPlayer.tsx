@@ -336,19 +336,6 @@ export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
       : isPlaying ? 'playing'
       : 'idle';
 
-    const handleToggleSettingsMenu = React.useCallback(() => {
-      if (!resolvedSettings.enabled) return;
-      if (isSettingsOpen) {
-        closeSettings();
-      } else {
-        openSettings();
-      }
-    }, [closeSettings, isSettingsOpen, openSettings, resolvedSettings.enabled]);
-
-    const handleToggleFullscreen = React.useCallback(() => {
-      toggleFullscreen();
-    }, [toggleFullscreen]);
-
     const renderPlayer = () => (
       <>
         <Video
@@ -403,8 +390,8 @@ export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
                 onSeekBack={seekBackward}
                 onTogglePlayPause={togglePlayPause}
                 onSeekForward={seekForward}
-                onToggleFullscreen={handleToggleFullscreen}
-                onToggleSettingsMenu={handleToggleSettingsMenu}
+                onToggleFullscreen={toggleFullscreen}
+                onToggleSettingsMenu={openSettings}
                 showFullscreenButton
                 showSettingsMenuButton={resolvedSettings.enabled && hasVisibleSettingsSections}
                 showTransportButtons={false}
@@ -422,8 +409,8 @@ export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
                 onSeekBack={seekBackward}
                 onTogglePlayPause={togglePlayPause}
                 onSeekForward={seekForward}
-                onToggleFullscreen={handleToggleFullscreen}
-                onToggleSettingsMenu={handleToggleSettingsMenu}
+                onToggleFullscreen={toggleFullscreen}
+                onToggleSettingsMenu={openSettings}
                 showFullscreenButton={false}
                 showSettingsMenuButton={false}
               />
@@ -484,7 +471,7 @@ export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
           visible={isFullscreen}
           animationType="fade"
           transparent={false}
-          onRequestClose={handleToggleFullscreen}
+          onRequestClose={toggleFullscreen}
           statusBarTranslucent
         >
           <View style={styles.fullscreenContainer}>

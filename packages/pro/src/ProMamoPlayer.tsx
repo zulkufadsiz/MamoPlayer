@@ -16,7 +16,6 @@ import { useProSettingsSections } from './hooks/useProSettingsSections';
 import { loadAds, releaseAds, subscribeToAdsEvents } from './ima/nativeBridge';
 import { getThumbnailForTime } from './internal/thumbnails';
 import { validateLicenseKey } from './licensing/license';
-import { requestPictureInPicture } from './pip/nativeBridge';
 import { ThemeProvider, usePlayerTheme } from './theme/ThemeContext';
 import type { AdBreak, AdsConfig } from './types/ads';
 import type { AnalyticsConfig, AnalyticsEvent } from './types/analytics';
@@ -943,6 +942,7 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
     initialQualityId,
     initialAudioTrackId: initialAudioTrackId ?? null,
     initialSubtitleTrackId: initialSubtitleTrackId ?? null,
+    videoRef: playerRef,
     onPipEvent: (event) => {
       onPipEvent?.(event);
     },
@@ -1014,31 +1014,6 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
     setPausedOverride(null);
   }, [rest.paused]);
 
-  const handleTogglePlayback = React.useCallback(() => {
-    const currentlyPaused =
-      typeof resolvedPausedState === 'boolean' ? resolvedPausedState : !isInlinePlaybackActive;
-    const nextPaused = !currentlyPaused;
-
-    if (typeof rest.paused === 'boolean') {
-      setPausedOverride(nextPaused);
-    } else {
-      setIsInlinePlaybackPaused(nextPaused);
-    }
-
-    setIsInlinePlaybackActive(!nextPaused);
-  }, [isInlinePlaybackActive, resolvedPausedState, rest.paused]);
-
-  const handleSeekBackTenSeconds = React.useCallback(() => {
-    const nextPosition = Math.max(0, positionRef.current - 10);
-    playerRef.current?.seek(nextPosition);
-  }, []);
-
-  const handleSeekForwardTenSeconds = React.useCallback(() => {
-    const targetDuration = mediaDuration > 0 ? mediaDuration : Number.MAX_SAFE_INTEGER;
-    const nextPosition = Math.min(targetDuration, positionRef.current + 10);
-    playerRef.current?.seek(nextPosition);
-  }, [mediaDuration]);
-
   const resolveScrubThumbnailFrame = React.useCallback(
     (time: number): ThumbnailFrame | null => {
       return getThumbnailForTime(thumbnails, time);
@@ -1088,46 +1063,6 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
     },
     [],
   );
-  const requestPip = React.useCallback(() => {
-    if (pip?.enabled === false) {
-      return;
-    }
-
-    // Optimistically enter the 'entering' state and notify the consumer.
-    // Native subscription in useProPlayerController handles 'active'/'inactive'
-    // transitions once the animation completes.
-    proController.setPipState('entering');
-    onPipEvent?.({ state: 'entering' });
-
-    let lastPipError: unknown;
-
-    if (typeof playerRef.current?.enterPictureInPicture === 'function') {
-      try {
-        playerRef.current.enterPictureInPicture();
-        return;
-      } catch (error) {
-        lastPipError = error;
-      }
-    }
-
-    try {
-      requestPictureInPicture();
-      return;
-    } catch (error) {
-      lastPipError = error;
-    }
-
-    if (lastPipError) {
-      const reason =
-        lastPipError instanceof Error
-          ? lastPipError.message
-          : 'Unable to enter picture in picture.';
-      console.warn(`[MamoPlayer Pro] ${reason}`);
-      proController.setPipState('inactive');
-      onPipEvent?.({ state: 'inactive', reason });
-    }
-  }, [onPipEvent, pip?.enabled, proController]);
-
   // Native PiP events ('mamo_pip_active' / 'mamo_pip_exiting') are handled
   // inside useProPlayerController which owns the pipState.
   // The Video component's onPictureInPictureStatusChanged is also forwarded to
@@ -2345,7 +2280,7 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
                 <Pressable
                   accessibilityRole="button"
                   accessibilityLabel="Enter picture in picture"
-                  onPress={requestPip}
+                  onPress={proController.requestPip}
                   testID="pro-topright-pip-button"
                 >
                   <MaterialIcons name="picture-in-picture" size={24} color="#FFFFFF" />
@@ -2375,7 +2310,7 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
           handleSkipAd={handleSkipAd}
           showPipButton={pip?.enabled === true}
           pipState={proController.pipState}
-          requestPip={requestPip}
+          requestPip={proController.requestPip}
           showSettingsButton={hasQualityOptions}
           isSettingsOpen={isSettingsOpen}
           openSettings={openSettings}
