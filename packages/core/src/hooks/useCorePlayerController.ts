@@ -404,9 +404,14 @@ export function useCorePlayerController(options: UseCorePlayerControllerOptions)
       }
 
       isBufferingRef.current = buffering;
-      setIsBuffering(buffering);
 
-      emit({ type: buffering ? 'buffer_start' : 'buffer_end' });
+      if (buffering) {
+        setIsBuffering(true);
+        emit({ type: 'buffer_start' });
+      } else {
+        setIsBuffering(false);
+        emit({ type: 'buffer_end' });
+      }
     },
     [emit],
   );
