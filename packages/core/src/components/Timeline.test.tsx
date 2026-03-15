@@ -139,7 +139,7 @@ describe('Timeline', () => {
     expect(onSeek).toHaveBeenCalledWith(25); // 50 / 200 * 100
   });
 
-  it('calls onSeek with the correct time as the user drags', () => {
+  it('does not call onSeek during scrub moves – position is tracked locally', () => {
     const onSeek = jest.fn();
 
     const { UNSAFE_getAllByType } = render(
@@ -158,11 +158,83 @@ describe('Timeline', () => {
 
     act(() => {
       touchArea!.props.onResponderGrant({ nativeEvent: { locationX: 0 } });
-      touchArea!.props.onResponderMove({ nativeEvent: { locationX: 75 } });
     });
 
-    // locationX 75 out of track width 100 → 75% of duration 200 = 150 s
-    expect(onSeek).toHaveBeenLastCalledWith(150);
+    const callsAfterGrant = onSeek.mock.calls.length;
+
+    act(() => {
+      touchArea!.props.onResponderMove({ nativeEvent: { locationX: 75 } });
+      touchArea!.props.onResponderMove({ nativeEvent: { locationX: 90 } });
+    });
+
+    // No additional onSeek calls should fire during moves.
+    expect(onSeek.mock.calls.length).toBe(callsAfterGrant);
+  });
+
+  it('freezes the played fill during scrubbing when the position prop updates', () => {
+    const { rerender, UNSAFE_getAllByType } = render(
+      <Timeline duration={100} position={0} />,
+    );
+
+    const touchArea = UNSAFE_getAllByType(View).find(
+      v => typeof v.props.onLayout === 'function' && v.props.onStartShouldSetResponder,
+    );
+
+    expect(touchArea).toBeTruthy();
+
+    act(() => {
+      touchArea!.props.onLayout({ nativeEvent: { layout: { width: 100 } } });
+    });
+
+    // Scrub to 40 %
+    act(() => {
+      touchArea!.props.onResponderGrant({ nativeEvent: { locationX: 40 } });
+    });
+
+    // Simulate a position update arriving from normal playback (should be ignored visually).
+    rerender(<Timeline duration={100} position={70} />);
+
+    // The played fill must reflect the scrub position (40 %), not the incoming prop (70 %).
+    const views = UNSAFE_getAllByType(View);
+    const scrubFill = views.find(v => {
+      const flat = Array.isArray(v.props.style) ? v.props.style : [v.props.style];
+      return flat.some(
+        (s: Record<string, unknown>) =>
+          s && typeof s === 'object' && 'width' in s && s.width === '40%',
+      );
+    });
+
+    expect(scrubFill).toBeTruthy();
+  });
+
+  it('calls onScrubEnd with the last tracked time when the gesture is terminated', () => {
+    const onScrubEnd = jest.fn();
+
+    const { UNSAFE_getAllByType } = render(
+      <Timeline duration={100} position={0} onScrubEnd={onScrubEnd} />,
+    );
+
+    const touchArea = UNSAFE_getAllByType(View).find(
+      v => typeof v.props.onLayout === 'function' && v.props.onStartShouldSetResponder,
+    );
+
+    expect(touchArea).toBeTruthy();
+
+    act(() => {
+      touchArea!.props.onLayout({ nativeEvent: { layout: { width: 100 } } });
+    });
+
+    act(() => {
+      touchArea!.props.onResponderGrant({ nativeEvent: { locationX: 0 } });
+      touchArea!.props.onResponderMove({ nativeEvent: { locationX: 60 } }); // 60 s
+    });
+
+    act(() => {
+      touchArea!.props.onResponderTerminate({});
+    });
+
+    // Should commit the position from the last move event.
+    expect(onScrubEnd).toHaveBeenCalledWith(60);
   });
 
   it('calls onScrubEnd with the final seek time on release', () => {
