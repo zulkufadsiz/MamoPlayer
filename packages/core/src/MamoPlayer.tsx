@@ -364,15 +364,15 @@ export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
             onSeekForward={seekForward}
             onSingleTap={handleSurfacePress}
           />
-        ) : !controlsVisible ? (
+        ) : (
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Show playback controls"
+            accessibilityLabel={controlsVisible ? 'Hide playback controls' : 'Show playback controls'}
             onPress={handleSurfacePress}
             style={styles.surfaceTouchArea}
             testID="core-player-surface"
           />
-        ) : null}
+        )}
         {!isSettingsOpen ? (
           <Animated.View
             style={[styles.controlsOverlay, isFullscreen && styles.controlsOverlayFullscreen, { opacity: controlsOpacityAnim }]}
