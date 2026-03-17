@@ -422,6 +422,7 @@ export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
                 buffered={buffered}
                 onSeek={handleScrubSeek}
                 onScrubStart={handleScrubStart}
+                onScrubMove={handleScrubSeek}
                 onScrubEnd={handleScrubEnd}
                 thumbnailUri={timelineConfig?.thumbnailUri}
               />

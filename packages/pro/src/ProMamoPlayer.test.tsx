@@ -63,6 +63,7 @@ let latestVideoProps:
       selectedAudioTrack?: { type: 'language'; value: string } | { type: 'disabled' } | undefined;
       currentSubtitleTrackId?: string | 'off';
       onSubtitleTrackChange?: (subtitleTrackId: string | 'off') => void;
+      timelineConfig?: { thumbnailUri?: string };
     }
   | undefined;
 let latestNativeAdsHandler:
@@ -81,6 +82,7 @@ let latestTimelineProps:
       buffered?: number;
       onSeek?: (time: number) => void;
       onScrubStart?: () => void;
+      onScrubMove?: (time: number) => void;
       onScrubEnd?: (time: number) => void;
     }
   | undefined;
@@ -138,7 +140,11 @@ jest.mock('@mamoplayer/core', () => {
         selectedAudioTrack,
         currentSubtitleTrackId,
         onSubtitleTrackChange,
+        timelineConfig,
         topRightActions,
+        onScrubStart,
+        onScrubMove,
+        onScrubEnd,
       }: {
         onPlaybackEvent?: (event: PlaybackEvent) => void;
         rate?: number;
@@ -187,6 +193,10 @@ jest.mock('@mamoplayer/core', () => {
         currentSubtitleTrackId?: string | 'off';
         onSubtitleTrackChange?: (subtitleTrackId: string | 'off') => void;
         topRightActions?: React.ReactNode;
+        timelineConfig?: { thumbnailUri?: string };
+        onScrubStart?: () => void;
+        onScrubMove?: (time: number) => void;
+        onScrubEnd?: (time: number) => void;
       },
       ref: React.Ref<{
         seek: (position: number) => void;
@@ -230,20 +240,36 @@ jest.mock('@mamoplayer/core', () => {
         selectedAudioTrack,
         currentSubtitleTrackId,
         onSubtitleTrackChange,
+        timelineConfig,
       };
-      return <View testID="mamoplayer-mock">{topRightActions ?? null}</View>;
+      return (
+        <View testID="mamoplayer-mock">
+          <TimelineMock 
+            onScrubStart={onScrubStart}
+            onScrubMove={onScrubMove}
+            onScrubEnd={(time) => {
+              mockSeek(time);
+              onScrubEnd?.(time);
+            }}
+            thumbnailUri={timelineConfig?.thumbnailUri}
+          />
+          {topRightActions ?? null}
+        </View>
+      );
     },
   );
 
   MamoPlayerMock.displayName = 'MamoPlayerMock';
 
-  const TimelineMock = ({ duration, position, buffered, onSeek, onScrubStart, onScrubEnd }: {
+  const TimelineMock = ({ duration, position, buffered, onSeek, onScrubStart, onScrubMove, onScrubEnd, thumbnailUri }: {
     duration?: number;
     position?: number;
     buffered?: number;
     onSeek?: (time: number) => void;
     onScrubStart?: () => void;
+    onScrubMove?: (time: number) => void;
     onScrubEnd?: (time: number) => void;
+    thumbnailUri?: string;
   }) => {
     latestTimelineProps = {
       duration,
@@ -251,10 +277,15 @@ jest.mock('@mamoplayer/core', () => {
       buffered,
       onSeek,
       onScrubStart,
+      onScrubMove,
       onScrubEnd,
     };
 
-    return <View testID="mamoplayer-core-timeline" />;
+    return (
+      <View testID="mamoplayer-core-timeline">
+        {thumbnailUri ? <View testID="pro-scrub-thumbnail" /> : null}
+      </View>
+    );
   };
 
   TimelineMock.displayName = 'TimelineMock';
@@ -2430,7 +2461,7 @@ describe('ProMamoPlayer', () => {
 
     act(() => {
       latestTimelineProps?.onScrubStart?.();
-      latestTimelineProps?.onSeek?.(22);
+      latestTimelineProps?.onScrubMove?.(22);
     });
 
     expect(queryByTestId('pro-scrub-thumbnail')).toBeTruthy();
