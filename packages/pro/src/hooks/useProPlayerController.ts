@@ -7,6 +7,9 @@ import type { PipConfig, PipEvent, PipState } from '../types/pip';
 import type { ThumbnailsConfig } from '../types/thumbnails';
 import type { TracksConfig, VideoQualityId } from '../types/tracks';
 
+/** Rebuffer count at which an `excessive_buffering` event is emitted. */
+const EXCESSIVE_BUFFERING_THRESHOLD = 3;
+
 /**
  * The subset of core controller values consumed by `useProPlayerController`.
  * Pass the object returned by `useCorePlayerController` directly — only
@@ -315,6 +318,22 @@ export function useProPlayerController(options: UseProPlayerControllerOptions): 
     },
     [],
   );
+
+  // ─── Diagnostics analytics effects ───────────────────────────────────────
+
+  React.useEffect(() => {
+    if (rebufferCount === EXCESSIVE_BUFFERING_THRESHOLD) {
+      emitAnalytics({ type: 'excessive_buffering' });
+    }
+  }, [rebufferCount, emitAnalytics]);
+
+  const prevDebugVisibleRef = React.useRef<boolean>(false);
+
+  React.useEffect(() => {
+    if (prevDebugVisibleRef.current === debugVisible) return;
+    prevDebugVisibleRef.current = debugVisible;
+    emitAnalytics({ type: debugVisible ? 'debug_overlay_opened' : 'debug_overlay_closed' });
+  }, [debugVisible, emitAnalytics]);
 
   // ─── Pro actions ──────────────────────────────────────────────────────────
 
