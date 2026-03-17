@@ -257,6 +257,7 @@ const ProDemoScreen = ({ onBack }: { onBack?: () => void } = {}) => {
             themeName={themeName}
             style={styles.player}
             settingsOverlay={settingsOverlay}
+            debug={{ enabled: true }}
             analytics={{
               onEvent: (event) => {
                 console.log('Pro analytics:', event);
@@ -280,6 +281,15 @@ const ProDemoScreen = ({ onBack }: { onBack?: () => void } = {}) => {
             <Text style={styles.errorBannerText}>Error occurred: {errorBannerMessage}</Text>
           </View>
         ) : null}
+        <View style={styles.section} testID="debug-overlay-hints">
+          <Text style={styles.sectionTitle}>Developer Debug Overlay</Text>
+          <Text style={styles.hintText}>Two-finger triple-tap the player to toggle the debug overlay.</Text>
+          <Text style={styles.hintText}>While playing: watch position and buffered values update in real time.</Text>
+          <Text style={styles.hintText}>While buffering: the state field shows "buffering" and rebuffer count increments.</Text>
+          <Text style={styles.hintText}>While switching tracks: quality, audio, and subtitle fields update immediately.</Text>
+          <Text style={styles.hintText}>While an ad plays: the ad playing field is highlighted and ad state shows "playing".</Text>
+        </View>
+
         <View style={styles.section} testID="ott-ux-hints">
           <Text style={styles.sectionTitle}>OTT UX Features</Text>
           <Text style={styles.hintText}>Tap the video to show or hide controls.</Text>
