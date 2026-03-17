@@ -7,7 +7,8 @@ import type { PlaybackEvent } from '@mamoplayer/core';
  * Session lifecycle: `session_start`, `session_end`.
  * Playback: `play`, `pause`, `ended`, `buffer_start`, `buffer_end`, `seek`, `quartile`.
  * Track changes: `quality_change`, `subtitle_change`, `audio_track_change`.
- * Errors: `buffering_start`, `buffering_end`, `playback_error`.
+ * Errors / diagnostics: `buffering_start`, `buffering_end`, `playback_error`,
+ *   `excessive_buffering`, `debug_overlay_opened`, `debug_overlay_closed`.
  */
 export type AnalyticsEventType =
   | 'ad_start'
@@ -27,7 +28,10 @@ export type AnalyticsEventType =
   | 'audio_track_change'
   | 'buffering_start'
   | 'buffering_end'
-  | 'playback_error';
+  | 'playback_error'
+  | 'excessive_buffering'
+  | 'debug_overlay_opened'
+  | 'debug_overlay_closed';
 
 /** Common fields shared by every analytics event. */
 export interface AnalyticsEventBase {
