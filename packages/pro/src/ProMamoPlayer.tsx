@@ -19,6 +19,7 @@ import { validateLicenseKey } from './licensing/license';
 import { ThemeProvider, usePlayerTheme } from './theme/ThemeContext';
 import type { AdBreak, AdsConfig } from './types/ads';
 import type { AnalyticsConfig, AnalyticsEvent } from './types/analytics';
+import type { DebugConfig } from './types/debug';
 import type { PlayerIconSet } from './types/icons';
 import type { IMAConfig } from './types/ima';
 import type { PlayerLayoutVariant } from './types/layout';
@@ -113,6 +114,8 @@ export interface ProMamoPlayerProps extends MamoPlayerProps {
   settingsOverlay?: SettingsOverlayConfig;
   /** Called whenever the picture-in-picture window state changes. */
   onPipEvent?: (event: PipEvent) => void;
+  /** Debug / diagnostics configuration. When omitted (or `enabled` is falsy) all debug features are suppressed. */
+  debug?: DebugConfig;
 }
 
 type OverlayOption = {
@@ -821,6 +824,7 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
   icons,
   pip,
   settingsOverlay,
+  debug,
   onPictureInPictureStatusChanged,
   onPlaybackEvent,
   onPipEvent,
@@ -935,6 +939,7 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
     pip,
     thumbnails,
     analytics,
+    debug,
     // Provide live position/duration so analytics events are enriched.
     // positionRef / durationRef are updated in handlePlaybackEvent so the
     // ref values are always current when an action callback fires.
