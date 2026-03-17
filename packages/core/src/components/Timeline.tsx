@@ -39,6 +39,8 @@ export interface TimelineProps {
   onSeek?: (time: number) => void;
   /** Called once when a scrub gesture begins (before any position change). */
   onScrubStart?: () => void;
+  /** Called on every scrub move with the candidate seek time in seconds. */
+  onScrubMove?: (time: number) => void;
   /** Called when the scrub gesture ends with the final seek target in seconds. */
   onScrubEnd?: (time: number) => void;
   /** URI of the thumbnail image to show while scrubbing. When provided a preview
@@ -56,6 +58,7 @@ export const Timeline: React.FC<TimelineProps> = ({
   buffered,
   onSeek,
   onScrubStart,
+  onScrubMove,
   onScrubEnd,
   thumbnailUri,
 }) => {
@@ -69,6 +72,7 @@ export const Timeline: React.FC<TimelineProps> = ({
   // is always current before any synchronous event handler fires.
   const onSeekRef = React.useRef(onSeek);
   const onScrubStartRef = React.useRef(onScrubStart);
+  const onScrubMoveRef = React.useRef(onScrubMove);
   const onScrubEndRef = React.useRef(onScrubEnd);
   const trackWidthRef = React.useRef(trackWidth);
   const safeDurationRef = React.useRef(duration > 0 ? duration : 0);
@@ -77,6 +81,7 @@ export const Timeline: React.FC<TimelineProps> = ({
 
   onSeekRef.current = onSeek;
   onScrubStartRef.current = onScrubStart;
+  onScrubMoveRef.current = onScrubMove;
   onScrubEndRef.current = onScrubEnd;
   safeDurationRef.current = duration > 0 ? duration : 0;
   // trackWidthRef is also updated synchronously inside handleLayout.
@@ -112,6 +117,7 @@ export const Timeline: React.FC<TimelineProps> = ({
           setIsScrubbing(true);
           setScrubTime(time);
           onScrubStartRef.current?.();
+          onScrubMoveRef.current?.(time);
           // Seek immediately to the tapped position so the player responds
           // to a simple tap (no drag) as well as the start of a drag.
           onSeekRef.current?.(time);
@@ -129,6 +135,7 @@ export const Timeline: React.FC<TimelineProps> = ({
           // Continuous seeks cause playback interruptions and conflict with
           // the locally-frozen scrub state set above.
           setScrubTime(time);
+          onScrubMoveRef.current?.(time);
         },
 
         onPanResponderRelease: event => {
