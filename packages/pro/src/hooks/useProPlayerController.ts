@@ -9,13 +9,15 @@ import type { TracksConfig, VideoQualityId } from '../types/tracks';
 /**
  * The subset of core controller values consumed by `useProPlayerController`.
  * Pass the object returned by `useCorePlayerController` directly — only
- * `position` and `duration` are read.
+ * `position`, `duration`, and `isBuffering` are read.
  */
 export interface CorePositionValues {
   /** Current playback position in seconds. */
   position: number;
   /** Total media duration in seconds. */
   duration: number;
+  /** Whether the player is stalled waiting for data. */
+  isBuffering?: boolean;
 }
 
 export interface UseProPlayerControllerOptions {
@@ -89,6 +91,10 @@ export interface ProPlayerState {
   pipState: PipState;
   /** Whether the debug information overlay is visible. */
   debugVisible: boolean;
+  /** The most recent playback or ad error message, if any. */
+  lastErrorMessage?: string;
+  /** Number of times buffering has started since the player mounted. */
+  rebufferCount: number;
 }
 
 /** Pro-specific player actions exposed by this hook. */
@@ -108,6 +114,14 @@ export interface ProPlayerActions {
   showDebugOverlay: () => void;
   /** Hide the debug information overlay. */
   hideDebugOverlay: () => void;
+  /** Toggle the debug information overlay on/off. */
+  toggleDebugOverlay: () => void;
+  /**
+   * Record a playback or ad error message.
+   * Call this from the playback or ads subsystem when an error occurs;
+   * the message is surfaced via `lastErrorMessage`.
+   */
+  notifyError: (message: string) => void;
   /**
    * Update the `isAdPlaying` flag.
    * Call this from the ads subsystem when an ad starts or finishes.
@@ -189,6 +203,8 @@ export function useProPlayerController(options: UseProPlayerControllerOptions): 
   const [isAdPlaying, setIsAdPlaying] = React.useState<boolean>(false);
   const [pipState, setPipState] = React.useState<PipState>('inactive');
   const [debugVisible, setDebugVisible] = React.useState<boolean>(false);
+  const [lastErrorMessage, setLastErrorMessage] = React.useState<string | undefined>(undefined);
+  const [rebufferCount, setRebufferCount] = React.useState<number>(0);
 
   // Track-state refs so analytics callbacks always read the latest selection
   // without triggering callback re-creation on every state change.
@@ -200,6 +216,20 @@ export function useProPlayerController(options: UseProPlayerControllerOptions): 
 
   const currentAudioTrackIdRef = React.useRef(currentAudioTrackId);
   currentAudioTrackIdRef.current = currentAudioTrackId;
+
+  // ─── Buffering counter ────────────────────────────────────────────────────
+  // Increment rebufferCount on every false→true transition of isBuffering.
+
+  const prevIsBufferingRef = React.useRef<boolean>(false);
+
+  React.useEffect(() => {
+    const isNowBuffering = coreController?.isBuffering ?? false;
+    if (isNowBuffering && !prevIsBufferingRef.current) {
+      setRebufferCount((c) => c + 1);
+    }
+    prevIsBufferingRef.current = isNowBuffering;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [coreController?.isBuffering]);
 
   // ─── Initial-ID sync effects ──────────────────────────────────────────────
   // When the host component recomputes initial IDs (e.g. because the `tracks`
@@ -353,6 +383,14 @@ export function useProPlayerController(options: UseProPlayerControllerOptions): 
     setDebugVisible(false);
   }, []);
 
+  const toggleDebugOverlay = React.useCallback(() => {
+    setDebugVisible((v) => !v);
+  }, []);
+
+  const notifyError = React.useCallback((message: string) => {
+    setLastErrorMessage(message);
+  }, []);
+
   // ─── Return ───────────────────────────────────────────────────────────────
 
   return {
@@ -363,6 +401,8 @@ export function useProPlayerController(options: UseProPlayerControllerOptions): 
     isAdPlaying,
     pipState,
     debugVisible,
+    lastErrorMessage,
+    rebufferCount,
     // Actions
     changeQuality,
     changeSubtitleTrack,
@@ -370,6 +410,8 @@ export function useProPlayerController(options: UseProPlayerControllerOptions): 
     requestPip,
     showDebugOverlay,
     hideDebugOverlay,
+    toggleDebugOverlay,
+    notifyError,
     setIsAdPlaying,
     setPipState,
   };
