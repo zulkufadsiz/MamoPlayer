@@ -3,6 +3,9 @@ import { act, fireEvent, render } from '@testing-library/react-native';
 
 type MockProMamoPlayerProps = {
   source: { uri: string };
+  controls?: { autoHide?: boolean; autoHideDelay?: number };
+  gestures?: { doubleTapSeek?: boolean };
+  layoutVariant?: string;
   ads?: {
     adBreaks?: Array<{ source?: { uri?: string } }>;
   };
@@ -109,5 +112,52 @@ describe('ProDemoScreen', () => {
     });
 
     expect(getByText('Error occurred: Main stream failed')).toBeTruthy();
+  });
+
+  it('renders the OTT UX features hints section', () => {
+    const { getByTestId, getByText } = render(<ProDemoScreen />);
+
+    expect(getByTestId('ott-ux-hints')).toBeTruthy();
+    expect(getByText('OTT UX Features')).toBeTruthy();
+    expect(getByText('Tap the video to show or hide controls.')).toBeTruthy();
+    expect(getByText('Double-tap the left side to seek back 10s.')).toBeTruthy();
+    expect(getByText('Double-tap the right side to seek forward 10s.')).toBeTruthy();
+    expect(
+      getByText('Scrub the timeline to see thumbnail frame previews and the current time.'),
+    ).toBeTruthy();
+    expect(getByText('Controls auto-hide after 3s of inactivity during playback.')).toBeTruthy();
+    expect(getByText('A spinner appears automatically when buffering occurs.')).toBeTruthy();
+  });
+
+  it('passes auto-hide controls config to the player', () => {
+    render(<ProDemoScreen />);
+
+    expect(latestProMamoPlayerProps?.controls?.autoHide).toBe(true);
+    expect(latestProMamoPlayerProps?.controls?.autoHideDelay).toBe(3000);
+  });
+
+  it('passes double-tap seek gesture config to the player', () => {
+    render(<ProDemoScreen />);
+
+    expect(latestProMamoPlayerProps?.gestures?.doubleTapSeek).toBe(true);
+  });
+
+  it('uses ott layoutVariant when ott theme is selected (default)', () => {
+    render(<ProDemoScreen />);
+
+    expect(latestProMamoPlayerProps?.layoutVariant).toBe('ott');
+  });
+
+  it('switches to standard layoutVariant when a non-ott theme is selected', () => {
+    const { getByText } = render(<ProDemoScreen />);
+
+    fireEvent.press(getByText('Light'));
+    expect(latestProMamoPlayerProps?.layoutVariant).toBe('standard');
+
+    fireEvent.press(getByText('Dark'));
+    expect(latestProMamoPlayerProps?.layoutVariant).toBe('standard');
+
+    fireEvent.press(getByText('OTT'));
+    expect(latestProMamoPlayerProps?.layoutVariant).toBe('ott');
   });
 });
