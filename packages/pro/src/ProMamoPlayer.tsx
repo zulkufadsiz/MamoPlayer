@@ -387,6 +387,11 @@ const emitAdAnalytics = (
     adPosition,
     errorMessage,
     mainContentPositionAtAdStart,
+    selectedQuality,
+    selectedSubtitle,
+    selectedAudioTrack,
+    rebufferCount,
+    lastErrorMessage,
   }: {
     playbackEvent?: PlaybackEvent;
     fallbackPosition?: number;
@@ -394,6 +399,11 @@ const emitAdAnalytics = (
     adPosition?: AnalyticsEvent['adPosition'];
     errorMessage?: string;
     mainContentPositionAtAdStart?: number;
+    selectedQuality?: string;
+    selectedSubtitle?: string;
+    selectedAudioTrack?: string;
+    rebufferCount?: number;
+    lastErrorMessage?: string;
   } = {},
 ) => {
   emitAnalytics(analytics, {
@@ -405,6 +415,11 @@ const emitAdAnalytics = (
     adPosition,
     errorMessage,
     mainContentPositionAtAdStart,
+    selectedQuality,
+    selectedSubtitle,
+    selectedAudioTrack,
+    rebufferCount,
+    lastErrorMessage,
     sessionId: analytics?.sessionId,
   });
 };
@@ -1159,6 +1174,11 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
         adPosition: getAdPositionFromPayload(payload),
         errorMessage: message,
         mainContentPositionAtAdStart: adMainContentStartPositionRef.current ?? positionRef.current,
+        selectedQuality: proControllerRef.current.currentQualityId,
+        selectedSubtitle: proControllerRef.current.currentSubtitleTrackId ?? undefined,
+        selectedAudioTrack: proControllerRef.current.currentAudioTrackId ?? undefined,
+        rebufferCount: proControllerRef.current.rebufferCount,
+        lastErrorMessage: proControllerRef.current.lastErrorMessage,
       });
       adMainContentStartPositionRef.current = null;
 
@@ -1547,6 +1567,11 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
         adPosition: currentAdBreak?.type,
         errorMessage: getErrorMessageFromPlaybackEvent(playbackEvent),
         mainContentPositionAtAdStart: adMainContentStartPositionRef.current ?? positionRef.current,
+        selectedQuality: proControllerRef.current.currentQualityId,
+        selectedSubtitle: proControllerRef.current.currentSubtitleTrackId ?? undefined,
+        selectedAudioTrack: proControllerRef.current.currentAudioTrackId ?? undefined,
+        rebufferCount: proControllerRef.current.rebufferCount,
+        lastErrorMessage: proControllerRef.current.lastErrorMessage,
       });
       adMainContentStartPositionRef.current = null;
     },
@@ -1776,6 +1801,8 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
               selectedQuality: proControllerRef.current.currentQualityId,
               selectedSubtitle: proControllerRef.current.currentSubtitleTrackId ?? undefined,
               selectedAudioTrack: proControllerRef.current.currentAudioTrackId ?? undefined,
+              rebufferCount: proControllerRef.current.rebufferCount,
+              lastErrorMessage: proControllerRef.current.lastErrorMessage,
               playbackEvent,
               sessionId: analytics?.sessionId,
             });
@@ -1794,6 +1821,8 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
               selectedQuality: proControllerRef.current.currentQualityId,
               selectedSubtitle: proControllerRef.current.currentSubtitleTrackId ?? undefined,
               selectedAudioTrack: proControllerRef.current.currentAudioTrackId ?? undefined,
+              rebufferCount: proControllerRef.current.rebufferCount,
+              lastErrorMessage: proControllerRef.current.lastErrorMessage,
               playbackEvent,
               sessionId: analytics?.sessionId,
             });
@@ -1807,6 +1836,7 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
               selectedSubtitle: proControllerRef.current.currentSubtitleTrackId ?? undefined,
               selectedAudioTrack: proControllerRef.current.currentAudioTrackId ?? undefined,
               errorMessage: playbackEvent.error?.message,
+              rebufferCount: proControllerRef.current.rebufferCount,
               playbackEvent,
               sessionId: analytics?.sessionId,
             });
@@ -2009,6 +2039,8 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
             selectedQuality: proControllerRef.current.currentQualityId,
             selectedSubtitle: proControllerRef.current.currentSubtitleTrackId ?? undefined,
             selectedAudioTrack: proControllerRef.current.currentAudioTrackId ?? undefined,
+            rebufferCount: proControllerRef.current.rebufferCount,
+            lastErrorMessage: proControllerRef.current.lastErrorMessage,
             playbackEvent,
             sessionId: analytics?.sessionId,
           });
@@ -2027,6 +2059,8 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
             selectedQuality: proControllerRef.current.currentQualityId,
             selectedSubtitle: proControllerRef.current.currentSubtitleTrackId ?? undefined,
             selectedAudioTrack: proControllerRef.current.currentAudioTrackId ?? undefined,
+            rebufferCount: proControllerRef.current.rebufferCount,
+            lastErrorMessage: proControllerRef.current.lastErrorMessage,
             playbackEvent,
             sessionId: analytics?.sessionId,
           });
@@ -2040,6 +2074,7 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
             selectedSubtitle: proControllerRef.current.currentSubtitleTrackId ?? undefined,
             selectedAudioTrack: proControllerRef.current.currentAudioTrackId ?? undefined,
             errorMessage: playbackEvent.error?.message,
+            rebufferCount: proControllerRef.current.rebufferCount,
             playbackEvent,
             sessionId: analytics?.sessionId,
           });
