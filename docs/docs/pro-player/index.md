@@ -214,3 +214,35 @@ import { ProMamoPlayer } from '@mamoplayer/pro';
   licenseKey={process.env.MAMOPLAYER_PRO_LICENSE_KEY}
 />;
 ```
+
+## Developer diagnostics
+
+The `debug` prop enables a lightweight in-player overlay that surfaces live playback internals. It is intended for development and debugging only — disable it (or omit it entirely) in production builds.
+
+```tsx
+debug={{ enabled: true }}
+```
+
+When enabled, the overlay displays the following fields in real time:
+
+| Field | Description |
+|---|---|
+| **state** | Current playback state: `playing`, `paused`, or `buffering` |
+| **buffering** | Whether the player is stalled waiting for data |
+| **quality / audio / subtitle** | Active track selections |
+| **last error** | Most recent playback or ad error message |
+| **ad playing** | Whether an ad break is currently active |
+| **pip** | Current picture-in-picture window state |
+
+### Example
+
+```tsx
+import { ProMamoPlayer } from '@mamoplayer/pro';
+
+<ProMamoPlayer
+  source={{ uri: 'https://cdn.example.com/main/master.m3u8' }}
+  debug={{ enabled: __DEV__ }}
+/>;
+```
+
+Using `__DEV__` ensures the overlay is only rendered in development and is automatically stripped from production bundles.
