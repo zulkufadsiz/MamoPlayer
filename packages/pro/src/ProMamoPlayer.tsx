@@ -2371,10 +2371,13 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
           subtitleBottomOffset={layoutVariant === 'ott' ? 56 : 42}
         />
         {debug?.enabled === true ? (
+          // TODO: Move gesture detection to a dedicated gesture layer once
+          // gesture coordination across core and pro is formalised.
           <DebugOverlay
             info={debugInfo}
             visible={proController.debugVisible}
             onClose={proController.hideDebugOverlay}
+            onToggle={proController.toggleDebugOverlay}
           />
         ) : null}
       </View>
