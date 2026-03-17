@@ -282,7 +282,7 @@ export function useCorePlayerController(options: UseCorePlayerControllerOptions)
 
     if (
       !resolvedAutoHide ||
-      resolvedPausedRef.current ||
+      resolvedPaused ||
       isSettingsOpen ||
       isScrubbingRef.current ||
       !controlsVisible
@@ -291,7 +291,15 @@ export function useCorePlayerController(options: UseCorePlayerControllerOptions)
     }
 
     autoHideTimerRef.current = setTimeout(hideControls, resolvedAutoHideDelay);
-  }, [clearAutoHideTimer, controlsVisible, hideControls, isSettingsOpen, resolvedAutoHide, resolvedAutoHideDelay]);
+  }, [
+    clearAutoHideTimer,
+    controlsVisible,
+    hideControls,
+    isSettingsOpen,
+    resolvedAutoHide,
+    resolvedAutoHideDelay,
+    resolvedPaused,
+  ]);
 
   const toggleControls = React.useCallback(() => {
     if (controlsVisible) {
