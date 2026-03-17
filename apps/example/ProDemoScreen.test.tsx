@@ -21,6 +21,7 @@ type MockProMamoPlayerProps = {
     type: string;
     error?: unknown;
   }) => void;
+  debug?: { enabled?: boolean };
 };
 
 let latestProMamoPlayerProps: MockProMamoPlayerProps | undefined;
@@ -159,5 +160,23 @@ describe('ProDemoScreen', () => {
 
     fireEvent.press(getByText('OTT'));
     expect(latestProMamoPlayerProps?.layoutVariant).toBe('ott');
+  });
+
+  it('passes debug.enabled=true to the player', () => {
+    render(<ProDemoScreen />);
+
+    expect(latestProMamoPlayerProps?.debug?.enabled).toBe(true);
+  });
+
+  it('renders the debug overlay hints section', () => {
+    const { getByTestId, getByText } = render(<ProDemoScreen />);
+
+    expect(getByTestId('debug-overlay-hints')).toBeTruthy();
+    expect(getByText('Developer Debug Overlay')).toBeTruthy();
+    expect(getByText('Two-finger triple-tap the player to toggle the debug overlay.')).toBeTruthy();
+    expect(getByText('While playing: watch position and buffered values update in real time.')).toBeTruthy();
+    expect(getByText('While buffering: the state field shows "buffering" and rebuffer count increments.')).toBeTruthy();
+    expect(getByText('While switching tracks: quality, audio, and subtitle fields update immediately.')).toBeTruthy();
+    expect(getByText('While an ad plays: the ad playing field is highlighted and ad state shows "playing".')).toBeTruthy();
   });
 });
