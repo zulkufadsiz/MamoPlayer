@@ -1,14 +1,14 @@
 import {
-  MamoPlayer,
-  PlaybackOptions,
-  type PlaybackEvent,
+    MamoPlayer,
+    PlaybackOptions,
+    type PlaybackEvent,
 } from '@mamoplayer/core';
 import {
-  useRef,
-  useState,
-  type ComponentProps,
-  type ComponentType,
-  type RefAttributes,
+    useRef,
+    useState,
+    type ComponentProps,
+    type ComponentType,
+    type RefAttributes,
 } from 'react';
 import { Button, Platform, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { VideoRef } from 'react-native-video';
@@ -144,9 +144,20 @@ const CoreDemoScreen = ({ onBack }: { onBack?: () => void } = {}) => {
             source={source}
             paused={paused}
             autoPlay
+            controls={{ autoHide: true, autoHideDelay: 3000 }}
+            gestures={{ doubleTapSeek: true }}
             onPlaybackEvent={handlePlaybackEvent}
             style={styles.player}
           />
+        </View>
+
+        <View style={styles.section} testID="ott-ux-hints">
+          <Text style={styles.sectionTitle}>OTT UX Features</Text>
+          <Text style={styles.hintText}>Tap the video to show or hide controls.</Text>
+          <Text style={styles.hintText}>Double-tap the left side to seek back 10s.</Text>
+          <Text style={styles.hintText}>Double-tap the right side to seek forward 10s.</Text>
+          <Text style={styles.hintText}>Controls auto-hide after 3s of inactivity during playback.</Text>
+          <Text style={styles.hintText}>A spinner appears automatically when buffering occurs.</Text>
         </View>
 
         <View style={styles.section}>
@@ -232,6 +243,11 @@ const styles = StyleSheet.create({
   },
   noteText: {
     fontSize: 12,
+  },
+  hintText: {
+    fontSize: 12,
+    color: '#555',
+    lineHeight: 18,
   },
   backButton: {
     paddingHorizontal: 16,

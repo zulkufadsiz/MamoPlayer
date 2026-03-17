@@ -2,55 +2,74 @@ import CoreDemoScreen from '@/apps/example/CoreDemoScreen';
 import { fireEvent, render } from '@testing-library/react-native';
 import { Platform } from 'react-native';
 
+type MockMamoPlayerProps = {
+  onPlaybackEvent?: (event: unknown) => void;
+  controls?: { autoHide?: boolean; autoHideDelay?: number };
+  gestures?: { doubleTapSeek?: boolean };
+};
+
+let latestMamoPlayerProps: MockMamoPlayerProps | undefined;
+
 jest.mock('@mamoplayer/core', () => {
   const React = require('react');
   const { Button, View } = require('react-native');
 
-  const MamoPlayerMock = ({ onPlaybackEvent }: { onPlaybackEvent?: (event: unknown) => void }) => (
-    <View>
-      <Button
-        title="emit-ready"
-        onPress={() =>
-          onPlaybackEvent?.({
-            type: 'ready',
-            position: 0,
-            duration: 120,
-            timestamp: Date.now(),
-          })
-        }
-      />
-      <Button
-        title="emit-time-update"
-        onPress={() =>
-          onPlaybackEvent?.({
-            type: 'time_update',
-            position: 42.345,
-            duration: 120,
-            timestamp: Date.now(),
-          })
-        }
-      />
-      <Button
-        title="emit-error"
-        onPress={() =>
-          onPlaybackEvent?.({
-            type: 'error',
-            error: { message: 'Invalid source URL' },
-            timestamp: Date.now(),
-          })
-        }
-      />
-    </View>
-  );
+  const MamoPlayerMock = ({ onPlaybackEvent, controls, gestures }: MockMamoPlayerProps) => {
+    latestMamoPlayerProps = { onPlaybackEvent, controls, gestures };
+    return (
+      <View>
+        <Button
+          title="emit-ready"
+          onPress={() =>
+            onPlaybackEvent?.({
+              type: 'ready',
+              position: 0,
+              duration: 120,
+              timestamp: Date.now(),
+            })
+          }
+        />
+        <Button
+          title="emit-time-update"
+          onPress={() =>
+            onPlaybackEvent?.({
+              type: 'time_update',
+              position: 42.345,
+              duration: 120,
+              timestamp: Date.now(),
+            })
+          }
+        />
+        <Button
+          title="emit-error"
+          onPress={() =>
+            onPlaybackEvent?.({
+              type: 'error',
+              error: { message: 'Invalid source URL' },
+              timestamp: Date.now(),
+            })
+          }
+        />
+      </View>
+    );
+  };
 
   MamoPlayerMock.displayName = 'MamoPlayerMock';
 
+  const PlaybackOptionsMock = () => <View />;
+  PlaybackOptionsMock.displayName = 'PlaybackOptionsMock';
+
   return {
     MamoPlayer: MamoPlayerMock,
+    PlaybackOptions: PlaybackOptionsMock,
   };
 });
 
 describe('CoreDemoScreen', () => {
+  beforeEach(() => {
+    latestMamoPlayerProps = undefined;
+  });
+
   it('displays and updates playback position and duration from playback events', () => {
     const { getByText } = render(<CoreDemoScreen />);
 
@@ -85,5 +104,30 @@ describe('CoreDemoScreen', () => {
 
     expect(queryByText('Subtitles are active (English).')).toBeNull();
     expect(getByText('Subtitles are not supported on this platform.')).toBeTruthy();
+  });
+
+  it('renders the OTT UX features hints section', () => {
+    const { getByTestId, getByText } = render(<CoreDemoScreen />);
+
+    expect(getByTestId('ott-ux-hints')).toBeTruthy();
+    expect(getByText('OTT UX Features')).toBeTruthy();
+    expect(getByText('Tap the video to show or hide controls.')).toBeTruthy();
+    expect(getByText('Double-tap the left side to seek back 10s.')).toBeTruthy();
+    expect(getByText('Double-tap the right side to seek forward 10s.')).toBeTruthy();
+    expect(getByText('Controls auto-hide after 3s of inactivity during playback.')).toBeTruthy();
+    expect(getByText('A spinner appears automatically when buffering occurs.')).toBeTruthy();
+  });
+
+  it('passes auto-hide controls config to the player', () => {
+    render(<CoreDemoScreen />);
+
+    expect(latestMamoPlayerProps?.controls?.autoHide).toBe(true);
+    expect(latestMamoPlayerProps?.controls?.autoHideDelay).toBe(3000);
+  });
+
+  it('passes double-tap seek gesture config to the player', () => {
+    render(<CoreDemoScreen />);
+
+    expect(latestMamoPlayerProps?.gestures?.doubleTapSeek).toBe(true);
   });
 });

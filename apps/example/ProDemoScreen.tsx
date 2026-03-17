@@ -1,5 +1,5 @@
 import type { PlaybackEvent } from '@mamoplayer/core';
-import type { AdsConfig, AnalyticsEvent, ThemeName, TracksConfig } from '@mamoplayer/pro';
+import type { AdsConfig, AnalyticsEvent, PlayerLayoutVariant, ThemeName, TracksConfig } from '@mamoplayer/pro';
 import { ProMamoPlayer } from '@mamoplayer/pro';
 import { useState } from 'react';
 import { Button, Pressable, SafeAreaView, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
@@ -137,6 +137,7 @@ const ProDemoScreen = ({ onBack }: { onBack?: () => void } = {}) => {
     uri: MP4_SOURCE_URI,
   });
   const [themeName, setThemeName] = useState<ThemeName>('ott');
+  const layoutVariant: PlayerLayoutVariant = themeName === 'ott' ? 'ott' : 'standard';
 
   const [pipEnabled, setPipEnabled] = useState(true);
   const [adsConfig, setAdsConfig] = useState<AdsConfig>(demoAds);
@@ -235,6 +236,9 @@ const ProDemoScreen = ({ onBack }: { onBack?: () => void } = {}) => {
         <View style={styles.playerArea}>
           <ProMamoPlayer
             source={source}
+            controls={{ autoHide: true, autoHideDelay: 3000 }}
+            gestures={{ doubleTapSeek: true }}
+            layoutVariant={layoutVariant}
             pip={{ enabled: pipEnabled }}
             onPipEvent={(e) => console.log('PiP event:', e)}
             onPlaybackEvent={(event) => {
@@ -276,26 +280,18 @@ const ProDemoScreen = ({ onBack }: { onBack?: () => void } = {}) => {
             <Text style={styles.errorBannerText}>Error occurred: {errorBannerMessage}</Text>
           </View>
         ) : null}
-        <Text style={styles.watermarkDescription}>
-          Watermark is shown on top of the video, moving every few seconds to help deter screen
-          recording.
-        </Text>
-
-        <Text style={styles.descriptionText}>
-          This demo uses simulated pre-roll, mid-roll (at 30s), and post-roll ads with skip after 5s.
-        </Text>
-
-        <Text style={styles.descriptionText}>
-          Tap the settings (gear) icon on the player to open the OTT-style overlay menu.
-        </Text>
-
-        <Text style={styles.descriptionText}>
-          Scrub the timeline to see thumbnail previews based on configured frames.
-        </Text>
-
-        <Text style={styles.descriptionText}>
-          PiP behavior depends on platform support and native integration.
-        </Text>
+        <View style={styles.section} testID="ott-ux-hints">
+          <Text style={styles.sectionTitle}>OTT UX Features</Text>
+          <Text style={styles.hintText}>Tap the video to show or hide controls.</Text>
+          <Text style={styles.hintText}>Double-tap the left side to seek back 10s.</Text>
+          <Text style={styles.hintText}>Double-tap the right side to seek forward 10s.</Text>
+          <Text style={styles.hintText}>Scrub the timeline to see thumbnail frame previews and the current time.</Text>
+          <Text style={styles.hintText}>Controls auto-hide after 3s of inactivity during playback.</Text>
+          <Text style={styles.hintText}>A spinner appears automatically when buffering occurs.</Text>
+          <Text style={styles.hintText}>Tap the settings icon to open the OTT overlay menu (quality, subtitles, audio).</Text>
+          <Text style={styles.hintText}>Watermark moves every few seconds to deter screen recording.</Text>
+          <Text style={styles.hintText}>PiP behavior depends on platform support and native integration.</Text>
+        </View>
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Analytics (last 10 events)</Text>
@@ -405,6 +401,11 @@ const styles = StyleSheet.create({
   },
   descriptionText: {
     fontSize: 12,
+  },
+  hintText: {
+    fontSize: 12,
+    color: '#555',
+    lineHeight: 18,
   },
   analyticsList: {
     gap: 8,
