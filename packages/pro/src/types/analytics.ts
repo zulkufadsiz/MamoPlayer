@@ -69,6 +69,15 @@ export interface AnalyticsEvent extends AnalyticsEventBase {
   selectedSubtitle?: string;
   /** Audio track label selected (present on `audio_track_change`). */
   selectedAudioTrack?: string;
+  /** Running count of buffering events in this session (diagnostic context). */
+  rebufferCount?: number;
+  /**
+   * The most recent error message recorded by the player prior to this event
+   * (diagnostic context, present on buffering, quality, and error events).
+   * Distinct from `errorMessage`, which carries the message for the current
+   * error event itself.
+   */
+  lastErrorMessage?: string;
 }
 
 /** Configuration to wire up analytics reporting. */

@@ -227,6 +227,14 @@ export function useProPlayerController(options: UseProPlayerControllerOptions): 
   const currentAudioTrackIdRef = React.useRef(currentAudioTrackId);
   currentAudioTrackIdRef.current = currentAudioTrackId;
 
+  // Diagnostic-state refs so the analytics enrichment always reads the latest
+  // values without invalidating memoised callbacks.
+  const rebufferCountRef = React.useRef(rebufferCount);
+  rebufferCountRef.current = rebufferCount;
+
+  const lastErrorMessageRef = React.useRef(lastErrorMessage);
+  lastErrorMessageRef.current = lastErrorMessage;
+
   // ─── Buffering counter ────────────────────────────────────────────────────
   // Increment rebufferCount on every false→true transition of isBuffering.
 
@@ -294,6 +302,10 @@ export function useProPlayerController(options: UseProPlayerControllerOptions): 
       if (!config) return;
 
       config.onEvent({
+        // Diagnostic context is spread first so callers can still override
+        // individual fields (e.g. lastErrorMessage on an error event).
+        rebufferCount: rebufferCountRef.current,
+        lastErrorMessage: lastErrorMessageRef.current,
         ...partial,
         timestamp: Date.now(),
         position: coreControllerRef.current?.position ?? 0,
