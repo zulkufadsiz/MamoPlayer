@@ -2,6 +2,7 @@ import React from 'react';
 
 import { requestPictureInPicture, subscribeToPipEvents } from '../pip/nativeBridge';
 import type { AnalyticsConfig, AnalyticsEvent } from '../types/analytics';
+import type { DebugConfig } from '../types/debug';
 import type { PipConfig, PipEvent, PipState } from '../types/pip';
 import type { ThumbnailsConfig } from '../types/thumbnails';
 import type { TracksConfig, VideoQualityId } from '../types/tracks';
@@ -67,6 +68,12 @@ export interface UseProPlayerControllerOptions {
    * falling back to the native MamoCastModule bridge.
    */
   videoRef?: React.RefObject<{ enterPictureInPicture?: () => void } | null>;
+  /**
+   * Debug / diagnostics configuration.
+   * When `enabled` is falsy (or omitted) `showDebugOverlay` is suppressed so
+   * no debug state is surfaced to the UI layer.
+   */
+  debug?: DebugConfig;
 }
 
 /** Pro-specific player state managed by this hook. */
@@ -154,6 +161,9 @@ export type ProPlayerController = ProPlayerState & ProPlayerActions;
  */
 export function useProPlayerController(options: UseProPlayerControllerOptions): ProPlayerController {
   const { tracks, pip, analytics, coreController } = options;
+
+  const debugRef = React.useRef(options.debug);
+  debugRef.current = options.debug;
 
   const videoRefRef = React.useRef(options.videoRef);
   videoRefRef.current = options.videoRef;
@@ -346,7 +356,9 @@ export function useProPlayerController(options: UseProPlayerControllerOptions): 
   }, [pip?.enabled]);
 
   const showDebugOverlay = React.useCallback(() => {
-    setDebugVisible(true);
+    if (debugRef.current?.enabled) {
+      setDebugVisible(true);
+    }
   }, []);
 
   const hideDebugOverlay = React.useCallback(() => {
