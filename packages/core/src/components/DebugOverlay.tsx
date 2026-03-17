@@ -20,6 +20,13 @@ interface DebugOverlayProps {
   visible?: boolean;
   /** Called when the user taps the close button. Only rendered when this callback is provided. */
   onClose?: () => void;
+  /**
+   * Called when the two-finger triple-tap gesture fires and `visible` is
+   * controlled externally. Ignored in uncontrolled mode (no `visible` prop).
+   * Use this to delegate toggle logic to the parent when the overlay
+   * visibility is managed outside the component.
+   */
+  onToggle?: () => void;
 }
 
 const TRIPLE_TAP_WINDOW_MS = 700;
@@ -48,10 +55,13 @@ const Row: React.FC<RowProps> = ({ label, value, error }) => (
  * Developer debug overlay. Toggle visibility with a two-finger triple tap
  * anywhere on the player surface.
  */
-export const DebugOverlay: React.FC<DebugOverlayProps> = ({ info, visible: controlledVisible, onClose }) => {
+export const DebugOverlay: React.FC<DebugOverlayProps> = ({ info, visible: controlledVisible, onClose, onToggle }) => {
   const [internalVisible, setInternalVisible] = React.useState(false);
   const tapTimesRef = React.useRef<number[]>([]);
   const isVisible = controlledVisible !== undefined ? controlledVisible : internalVisible;
+
+  const onToggleRef = React.useRef(onToggle);
+  onToggleRef.current = onToggle;
 
   const recordTwoFingerTap = React.useCallback(() => {
     const now = Date.now();
@@ -63,6 +73,8 @@ export const DebugOverlay: React.FC<DebugOverlayProps> = ({ info, visible: contr
       tapTimesRef.current = [];
       if (controlledVisible === undefined) {
         setInternalVisible((prev) => !prev);
+      } else {
+        onToggleRef.current?.();
       }
     }
   }, [controlledVisible]);
