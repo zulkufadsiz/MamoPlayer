@@ -1,3 +1,4 @@
+export { DebugOverlay, type DebugInfo } from './components/DebugOverlay';
 export { PlaybackOptions } from './components/PlaybackOptions';
 export type { PlaybackOptionsProps } from './components/PlaybackOptions';
 export { Timeline } from './components/Timeline';
