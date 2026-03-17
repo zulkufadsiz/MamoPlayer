@@ -1,5 +1,5 @@
 import React from 'react';
-import { GestureResponderEvent, StyleSheet, Text, View } from 'react-native';
+import { GestureResponderEvent, Pressable, StyleSheet, Text, View } from 'react-native';
 
 export interface DebugInfo {
   playbackState: string;
@@ -16,6 +16,10 @@ export interface DebugInfo {
 
 interface DebugOverlayProps {
   info: DebugInfo;
+  /** When provided, overrides the internal two-finger-tap toggle to show/hide the panel. */
+  visible?: boolean;
+  /** Called when the user taps the close button. Only rendered when this callback is provided. */
+  onClose?: () => void;
 }
 
 const TRIPLE_TAP_WINDOW_MS = 700;
@@ -44,9 +48,10 @@ const Row: React.FC<RowProps> = ({ label, value, error }) => (
  * Developer debug overlay. Toggle visibility with a two-finger triple tap
  * anywhere on the player surface.
  */
-export const DebugOverlay: React.FC<DebugOverlayProps> = ({ info }) => {
-  const [visible, setVisible] = React.useState(false);
+export const DebugOverlay: React.FC<DebugOverlayProps> = ({ info, visible: controlledVisible, onClose }) => {
+  const [internalVisible, setInternalVisible] = React.useState(false);
   const tapTimesRef = React.useRef<number[]>([]);
+  const isVisible = controlledVisible !== undefined ? controlledVisible : internalVisible;
 
   const recordTwoFingerTap = React.useCallback(() => {
     const now = Date.now();
@@ -56,9 +61,11 @@ export const DebugOverlay: React.FC<DebugOverlayProps> = ({ info }) => {
 
     if (recent.length >= 3) {
       tapTimesRef.current = [];
-      setVisible((prev) => !prev);
+      if (controlledVisible === undefined) {
+        setInternalVisible((prev) => !prev);
+      }
     }
-  }, []);
+  }, [controlledVisible]);
 
   /**
    * Only claim the responder when 2+ fingers are on screen so single-finger
@@ -84,9 +91,22 @@ export const DebugOverlay: React.FC<DebugOverlayProps> = ({ info }) => {
       onStartShouldSetResponder={onStartShouldSetResponder}
       onResponderGrant={onResponderGrant}
     >
-      {visible ? (
-        <View style={styles.panel} pointerEvents="none">
-          <Text style={styles.title}>Debug</Text>
+      {isVisible ? (
+        <View style={styles.panel} pointerEvents={onClose ? 'box-none' : 'none'}>
+          <View style={styles.titleRow}>
+            <Text style={styles.title}>Debug</Text>
+            {onClose ? (
+              <Pressable
+                onPress={onClose}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel="Close debug overlay"
+                style={styles.closeButton}
+              >
+                <Text style={styles.closeButtonText}>✕</Text>
+              </Pressable>
+            ) : null}
+          </View>
           <Row label="State" value={info.playbackState} />
           <Row
             label="Position"
@@ -121,13 +141,26 @@ const styles = StyleSheet.create({
     minWidth: 220,
     maxWidth: 300,
   },
+  titleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
   title: {
     color: '#FACC15',
     fontSize: 11,
     fontWeight: '700',
-    marginBottom: 6,
     letterSpacing: 1,
     textTransform: 'uppercase',
+  },
+  closeButton: {
+    padding: 2,
+  },
+  closeButtonText: {
+    color: '#9CA3AF',
+    fontSize: 12,
+    fontWeight: '700',
   },
   row: {
     flexDirection: 'row',

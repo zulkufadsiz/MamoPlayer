@@ -1,4 +1,5 @@
 import {
+    DebugOverlay,
     MamoPlayer as MamoPlayerCore,
     type MamoPlayerProps,
     type MamoPlayerSource,
@@ -11,6 +12,7 @@ import React, { useRef } from 'react';
 import { Animated, Easing, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { VideoRef } from 'react-native-video';
 import { AdStateMachine } from './ads/AdState';
+import { useDebugSnapshot } from './features/debug/useDebugSnapshot';
 import { useProPlayerController } from './hooks/useProPlayerController';
 import { useProSettingsSections } from './hooks/useProSettingsSections';
 import { loadAds, releaseAds, subscribeToAdsEvents } from './ima/nativeBridge';
@@ -980,6 +982,38 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
   );
   const [parsedSubtitleCues, setParsedSubtitleCues] = React.useState<ParsedSubtitleCue[]>([]);
   const [isCoreFullscreen, setIsCoreFullscreen] = React.useState(false);
+  const [isBuffering, setIsBuffering] = React.useState(false);
+
+  const debugSnapshot = useDebugSnapshot({
+    isPlaying: isInlinePlaybackActive,
+    isBuffering,
+    position: currentPosition,
+    duration: mediaDuration > 0 ? mediaDuration : undefined,
+    buffered: bufferedPosition,
+    currentQualityId: proController.currentQualityId,
+    currentSubtitleTrackId: proController.currentSubtitleTrackId,
+    currentAudioTrackId: proController.currentAudioTrackId,
+    isAdPlaying: proController.isAdPlaying,
+    pipState: proController.pipState,
+    lastErrorMessage: proController.lastErrorMessage,
+    rebufferCount: proController.rebufferCount,
+  });
+
+  const debugInfo = React.useMemo(
+    () => ({
+      playbackState: debugSnapshot.playbackState ?? 'paused',
+      position: debugSnapshot.position,
+      duration: debugSnapshot.duration ?? 0,
+      buffered: debugSnapshot.buffered,
+      rebufferCount: debugSnapshot.rebufferCount ?? 0,
+      lastError: debugSnapshot.lastErrorMessage,
+      quality: debugSnapshot.selectedQuality,
+      audioTrack: debugSnapshot.selectedAudioTrack,
+      subtitleTrack: debugSnapshot.selectedSubtitle,
+      adState: debugSnapshot.isAdPlaying === true ? 'playing' : undefined,
+    }),
+    [debugSnapshot],
+  );
 
   const qualityOptions = React.useMemo<OverlayOption[]>(() => {
     if (!shouldShowQualitySettings || !tracks?.qualities?.length) {
@@ -1665,6 +1699,12 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
         setIsInlinePlaybackActive(false);
       }
 
+      if (playbackEvent.type === 'buffer_start') {
+        setIsBuffering(true);
+      } else if (playbackEvent.type === 'buffer_end') {
+        setIsBuffering(false);
+      }
+
       // Native IMA path
       if (useNativeIMA) {
         positionRef.current = playbackEvent.position;
@@ -2330,6 +2370,13 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
           subtitleText={!isCoreFullscreen ? resolvedSubtitleText : undefined}
           subtitleBottomOffset={layoutVariant === 'ott' ? 56 : 42}
         />
+        {debug?.enabled === true ? (
+          <DebugOverlay
+            info={debugInfo}
+            visible={proController.debugVisible}
+            onClose={proController.hideDebugOverlay}
+          />
+        ) : null}
       </View>
     </ThemeProvider>
   );
