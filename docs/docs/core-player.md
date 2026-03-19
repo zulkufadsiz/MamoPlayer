@@ -20,8 +20,8 @@ In the Core package, `MamoPlayer` is the public component name exported from `@m
 
 ## Required
 
-- `source: { uri: string } | number`
-  - Media source (remote URL or local asset module)
+- `source: MamoPlayerSource`
+  - Media source. Accepts a remote URI string, a `{ uri }` object, a local `require()` asset number, or a source array (all shapes supported by `react-native-video`).
 
 ## Common Core props
 
@@ -34,7 +34,6 @@ In the Core package, `MamoPlayer` is the public component name exported from `@m
 
 Because Core props are based on `ReactVideoProps`, you can also pass standard player props such as:
 
-- `controls`
 - `resizeMode`
 - `repeat`
 - `muted`
@@ -42,6 +41,8 @@ Because Core props are based on `ReactVideoProps`, you can also pass standard pl
 - `rate`
 - `style`
 - `testID`
+
+> **Note**: the `controls` prop is **not** forwarded to `react-native-video`. MamoPlayer intercepts it as a `ControlsConfig` object to configure auto-hide behaviour. See the [Core Package docs](/docs/core-package) for the full prop reference.
 
 # Events
 
@@ -58,6 +59,7 @@ type PlaybackEvent = {
     | 'buffer_end'
     | 'seek'
     | 'time_update'
+    | 'source_type'
     | 'error';
   timestamp: number;
   position: number;
@@ -80,6 +82,7 @@ type PlaybackEvent = {
 - `buffer_end`: buffering finished
 - `seek`: playback position changed by seek
 - `time_update`: periodic progress update
+- `source_type`: source locality resolved; `sourceType` is set to `'streaming'` or `'offline'`
 - `error`: playback error with optional error metadata
 
 ## Sample event object
@@ -112,7 +115,6 @@ export default function CorePlayerScreen() {
       <MamoPlayer
         source={{ uri: 'https://example.com/video.m3u8' }}
         autoPlay
-        controls
         resizeMode="contain"
         onPlaybackEvent={handlePlaybackEvent}
       />
