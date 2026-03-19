@@ -46,7 +46,7 @@
     "typescript": "^5"
   },
   "scripts": {
-    "build": "tsup src/index.ts --format esm,cjs --dts --clean",
+    "build": "rm -rf dist && tsup src/index.ts --format esm,cjs --dts",
     "test": "jest --config ./jest.config.js --runInBand"
   }
 }
