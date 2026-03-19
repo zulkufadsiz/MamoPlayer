@@ -93,7 +93,7 @@ export interface DebugConfig {
 
 export interface MamoPlayerCoreProps extends Omit<
   ReactVideoProps,
-  'source' | 'paused' | 'controls' | 'onLoad' | 'onProgress' | 'onEnd' | 'onError' | 'onSeek' | 'onBuffer' | 'drm'
+  'source' | 'paused' | 'controls' | 'onLoad' | 'onProgress' | 'onEnd' | 'onError' | 'onSeek' | 'onBuffer' | 'drm' | 'debug'
 > {
   /** The video source. Accepts a `require()` asset, a URI string, a `{ uri }` object, or a source-array. */
   source: MamoPlayerSource;
