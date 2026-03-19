@@ -1,6 +1,6 @@
 {
   "name": "@mamoplayer/core",
-  "version": "1.0.0",
+  "version": "1.0.0-rc.1",
   "description": "Core React Native video player package for the MamoPlayer SDK",
   "license": "MIT",
   "main": "dist/index.js",
