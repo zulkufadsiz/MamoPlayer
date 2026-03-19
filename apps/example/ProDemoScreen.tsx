@@ -1,5 +1,5 @@
 import type { PlaybackEvent } from '@mamoplayer/core';
-import type { AdsConfig, AnalyticsEvent, PlayerLayoutVariant, PlaybackRestrictions, ProSettingsOverlayConfig, ThemeName, TracksConfig } from '@mamoplayer/pro';
+import type { AdsConfig, AnalyticsEvent, PlaybackRestrictions, PlayerLayoutVariant, ProSettingsOverlayConfig, ThemeName, TracksConfig } from '@mamoplayer/pro';
 import { ProMamoPlayer } from '@mamoplayer/pro';
 import { useState } from 'react';
 import { Button, Pressable, SafeAreaView, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
