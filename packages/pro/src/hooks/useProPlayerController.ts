@@ -2,7 +2,7 @@ import React from 'react';
 
 import { requestPictureInPicture, subscribeToPipEvents } from '../pip/nativeBridge';
 import type { AnalyticsConfig, AnalyticsEvent } from '../types/analytics';
-import type { DebugConfig } from '../types/debug';
+import type { ProDebugConfig } from '../types/debug';
 import type { PipConfig, PipEvent, PipState } from '../types/pip';
 import type { ThumbnailsConfig } from '../types/thumbnails';
 import type { TracksConfig, VideoQualityId } from '../types/tracks';
@@ -78,7 +78,7 @@ export interface UseProPlayerControllerOptions {
    * When `enabled` is falsy (or omitted) `showDebugOverlay` is suppressed so
    * no debug state is surfaced to the UI layer.
    */
-  debug?: DebugConfig;
+  debug?: ProDebugConfig;
 }
 
 /** Pro-specific player state managed by this hook. */

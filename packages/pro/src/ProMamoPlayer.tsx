@@ -21,7 +21,7 @@ import { validateLicenseKey } from './licensing/license';
 import { ThemeProvider, usePlayerTheme } from './theme/ThemeContext';
 import type { AdBreak, AdsConfig } from './types/ads';
 import type { AnalyticsConfig, AnalyticsEvent } from './types/analytics';
-import type { DebugConfig } from './types/debug';
+import type { ProDebugConfig } from './types/debug';
 import type { PlayerIconSet } from './types/icons';
 import type { IMAConfig } from './types/ima';
 import type { PlayerLayoutVariant } from './types/layout';
@@ -117,7 +117,7 @@ export interface ProMamoPlayerProps extends MamoPlayerProps {
   /** Called whenever the picture-in-picture window state changes. */
   onPipEvent?: (event: PipEvent) => void;
   /** Debug / diagnostics configuration. When omitted (or `enabled` is falsy) all debug features are suppressed. */
-  debug?: DebugConfig;
+  debug?: ProDebugConfig;
 }
 
 type OverlayOption = {

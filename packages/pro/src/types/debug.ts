@@ -1,4 +1,4 @@
-export type DebugConfig = {
+export type ProDebugConfig = {
   enabled?: boolean;
 };
 
