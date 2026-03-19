@@ -1,2 +1,16 @@
+# This file lives in src/ intentionally.
+# When "files" is set in package.json, npm ignores a root-level .npmignore;
+# only subdirectory .npmignore files are consulted as additional exclusions.
+# Placing this file here ensures test/spec/snapshot/mock artefacts inside
+# src/ are never included in the published tarball.
+
+# Test and spec files
 *.test.*
 *.spec.*
+
+# Jest snapshot and mock directories
+__snapshots__/
+__mocks__/
+
+# Storybook story files
+*.stories.*
