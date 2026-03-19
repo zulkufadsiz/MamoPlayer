@@ -12,7 +12,7 @@ It gives you:
 - Optional autoplay via `autoPlay`
 - A normalized event stream via `onPlaybackEvent`
 
-In the Core package, `MamoPlayer` is exported as an alias of `MamoPlayerCore`.
+In the Core package, `MamoPlayer` is the public component name exported from `@mamoplayer/core`.
 
 # Props
 

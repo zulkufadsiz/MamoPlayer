@@ -52,10 +52,10 @@ yarn add @mamoplayer/core
 ```
 
 ```bash
-# Pro
-npm install @mamoplayer/pro
+# Pro (also installs the required Core peer dependency)
+npm install @mamoplayer/core @mamoplayer/pro
 # or
-yarn add @mamoplayer/pro
+yarn add @mamoplayer/core @mamoplayer/pro
 ```
 
 ### 2) Install peer dependencies

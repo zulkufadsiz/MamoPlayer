@@ -19,8 +19,10 @@ Use it when your app needs OTT-focused capabilities beyond basic playback:
 ## Installation
 
 ```bash
-npm install @mamoplayer/pro
+npm install @mamoplayer/core @mamoplayer/pro
 ```
+
+`@mamoplayer/core` is a peer dependency of `@mamoplayer/pro` and must be installed alongside it.
 
 ## Minimal usage
 
