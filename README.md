@@ -84,12 +84,12 @@ MamoPlayer Pro is built for OTT teams that need production features like ad mone
 ```tsx
 import React from 'react';
 import { View } from 'react-native';
-import { MamoPlayerCore } from '@mamoplayer/core';
+import { MamoPlayer } from '@mamoplayer/core';
 
 export default function CorePlayerScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: '#000' }}>
-      <MamoPlayerCore
+      <MamoPlayer
         source={{ uri: 'https://cdn.example.com/ott/master.m3u8' }}
         autoPlay
         onPlaybackEvent={(event) => {
@@ -484,10 +484,10 @@ yarn add @mamoplayer/core
 ### Install Pro
 
 ```bash
-yarn add @mamoplayer/pro
+yarn add @mamoplayer/core @mamoplayer/pro
 ```
 
-`@mamoplayer/pro` depends on `@mamoplayer/core`, so installing Pro gives you the Core runtime dependency as well.
+`@mamoplayer/core` is a peer dependency of `@mamoplayer/pro`. Both packages must be installed explicitly.
 
 ## License information
 

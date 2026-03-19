@@ -12,8 +12,9 @@ The npm package currently exposes only the core entrypoint:
 
 Your app should satisfy these peer dependencies:
 
-- `react` `^19.0.0`
-- `react-native` `>=0.81.0`
+- `react` `>=18`
+- `react-native` `>=0.72`
+- `react-native-video` `>=6`
 
 ## Install
 
@@ -24,12 +25,6 @@ npm install @mamoplayer/core
 ## Import
 
 ```ts
-import { MamoPlayerCore } from '@mamoplayer/core';
-```
-
-`MamoPlayer` is also exported as a convenience alias for `MamoPlayerCore`:
-
-```ts
 import { MamoPlayer } from '@mamoplayer/core';
 ```
 
@@ -38,12 +33,12 @@ import { MamoPlayer } from '@mamoplayer/core';
 ```tsx
 import React from 'react';
 import { View } from 'react-native';
-import { MamoPlayerCore } from '@mamoplayer/core';
+import { MamoPlayer } from '@mamoplayer/core';
 
 export default function VideoScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: '#000' }}>
-      <MamoPlayerCore
+      <MamoPlayer
         source={{ uri: 'https://example.com/video.m3u8' }}
         autoPlay={false}
         allowsFullscreen
@@ -85,7 +80,7 @@ See the [Pro Player docs](./pro-player/) for the full `TracksConfig` API.
 
 ## Core props reference
 
-Props specific to `MamoPlayerCore` / `MamoPlayer`:
+Props specific to `MamoPlayer`:
 
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
@@ -153,6 +148,6 @@ Current limitation: native Google IMA is not integrated yet. Planned roadmap: Ph
 
 ## Notes
 
-- `MamoPlayerCore` and its `MamoPlayer` alias are identical — choose whichever reads more cleanly in your codebase.
+- The public export name is `MamoPlayer`. Import it with `import { MamoPlayer } from '@mamoplayer/core'`.
 - The player manages playback rate and mute state internally and exposes them through the settings overlay. Pass `settingsOverlay={{ showPlaybackSpeed: false, showMute: false }}` to hide those controls.
 - All quality, subtitle, and audio track management requires `@mamoplayer/pro`. Core only renders the base player with settings (speed/mute) and fullscreen support.
