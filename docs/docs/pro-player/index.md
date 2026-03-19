@@ -230,11 +230,14 @@ When enabled, the overlay displays the following fields in real time:
 | Field | Description |
 |---|---|
 | **state** | Current playback state: `playing`, `paused`, or `buffering` |
+| **position / duration** | Current playback position and total duration in seconds |
+| **buffered** | Seconds of content buffered ahead of the current position |
 | **buffering** | Whether the player is stalled waiting for data |
 | **quality / audio / subtitle** | Active track selections |
 | **last error** | Most recent playback or ad error message |
 | **ad playing** | Whether an ad break is currently active |
 | **pip** | Current picture-in-picture window state |
+| **rebuffer count** | Number of buffering interruptions in this session |
 
 ### Example
 

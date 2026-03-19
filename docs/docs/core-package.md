@@ -41,7 +41,6 @@ export default function VideoScreen() {
       <MamoPlayer
         source={{ uri: 'https://example.com/video.m3u8' }}
         autoPlay={false}
-        allowsFullscreen
       />
     </View>
   );
@@ -84,7 +83,7 @@ Props specific to `MamoPlayer`:
 
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
-| `source` | `MamoPlayerSource` | — | **Required.** Video source (`{ uri }` or number). |
+| `source` | `MamoPlayerSource` | — | **Required.** Video source: URI string, `{ uri }` object, local `require()` asset number, or source array. |
 | `autoPlay` | `boolean` | `true` | Begin playback as soon as the player is ready. |
 | `paused` | `boolean` | `undefined` | Controlled pause state. |
 | `settingsOverlay` | `SettingsOverlayConfig` | — | Configure the built-in settings panel (speed, mute, extra items). |
@@ -92,6 +91,15 @@ Props specific to `MamoPlayer`:
 | `overlayContent` | `ReactNode` | — | Custom content layered over the video. |
 | `onFullscreenChange` | `(isFullscreen: boolean) => void` | — | Fires when fullscreen state changes. |
 | `onPlaybackEvent` | `(event: PlaybackEvent) => void` | — | Unified playback event callback. See [Playback Events](./core-player.md). |
+| `controls` | `ControlsConfig` | — | Auto-hide behaviour for the controls overlay (`autoHide`, `autoHideDelay`). |
+| `gestures` | `GesturesConfig` | — | Double-tap seek configuration (±10 s on left/right sides). |
+| `timelineConfig` | `{ thumbnailUri?: string }` | — | Forwarded to the scrubber; enables thumbnail frame preview while dragging. |
+| `onScrubStart` | `() => void` | — | Called when a scrub gesture begins. |
+| `onScrubMove` | `(time: number) => void` | — | Called on every scrub position change with the candidate seek time. |
+| `onScrubEnd` | `(time: number) => void` | — | Called when the scrub ends with the final seek time in seconds. |
+| `drm` | `DrmConfig` | — | DRM configuration for Widevine (Android/DASH) or FairPlay (iOS/HLS) protected streams. |
+| `casting` | `CastingConfig` | — | Casting configuration; shows a cast button and enables AirPlay / Chromecast. |
+| `debug` | `DebugConfig` | — | Developer debug overlay. Toggle visibility in-app with a two-finger triple tap. |
 
 All other props from `react-native-video`'s `ReactVideoProps` are forwarded to the underlying `<Video>` component (e.g. `style`, `resizeMode`, `poster`, `volume`, `onReadyForDisplay`).
 
@@ -144,7 +152,7 @@ Skip behavior:
 - `skipButtonEnabled: true` shows the skip UI during ads.
 - With `skipAfterSeconds > 0`, UI shows a countdown (`Skip in Ns`) then enables `Skip ad`.
 
-Current limitation: native Google IMA is not integrated yet. Planned roadmap: Phase 3 native IMA support on Android/iOS.
+For IMA-based ad serving (VAST/VMAP), use the `ima` prop on `ProMamoPlayer`. See [Ads & Monetization](./ads-monetization/) for full details.
 
 ## Notes
 

@@ -24,17 +24,22 @@ You can start with the Core package for a standard playback experience, then mov
 
 Use Core when you need:
 
-- Base player components
-- Standard playback controls
-- Fast integration with minimal setup
+- Standard video playback with built-in controls (play/pause, seek, fullscreen)
+- Settings overlay (playback speed, mute) and support for custom settings items
+- Normalized playback event callbacks (`onPlaybackEvent`)
+- Optional DRM support (Widevine / FairPlay) and casting (AirPlay / Chromecast)
+- Developer debug overlay
 
 ### `@mamoplayer/pro` (Pro)
 
 Use Pro when you need:
 
-- Premium/advanced player capabilities
-- Extended controls and enterprise-style features
-- A richer playback experience on top of Core concepts
+- Analytics instrumentation (`session_start`, `quartile`, `quality_change`, and more)
+- Ad monetization: simulated ad breaks (`ads`) or Google IMA / VAST (`ima`)
+- Track and quality switching (quality variants, audio tracks, subtitle tracks)
+- Watermark overlays and playback policy enforcement (`restrictions`)
+- Picture-in-picture support
+- Premium theming, layout variants (`compact`, `standard`, `ott`), and custom icon sets
 
 ## Installation
 
