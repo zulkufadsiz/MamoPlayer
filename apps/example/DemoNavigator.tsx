@@ -42,7 +42,7 @@ export default function DemoNavigator() {
           <Text style={styles.cardLabel}>CORE</Text>
           <Text style={styles.cardTitle}>Core Demo</Text>
           <Text style={styles.cardDescription}>
-            MP4 · HLS · subtitles · seek · playback events{'\n'}via @mamoplayer/core
+            MP4 · HLS · subtitles · seek · settings overlay · debug overlay{'\n'}via @mamoplayer/core
           </Text>
         </Pressable>
 
@@ -54,7 +54,7 @@ export default function DemoNavigator() {
           <Text style={styles.cardLabel}>PRO</Text>
           <Text style={styles.cardTitle}>Pro Demo</Text>
           <Text style={styles.cardDescription}>
-            Ads · analytics · themes · PiP · watermark{'\n'}via @mamoplayer/pro
+            Ads · tracks · thumbnails · PiP · restrictions · debug overlay{'\n'}via @mamoplayer/pro
           </Text>
         </Pressable>
       </View>

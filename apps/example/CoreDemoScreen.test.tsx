@@ -6,6 +6,8 @@ type MockMamoPlayerProps = {
   onPlaybackEvent?: (event: unknown) => void;
   controls?: { autoHide?: boolean; autoHideDelay?: number };
   gestures?: { doubleTapSeek?: boolean };
+  settingsOverlay?: { enabled?: boolean; showPlaybackSpeed?: boolean; showMute?: boolean };
+  debug?: { enabled?: boolean };
 };
 
 let latestMamoPlayerProps: MockMamoPlayerProps | undefined;
@@ -14,8 +16,8 @@ jest.mock('@mamoplayer/core', () => {
   const React = require('react');
   const { Button, View } = require('react-native');
 
-  const MamoPlayerMock = ({ onPlaybackEvent, controls, gestures }: MockMamoPlayerProps) => {
-    latestMamoPlayerProps = { onPlaybackEvent, controls, gestures };
+  const MamoPlayerMock = ({ onPlaybackEvent, controls, gestures, debug, settingsOverlay }: MockMamoPlayerProps) => {
+    latestMamoPlayerProps = { onPlaybackEvent, controls, gestures, debug, settingsOverlay };
     return (
       <View>
         <Button
@@ -129,5 +131,35 @@ describe('CoreDemoScreen', () => {
     render(<CoreDemoScreen />);
 
     expect(latestMamoPlayerProps?.gestures?.doubleTapSeek).toBe(true);
+  });
+
+  it('passes debug.enabled=true to the player', () => {
+    render(<CoreDemoScreen />);
+
+    expect(latestMamoPlayerProps?.debug?.enabled).toBe(true);
+  });
+
+  it('passes settingsOverlay with speed and mute enabled to the player', () => {
+    render(<CoreDemoScreen />);
+
+    expect(latestMamoPlayerProps?.settingsOverlay?.enabled).toBe(true);
+    expect(latestMamoPlayerProps?.settingsOverlay?.showPlaybackSpeed).toBe(true);
+    expect(latestMamoPlayerProps?.settingsOverlay?.showMute).toBe(true);
+  });
+
+  it('renders the settings overlay hints section', () => {
+    const { getByTestId, getByText } = render(<CoreDemoScreen />);
+
+    expect(getByTestId('settings-overlay-hints')).toBeTruthy();
+    expect(getByText('Settings Overlay')).toBeTruthy();
+    expect(getByText('Tap the gear icon in the player to open the settings overlay.')).toBeTruthy();
+  });
+
+  it('renders the debug overlay hints section', () => {
+    const { getByTestId, getByText } = render(<CoreDemoScreen />);
+
+    expect(getByTestId('debug-overlay-hints')).toBeTruthy();
+    expect(getByText('Debug Overlay')).toBeTruthy();
+    expect(getByText('Two-finger triple-tap the player to toggle the debug overlay.')).toBeTruthy();
   });
 });
