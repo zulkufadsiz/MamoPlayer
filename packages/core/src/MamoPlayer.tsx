@@ -81,14 +81,12 @@ export interface GesturesConfig {
 export interface DebugConfig {
   /** Show the developer debug overlay. Toggle visibility with a two-finger triple tap. */
   enabled?: boolean;
-  /** Current quality label forwarded from the host (e.g. ProMamoPlayer). */
+  /** Current quality label forwarded from the host. */
   quality?: string;
   /** Current audio track label forwarded from the host. */
   audioTrack?: string;
   /** Current subtitle track label forwarded from the host. */
   subtitleTrack?: string;
-  /** Current ad state label forwarded from the host. */
-  adState?: string;
 }
 
 export interface MamoPlayerCoreProps extends Omit<
@@ -117,8 +115,8 @@ export interface MamoPlayerCoreProps extends Omit<
   gestures?: GesturesConfig;
   /**
    * Optional thumbnail URI and other per-scrub configuration forwarded to the
-   * Timeline.  Set by ProMamoPlayer to show a thumbnail frame preview while the
-   * user is dragging the scrubber.
+   * Timeline.  When provided, the player shows a thumbnail frame preview while
+   * the user is dragging the scrubber.
    */
   timelineConfig?: {
     thumbnailUri?: string;
@@ -454,7 +452,6 @@ export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
               quality: debug.quality,
               audioTrack: debug.audioTrack,
               subtitleTrack: debug.subtitleTrack,
-              adState: debug.adState,
             }}
           />
         ) : null}

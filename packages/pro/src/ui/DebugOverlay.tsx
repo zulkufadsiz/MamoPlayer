@@ -1,11 +1,19 @@
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React from 'react';
+import { GestureResponderEvent, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import type { DebugSnapshot } from '../types/debug';
+
+const TRIPLE_TAP_WINDOW_MS = 700;
 
 export interface DebugOverlayProps {
   visible: boolean;
   snapshot: DebugSnapshot;
   onClose?: () => void;
+  /**
+   * Called when a two-finger triple-tap gesture fires. Use this to toggle
+   * overlay visibility from the parent component.
+   */
+  onToggle?: () => void;
 }
 
 function fmt(value: string | number | boolean | undefined | null): string {
@@ -38,11 +46,54 @@ function Row({ label, value, highlight = false }: RowProps) {
   );
 }
 
-export function DebugOverlay({ visible, snapshot, onClose }: DebugOverlayProps) {
-  if (!visible) return null;
+export function DebugOverlay({ visible, snapshot, onClose, onToggle }: DebugOverlayProps) {
+  const tapTimesRef = React.useRef<number[]>([]);
+  const onToggleRef = React.useRef(onToggle);
+  onToggleRef.current = onToggle;
+
+  const recordTwoFingerTap = React.useCallback(() => {
+    const now = Date.now();
+    const recent = tapTimesRef.current.filter((t) => now - t < TRIPLE_TAP_WINDOW_MS);
+    recent.push(now);
+    tapTimesRef.current = recent;
+    if (recent.length >= 3) {
+      tapTimesRef.current = [];
+      onToggleRef.current?.();
+    }
+  }, []);
+
+  const onStartShouldSetResponder = React.useCallback(
+    (evt: GestureResponderEvent) => evt.nativeEvent.touches.length >= 2,
+    [],
+  );
+
+  const onResponderGrant = React.useCallback(
+    (evt: GestureResponderEvent) => {
+      if (evt.nativeEvent.touches.length >= 2) {
+        recordTwoFingerTap();
+      }
+    },
+    [recordTwoFingerTap],
+  );
+
+  if (!visible) {
+    return (
+      <View
+        style={StyleSheet.absoluteFillObject}
+        onStartShouldSetResponder={onStartShouldSetResponder}
+        onResponderGrant={onResponderGrant}
+        pointerEvents="box-none"
+      />
+    );
+  }
 
   return (
-    <View style={styles.container} pointerEvents="box-none">
+    <View
+      style={styles.container}
+      onStartShouldSetResponder={onStartShouldSetResponder}
+      onResponderGrant={onResponderGrant}
+      pointerEvents="box-none"
+    >
       <View style={styles.panel}>
         {/* Header */}
         <View style={styles.header}>

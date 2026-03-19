@@ -11,7 +11,6 @@ export interface DebugInfo {
   quality?: string;
   audioTrack?: string;
   subtitleTrack?: string;
-  adState?: string;
 }
 
 interface DebugOverlayProps {
@@ -132,7 +131,6 @@ export const DebugOverlay: React.FC<DebugOverlayProps> = ({ info, visible: contr
           <Row label="Audio" value={info.audioTrack ?? '—'} />
           <Row label="Subtitles" value={info.subtitleTrack ?? '—'} />
           <Row label="Rebuffers" value={String(info.rebufferCount)} />
-          <Row label="Ad state" value={info.adState ?? '—'} />
           {info.lastError != null ? (
             <Row label="Last error" value={info.lastError} error />
           ) : null}
