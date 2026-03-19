@@ -21,6 +21,7 @@
     "docs:dev": "npm run start --workspace docs",
     "docs:build": "npm run build --workspace docs",
     "docs:serve": "npm run serve --workspace docs",
+    "release:check": "yarn build && yarn docs:build && yarn test:packages",
     "docs:deploy": "npm run deploy --workspace docs"
   },
   "devDependencies": {
