@@ -22,8 +22,8 @@ export interface UseCoreSettingsSectionsOptions {
   /** Additional custom menu items to append as extra sections. */
   extraMenuItems?: SettingsOverlayExtraMenuItem[];
   /**
-   * Pre-built sections injected by the Pro layer (quality, subtitles, audio).
-   * Appended after the core sections and any `extraMenuItems`-derived sections.
+   * Pre-built sections appended after the core sections and any
+   * `extraMenuItems`-derived sections.
    */
   extraSections?: SettingsSection[];
 }

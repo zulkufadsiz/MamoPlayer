@@ -1,10 +1,8 @@
 import {
-    DebugOverlay,
     MamoPlayer as MamoPlayerCore,
     type MamoPlayerProps,
     type MamoPlayerSource,
     type PlaybackEvent,
-    type SettingsOverlayConfig,
     type SettingsSection
 } from '@mamoplayer/core';
 import MaterialIcons from '@react-native-vector-icons/material-icons';
@@ -27,10 +25,12 @@ import type { IMAConfig } from './types/ima';
 import type { PlayerLayoutVariant } from './types/layout';
 import type { PipConfig, PipEvent, PipState } from './types/pip';
 import type { PlaybackRestrictions } from './types/restrictions';
+import type { ProSettingsOverlayConfig } from './types/settings';
 import type { PlayerThemeConfig, ThemeName } from './types/theme';
 import type { ThumbnailFrame, ThumbnailsConfig } from './types/thumbnails';
 import type { TracksConfig, VideoQualityId } from './types/tracks';
 import type { WatermarkConfig } from './types/watermark';
+import { DebugOverlay as ProDebugOverlay } from './ui/DebugOverlay';
 
 /** Internal helper: returns whether a source points to a local/offline file. */
 const detectSourceType = (source: MamoPlayerSource): 'offline' | 'streaming' => {
@@ -113,7 +113,7 @@ export interface ProMamoPlayerProps extends MamoPlayerProps {
   /** Picture-in-picture configuration. */
   pip?: PipConfig;
   /** Settings overlay configuration (merged with Pro-generated quality/subtitle/audio entries). */
-  settingsOverlay?: SettingsOverlayConfig;
+  settingsOverlay?: ProSettingsOverlayConfig;
   /** Called whenever the picture-in-picture window state changes. */
   onPipEvent?: (event: PipEvent) => void;
   /** Debug / diagnostics configuration. When omitted (or `enabled` is falsy) all debug features are suppressed. */
@@ -1013,22 +1013,6 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
     lastErrorMessage: proController.lastErrorMessage,
     rebufferCount: proController.rebufferCount,
   });
-
-  const debugInfo = React.useMemo(
-    () => ({
-      playbackState: debugSnapshot.playbackState ?? 'paused',
-      position: debugSnapshot.position,
-      duration: debugSnapshot.duration ?? 0,
-      buffered: debugSnapshot.buffered,
-      rebufferCount: debugSnapshot.rebufferCount ?? 0,
-      lastError: debugSnapshot.lastErrorMessage,
-      quality: debugSnapshot.selectedQuality,
-      audioTrack: debugSnapshot.selectedAudioTrack,
-      subtitleTrack: debugSnapshot.selectedSubtitle,
-      adState: debugSnapshot.isAdPlaying === true ? 'playing' : undefined,
-    }),
-    [debugSnapshot],
-  );
 
   const qualityOptions = React.useMemo<OverlayOption[]>(() => {
     if (!shouldShowQualitySettings || !tracks?.qualities?.length) {
@@ -2408,8 +2392,8 @@ export const ProMamoPlayer: React.FC<ProMamoPlayerProps> = ({
         {debug?.enabled === true ? (
           // TODO: Move gesture detection to a dedicated gesture layer once
           // gesture coordination across core and pro is formalised.
-          <DebugOverlay
-            info={debugInfo}
+          <ProDebugOverlay
+            snapshot={debugSnapshot}
             visible={proController.debugVisible}
             onClose={proController.hideDebugOverlay}
             onToggle={proController.toggleDebugOverlay}

@@ -7,7 +7,9 @@
     "allowSyntheticDefaultImports": true,
     "resolveJsonModule": true,
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./*"],
+      "@mamoplayer/core": ["./packages/core/src/index.ts"],
+      "@mamoplayer/pro": ["./packages/pro/src/index.tsx"]
     }
   },
   "include": ["**/*.ts", "**/*.tsx"]

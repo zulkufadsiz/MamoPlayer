@@ -210,7 +210,7 @@ export class ReactNativeVideoAdapter {
   //       `selectSubtitleTrack(id: string | 'off')`, and
   //       `selectVideoTrack(id: string)` once the engine exposes a stable
   //       imperative track-selection API. Currently these are driven by source
-  //       props in ProMamoPlayer.
+  //       props in the host player component.
 
   // TODO: Advanced buffering / network – expose `setBufferingStrategy()` to
   //       tune min/max buffer durations, content steering, and adaptive-bitrate
