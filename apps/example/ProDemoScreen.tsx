@@ -1,5 +1,5 @@
 import type { PlaybackEvent } from '@mamoplayer/core';
-import type { AdsConfig, AnalyticsEvent, PlayerLayoutVariant, ProSettingsOverlayConfig, ThemeName, TracksConfig } from '@mamoplayer/pro';
+import type { AdsConfig, AnalyticsEvent, PlayerLayoutVariant, PlaybackRestrictions, ProSettingsOverlayConfig, ThemeName, TracksConfig } from '@mamoplayer/pro';
 import { ProMamoPlayer } from '@mamoplayer/pro';
 import { useState } from 'react';
 import { Button, Pressable, SafeAreaView, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
@@ -141,6 +141,7 @@ const ProDemoScreen = ({ onBack }: { onBack?: () => void } = {}) => {
 
   const [pipEnabled, setPipEnabled] = useState(true);
   const [adsConfig, setAdsConfig] = useState<AdsConfig>(demoAds);
+  const [restrictions, setRestrictions] = useState<PlaybackRestrictions>({});
   const [analyticsEvents, setAnalyticsEvents] = useState<AnalyticsEvent[]>([]);
   const [errorBannerMessage, setErrorBannerMessage] = useState<string | null>(null);
 
@@ -199,6 +200,15 @@ const ProDemoScreen = ({ onBack }: { onBack?: () => void } = {}) => {
                 }}
               />
             </View>
+            <View style={styles.optionButtonContainer}>
+              <Button
+                title="Reset Ads"
+                onPress={() => {
+                  setAdsConfig(demoAds);
+                  setErrorBannerMessage(null);
+                }}
+              />
+            </View>
           </View>
         </View>
 
@@ -233,6 +243,24 @@ const ProDemoScreen = ({ onBack }: { onBack?: () => void } = {}) => {
           </View>
         </View>
 
+        <View style={styles.section} testID="playback-restrictions">
+          <Text style={styles.sectionTitle}>Playback Restrictions</Text>
+          <View style={styles.toggleRow}>
+            <Text style={styles.label}>Disable seeking forward</Text>
+            <Switch
+              value={restrictions.disableSeekingForward ?? false}
+              onValueChange={(val) => setRestrictions((r) => ({ ...r, disableSeekingForward: val }))}
+            />
+          </View>
+          <View style={styles.toggleRow}>
+            <Text style={styles.label}>Disable seeking backward</Text>
+            <Switch
+              value={restrictions.disableSeekingBackward ?? false}
+              onValueChange={(val) => setRestrictions((r) => ({ ...r, disableSeekingBackward: val }))}
+            />
+          </View>
+        </View>
+
         <View style={styles.playerArea}>
           <ProMamoPlayer
             source={source}
@@ -241,6 +269,7 @@ const ProDemoScreen = ({ onBack }: { onBack?: () => void } = {}) => {
             layoutVariant={layoutVariant}
             pip={{ enabled: pipEnabled }}
             onPipEvent={(e) => console.log('PiP event:', e)}
+            restrictions={restrictions}
             onPlaybackEvent={(event) => {
               if (event.type !== 'error') {
                 return;

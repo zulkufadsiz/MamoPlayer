@@ -22,6 +22,10 @@ type MockProMamoPlayerProps = {
     error?: unknown;
   }) => void;
   debug?: { enabled?: boolean };
+  restrictions?: {
+    disableSeekingForward?: boolean;
+    disableSeekingBackward?: boolean;
+  };
 };
 
 let latestProMamoPlayerProps: MockProMamoPlayerProps | undefined;
@@ -54,6 +58,7 @@ describe('ProDemoScreen', () => {
     expect(getByText('Analytics (last 10 events)')).toBeTruthy();
     expect(getByText('Ads')).toBeTruthy();
     expect(getByText('Watermark')).toBeTruthy();
+    expect(getByText('Playback Restrictions')).toBeTruthy();
     expect(getByText('No events yet')).toBeTruthy();
   });
 
@@ -178,5 +183,43 @@ describe('ProDemoScreen', () => {
     expect(getByText('While buffering: the state field shows "buffering" and rebuffer count increments.')).toBeTruthy();
     expect(getByText('While switching tracks: quality, audio, and subtitle fields update immediately.')).toBeTruthy();
     expect(getByText('While an ad plays: the ad playing field is highlighted and ad state shows "playing".')).toBeTruthy();
+  });
+
+  it('renders the playback restrictions section', () => {
+    const { getByTestId, getByText } = render(<ProDemoScreen />);
+
+    expect(getByTestId('playback-restrictions')).toBeTruthy();
+    expect(getByText('Playback Restrictions')).toBeTruthy();
+    expect(getByText('Disable seeking forward')).toBeTruthy();
+    expect(getByText('Disable seeking backward')).toBeTruthy();
+  });
+
+  it('passes restrictions to the player and updates them via toggles', () => {
+    const { getAllByRole } = render(<ProDemoScreen />);
+
+    expect(latestProMamoPlayerProps?.restrictions?.disableSeekingForward).toBeFalsy();
+    expect(latestProMamoPlayerProps?.restrictions?.disableSeekingBackward).toBeFalsy();
+
+    const switches = getAllByRole('switch');
+    // First switch is PiP, second is disableSeekingForward, third is disableSeekingBackward
+    fireEvent(switches[1], 'valueChange', true);
+    expect(latestProMamoPlayerProps?.restrictions?.disableSeekingForward).toBe(true);
+
+    fireEvent(switches[2], 'valueChange', true);
+    expect(latestProMamoPlayerProps?.restrictions?.disableSeekingBackward).toBe(true);
+  });
+
+  it('reset ads button restores valid ad config', () => {
+    const { getByText } = render(<ProDemoScreen />);
+
+    fireEvent.press(getByText('Play Invalid Ad Source'));
+    const invalidUris =
+      latestProMamoPlayerProps?.ads?.adBreaks?.map((adBreak) => adBreak.source?.uri) ?? [];
+    expect(invalidUris).toContain('https://not-found-ad.mp4');
+
+    fireEvent.press(getByText('Reset Ads'));
+    const resetUris =
+      latestProMamoPlayerProps?.ads?.adBreaks?.map((adBreak) => adBreak.source?.uri) ?? [];
+    expect(resetUris).not.toContain('https://not-found-ad.mp4');
   });
 });

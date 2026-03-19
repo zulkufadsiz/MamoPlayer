@@ -146,6 +146,8 @@ const CoreDemoScreen = ({ onBack }: { onBack?: () => void } = {}) => {
             autoPlay
             controls={{ autoHide: true, autoHideDelay: 3000 }}
             gestures={{ doubleTapSeek: true }}
+            settingsOverlay={{ enabled: true, showPlaybackSpeed: true, showMute: true }}
+            debug={{ enabled: true }}
             onPlaybackEvent={handlePlaybackEvent}
             style={styles.player}
           />
@@ -158,6 +160,20 @@ const CoreDemoScreen = ({ onBack }: { onBack?: () => void } = {}) => {
           <Text style={styles.hintText}>Double-tap the right side to seek forward 10s.</Text>
           <Text style={styles.hintText}>Controls auto-hide after 3s of inactivity during playback.</Text>
           <Text style={styles.hintText}>A spinner appears automatically when buffering occurs.</Text>
+        </View>
+
+        <View style={styles.section} testID="settings-overlay-hints">
+          <Text style={styles.sectionTitle}>Settings Overlay</Text>
+          <Text style={styles.hintText}>Tap the gear icon in the player to open the settings overlay.</Text>
+          <Text style={styles.hintText}>The core overlay exposes: playback speed (0.5×–2×) and mute toggle.</Text>
+          <Text style={styles.hintText}>Extra menu items and sections can be injected via the settingsOverlay prop.</Text>
+        </View>
+
+        <View style={styles.section} testID="debug-overlay-hints">
+          <Text style={styles.sectionTitle}>Debug Overlay</Text>
+          <Text style={styles.hintText}>Two-finger triple-tap the player to toggle the debug overlay.</Text>
+          <Text style={styles.hintText}>While playing: watch position and buffered values update in real time.</Text>
+          <Text style={styles.hintText}>While buffering: the state field shows "buffering" and rebuffer count increments.</Text>
         </View>
 
         <View style={styles.section}>
