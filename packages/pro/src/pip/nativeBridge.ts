@@ -33,6 +33,13 @@ const getPipEventEmitter = (): NativeEventEmitter => {
 };
 
 export const requestPictureInPicture = (): void => {
+  if (!mamoPipModule) {
+    if (__DEV__) {
+      console.warn(`[MamoPlayer] ${MAMO_PIP_MODULE_NAME} native module is not available. Cannot enter PiP.`);
+    }
+    return;
+  }
+
   const pipModule = getPipModule();
 
   if (typeof pipModule.requestPictureInPicture === 'function') {
@@ -51,6 +58,13 @@ export const requestPictureInPicture = (): void => {
 };
 
 export const subscribeToPipEvents = (handler: MamoPipEventsHandler): (() => void) => {
+  if (!mamoPipModule) {
+    if (__DEV__) {
+      console.warn(`[MamoPlayer] ${MAMO_PIP_MODULE_NAME} native module is not available. PiP events will not be received.`);
+    }
+    return () => {};
+  }
+
   const eventEmitter = getPipEventEmitter();
 
   const subscriptions: EmitterSubscription[] = [
