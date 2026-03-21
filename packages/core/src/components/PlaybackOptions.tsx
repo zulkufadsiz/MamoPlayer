@@ -116,7 +116,7 @@ export const PlaybackOptions: React.FC<PlaybackOptionsProps> = ({
             accessibilityLabel="Seek backward 10 seconds"
           >
             <View style={styles.seekButtonVisual}>
-             <MaterialIcons name="forward-10" color="white" size={44} style={styles.seekIcon} />
+             <MaterialIcons name="replay-10" color="white" size={44} style={styles.seekIcon} />
             </View>
           </Pressable>
 
@@ -141,7 +141,7 @@ export const PlaybackOptions: React.FC<PlaybackOptionsProps> = ({
             accessibilityLabel="Seek forward 10 seconds"
           >
             <View style={styles.seekButtonVisual}>
-             <MaterialIcons name="replay-10" color="white" size={44} style={styles.seekIcon} />
+             <MaterialIcons name="forward-10" color="white" size={44} style={styles.seekIcon} />
             </View>
           </Pressable>
         </>
@@ -155,7 +155,7 @@ export const PlaybackOptions: React.FC<PlaybackOptionsProps> = ({
           testID="core-toggle-fullscreen-button"
         >
           <MaterialIcons
-            name={isFullscreen ? 'fullscreen-exit' : 'crop-free'}
+            name={isFullscreen ? 'close-fullscreen' : 'open-in-full'}
             color="white"
             size={compact ? 20 : 24}
             style={[styles.fullscreenIcon, compact && styles.fullscreenIconCompact]}
