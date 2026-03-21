@@ -1,14 +1,14 @@
 import {
-    MamoPlayer,
-    PlaybackOptions,
-    type PlaybackEvent,
+  MamoPlayer,
+  PlaybackOptions,
+  type PlaybackEvent,
 } from '@mamoplayer/core';
 import {
-    useRef,
-    useState,
-    type ComponentProps,
-    type ComponentType,
-    type RefAttributes,
+  useRef,
+  useState,
+  type ComponentProps,
+  type ComponentType,
+  type RefAttributes,
 } from 'react';
 import { Button, Platform, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { VideoRef } from 'react-native-video';
@@ -237,8 +237,8 @@ const CoreDemoScreen = ({ onBack }: { onBack?: () => void } = {}) => {
               source={source}
               paused={paused}
               autoPlay
-              controls={{ autoHide: true, autoHideDelay: 3000 }}
-              gestures={{ doubleTapSeek: true }}
+             controls={{ autoHide: true, autoHideDelay: 3000 }}
+             gestures={{ doubleTapSeek: true }}
               settingsOverlay={{ enabled: true, showPlaybackSpeed: true, showMute: true }}
               debug={{ enabled: true }}
               onPlaybackEvent={handlePlaybackEvent}

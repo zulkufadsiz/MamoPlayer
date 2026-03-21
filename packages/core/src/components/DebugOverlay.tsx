@@ -1,5 +1,5 @@
 import React from 'react';
-import { GestureResponderEvent, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 export interface DebugInfo {
   playbackState: string;
@@ -51,90 +51,42 @@ const Row: React.FC<RowProps> = ({ label, value, error }) => (
 );
 
 /**
- * Developer debug overlay. Toggle visibility with a two-finger triple tap
- * anywhere on the player surface.
+ * Developer debug overlay.
  */
-export const DebugOverlay: React.FC<DebugOverlayProps> = ({ info, visible: controlledVisible, onClose, onToggle }) => {
-  const [internalVisible, setInternalVisible] = React.useState(false);
-  const tapTimesRef = React.useRef<number[]>([]);
-  const isVisible = controlledVisible !== undefined ? controlledVisible : internalVisible;
-
-  const onToggleRef = React.useRef(onToggle);
-  onToggleRef.current = onToggle;
-
-  const recordTwoFingerTap = React.useCallback(() => {
-    const now = Date.now();
-    const recent = tapTimesRef.current.filter((t) => now - t < TRIPLE_TAP_WINDOW_MS);
-    recent.push(now);
-    tapTimesRef.current = recent;
-
-    if (recent.length >= 3) {
-      tapTimesRef.current = [];
-      if (controlledVisible === undefined) {
-        setInternalVisible((prev) => !prev);
-      } else {
-        onToggleRef.current?.();
-      }
-    }
-  }, [controlledVisible]);
-
-  /**
-   * Only claim the responder when 2+ fingers are on screen so single-finger
-   * gestures (play/pause, seek double-tap) are not affected.
-   */
-  const onStartShouldSetResponder = React.useCallback(
-    (evt: GestureResponderEvent) => evt.nativeEvent.touches.length >= 2,
-    [],
-  );
-
-  const onResponderGrant = React.useCallback(
-    (evt: GestureResponderEvent) => {
-      if (evt.nativeEvent.touches.length >= 2) {
-        recordTwoFingerTap();
-      }
-    },
-    [recordTwoFingerTap],
-  );
+export const DebugOverlay: React.FC<DebugOverlayProps> = ({ info, visible = false, onClose }) => {
+  if (!visible) return null;
 
   return (
-    <View
-      style={StyleSheet.absoluteFillObject}
-      onStartShouldSetResponder={onStartShouldSetResponder}
-      onResponderGrant={onResponderGrant}
-    >
-      {isVisible ? (
-        <View style={styles.panel} pointerEvents={onClose ? 'box-none' : 'none'}>
-          <View style={styles.titleRow}>
-            <Text style={styles.title}>Debug</Text>
-            {onClose ? (
-              <Pressable
-                onPress={onClose}
-                hitSlop={8}
-                accessibilityRole="button"
-                accessibilityLabel="Close debug overlay"
-                style={styles.closeButton}
-              >
-                <Text style={styles.closeButtonText}>✕</Text>
-              </Pressable>
-            ) : null}
-          </View>
-          <Row label="State" value={info.playbackState} />
-          <Row
-            label="Position"
-            value={`${formatTime(info.position)} / ${formatTime(info.duration)}`}
-          />
-          <Row
-            label="Buffered"
-            value={info.buffered != null ? formatTime(info.buffered) : '—'}
-          />
-          <Row label="Quality" value={info.quality ?? '—'} />
-          <Row label="Audio" value={info.audioTrack ?? '—'} />
-          <Row label="Subtitles" value={info.subtitleTrack ?? '—'} />
-          <Row label="Rebuffers" value={String(info.rebufferCount)} />
-          {info.lastError != null ? (
-            <Row label="Last error" value={info.lastError} error />
-          ) : null}
-        </View>
+    <View style={styles.panel} pointerEvents={onClose ? 'box-none' : 'none'}>
+      <View style={styles.titleRow}>
+        <Text style={styles.title}>Debug</Text>
+        {onClose ? (
+          <Pressable
+            onPress={onClose}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Close debug overlay"
+            style={styles.closeButton}
+          >
+            <Text style={styles.closeButtonText}>✕</Text>
+          </Pressable>
+        ) : null}
+      </View>
+      <Row label="State" value={info.playbackState} />
+      <Row
+        label="Position"
+        value={`${formatTime(info.position)} / ${formatTime(info.duration)}`}
+      />
+      <Row
+        label="Buffered"
+        value={info.buffered != null ? formatTime(info.buffered) : '—'}
+      />
+      <Row label="Quality" value={info.quality ?? '—'} />
+      <Row label="Audio" value={info.audioTrack ?? '—'} />
+      <Row label="Subtitles" value={info.subtitleTrack ?? '—'} />
+      <Row label="Rebuffers" value={String(info.rebufferCount)} />
+      {info.lastError != null ? (
+        <Row label="Last error" value={info.lastError} error />
       ) : null}
     </View>
   );
