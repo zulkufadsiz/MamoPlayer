@@ -31,7 +31,7 @@ import { type CastingConfig } from './types/casting';
 import { type DrmConfig } from './types/drm';
 import { type PlaybackEvent } from './types/playback';
 import { type SettingsOverlayConfig } from './types/settings';
-import { detectSourceType } from './utils/source';
+import { detectSourceType, getSourceId } from './utils/source';
 
 const formatTime = (seconds: number): string => {
   const safeSeconds = Math.max(0, Math.floor(Number.isFinite(seconds) ? seconds : 0));
@@ -228,6 +228,7 @@ export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
     }, [drm, source]);
 
     const sourceType = React.useMemo(() => detectSourceType(source), [source]);
+    const sourceId = React.useMemo(() => getSourceId(source), [source]);
 
     const videoRef = React.useRef<VideoRef>(null);
 
@@ -249,6 +250,7 @@ export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
 
     // ─── Controller ───────────────────────────────────────────────────────
     const controller = useCorePlayerController({
+      sourceId,
       videoRef,
       controls,
       autoPlay,
