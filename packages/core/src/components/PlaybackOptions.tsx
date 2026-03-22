@@ -11,11 +11,11 @@ export interface PlaybackOptionsProps {
   /** Whether the player is currently in fullscreen mode. */
   isFullscreen?: boolean;
   /** Called when the user taps the seek-back button (−10 s). */
-  onSeekBack: () => void;
+  onSeekBack?: () => void;
   /** Called when the user taps the play/pause button. */
   onTogglePlayPause: () => void;
   /** Called when the user taps the seek-forward button (+10 s). */
-  onSeekForward: () => void;
+  onSeekForward?: () => void;
   /** Called when the user taps the fullscreen toggle button. */
   onToggleFullscreen?: () => void;
   /** Called when the user taps the settings (gear) button. */
@@ -109,16 +109,18 @@ export const PlaybackOptions: React.FC<PlaybackOptionsProps> = ({
       ) : null}
       {showTransportButtons ? (
         <>
-          <Pressable
-            style={({ pressed }) => [styles.optionButton, pressed && styles.optionButtonPressed]}
-            onPress={onSeekBack}
-            accessibilityRole="button"
-            accessibilityLabel="Seek backward 10 seconds"
-          >
-            <View style={styles.seekButtonVisual}>
-             <MaterialIcons name="forward-10" color="white" size={44} style={styles.seekIcon} />
-            </View>
-          </Pressable>
+          {onSeekBack ? (
+            <Pressable
+              style={({ pressed }) => [styles.optionButton, pressed && styles.optionButtonPressed]}
+              onPress={onSeekBack}
+              accessibilityRole="button"
+              accessibilityLabel="Seek backward 10 seconds"
+            >
+              <View style={styles.seekButtonVisual}>
+                <MaterialIcons name="fast-rewind" color="white" size={44} style={styles.seekIcon} />
+              </View>
+            </Pressable>
+          ) : null}
 
           <Pressable
             style={({ pressed }) => [styles.playPauseButton, pressed && styles.optionButtonPressed]}
@@ -134,16 +136,18 @@ export const PlaybackOptions: React.FC<PlaybackOptionsProps> = ({
             )}
           </Pressable>
 
-          <Pressable
-            style={({ pressed }) => [styles.optionButton, pressed && styles.optionButtonPressed]}
-            onPress={onSeekForward}
-            accessibilityRole="button"
-            accessibilityLabel="Seek forward 10 seconds"
-          >
-            <View style={styles.seekButtonVisual}>
-             <MaterialIcons name="replay-10" color="white" size={44} style={styles.seekIcon} />
-            </View>
-          </Pressable>
+          {onSeekForward ? (
+            <Pressable
+              style={({ pressed }) => [styles.optionButton, pressed && styles.optionButtonPressed]}
+              onPress={onSeekForward}
+              accessibilityRole="button"
+              accessibilityLabel="Seek forward 10 seconds"
+            >
+              <View style={styles.seekButtonVisual}>
+                <MaterialIcons name="fast-forward" color="white" size={44} style={styles.seekIcon} />
+              </View>
+            </Pressable>
+          ) : null}
         </>
       ) : null}
       {showFullscreenButton && onToggleFullscreen ? (
@@ -155,7 +159,7 @@ export const PlaybackOptions: React.FC<PlaybackOptionsProps> = ({
           testID="core-toggle-fullscreen-button"
         >
           <MaterialIcons
-            name={isFullscreen ? 'fullscreen-exit' : 'crop-free'}
+            name={isFullscreen ? 'close-fullscreen' : 'open-in-full'}
             color="white"
             size={compact ? 20 : 24}
             style={[styles.fullscreenIcon, compact && styles.fullscreenIconCompact]}

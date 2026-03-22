@@ -1,14 +1,14 @@
 import {
-    MamoPlayer,
-    PlaybackOptions,
-    type PlaybackEvent,
+  MamoPlayer,
+  PlaybackOptions,
+  type PlaybackEvent,
 } from '@mamoplayer/core';
 import {
-    useRef,
-    useState,
-    type ComponentProps,
-    type ComponentType,
-    type RefAttributes,
+  useRef,
+  useState,
+  type ComponentProps,
+  type ComponentType,
+  type RefAttributes,
 } from 'react';
 import { Button, Platform, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { VideoRef } from 'react-native-video';
@@ -165,13 +165,6 @@ const CoreDemoScreen = ({ onBack }: { onBack?: () => void } = {}) => {
     } as CorePlayerWithRefProps['source']);
   };
 
-  const handleSeekForward = () => {
-    videoRef.current?.seek(position + 10);
-  };
-
-  const handleSeekBackward = () => {
-    videoRef.current?.seek(Math.max(0, position - 10));
-  };
 
   const handleToggleFullscreen = () => {
     videoRef.current?.presentFullscreenPlayer?.();
@@ -265,7 +258,7 @@ const CoreDemoScreen = ({ onBack }: { onBack?: () => void } = {}) => {
           <SectionLabel index={3} title="Playback Options" />
           <Text style={styles.cardDesc}>
             The <Text style={styles.inlineCode}>{'<PlaybackOptions />'}</Text> component renders a standalone
-            control bar — seek ±10 s, play/pause, and fullscreen.
+            control bar — play/pause, and fullscreen.
           </Text>
           <View style={styles.statsRow}>
             <View style={styles.statBox}>
@@ -280,9 +273,7 @@ const CoreDemoScreen = ({ onBack }: { onBack?: () => void } = {}) => {
           </View>
           <PlaybackOptions
             isPlaying={!paused}
-            onSeekBack={handleSeekBackward}
             onTogglePlayPause={() => setPaused((v) => !v)}
-            onSeekForward={handleSeekForward}
             onToggleFullscreen={handleToggleFullscreen}
           />
         </View>

@@ -1,18 +1,27 @@
 import MaterialIcons from '@react-native-vector-icons/material-icons';
 import React from 'react';
-import { Animated, Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import {
+  Animated,
+  type GestureResponderEvent,
+  Modal,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import Video, {
-    DRMType,
-    type OnLoadData,
-    type ReactVideoProps,
-    type VideoRef,
+  DRMType,
+  type OnLoadData,
+  type ReactVideoProps,
+  type VideoRef,
 } from 'react-native-video';
 import { useCasting } from './casting/useCasting';
 import { BufferingIndicator } from './components/BufferingIndicator';
 import { DebugOverlay } from './components/DebugOverlay';
 import { DoubleTapSeekOverlay } from './components/DoubleTapSeekOverlay';
 import {
-    PlaybackOptions,
+  PlaybackOptions,
 } from './components/PlaybackOptions';
 import { SettingsOverlay } from './components/SettingsOverlay';
 import { Timeline } from './components/Timeline';
@@ -22,7 +31,7 @@ import { type CastingConfig } from './types/casting';
 import { type DrmConfig } from './types/drm';
 import { type PlaybackEvent } from './types/playback';
 import { type SettingsOverlayConfig } from './types/settings';
-import { detectSourceType } from './utils/source';
+import { detectSourceType, getSourceId } from './utils/source';
 
 const formatTime = (seconds: number): string => {
   const safeSeconds = Math.max(0, Math.floor(Number.isFinite(seconds) ? seconds : 0));
@@ -175,8 +184,36 @@ export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
     const [hasEnded, setHasEnded] = React.useState<boolean>(false);
     const [rebufferCount, setRebufferCount] = React.useState<number>(0);
     const [lastError, setLastError] = React.useState<string | undefined>(undefined);
+    const [debugPanelVisible, setDebugPanelVisible] = React.useState(false);
+    const debugTapTimesRef = React.useRef<number[]>([]);
 
     const doubleTapSeekEnabled = gestures?.doubleTapSeek !== false;
+
+    const handleDebugGesture = React.useCallback(() => {
+      const now = Date.now();
+      const recent = debugTapTimesRef.current.filter((t) => now - t < 700);
+      recent.push(now);
+      debugTapTimesRef.current = recent;
+
+      if (recent.length >= 3) {
+        debugTapTimesRef.current = [];
+        setDebugPanelVisible((prev) => !prev);
+      }
+    }, []);
+
+    const onStartShouldSetResponderCapture = React.useCallback(
+      (evt: GestureResponderEvent) => evt.nativeEvent.touches.length >= 2,
+      [],
+    );
+
+    const onResponderGrant = React.useCallback(
+      (evt: GestureResponderEvent) => {
+        if (evt.nativeEvent.touches.length >= 2) {
+          handleDebugGesture();
+        }
+      },
+      [handleDebugGesture],
+    );
 
     const resolvedSource = React.useMemo(() => {
       if (!drm) return source;
@@ -191,6 +228,7 @@ export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
     }, [drm, source]);
 
     const sourceType = React.useMemo(() => detectSourceType(source), [source]);
+    const sourceId = React.useMemo(() => getSourceId(source), [source]);
 
     const videoRef = React.useRef<VideoRef>(null);
 
@@ -212,6 +250,7 @@ export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
 
     // ─── Controller ───────────────────────────────────────────────────────
     const controller = useCorePlayerController({
+      sourceId,
       videoRef,
       controls,
       autoPlay,
@@ -268,6 +307,13 @@ export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
       handleScrubSeek,
       handleScrubEnd,
     } = controller;
+
+    // ─── Web hover — show controls on mouse-enter, schedule hide on leave ─
+    // React Native Web passes these through to the DOM element. On native they
+    // are never applied (Platform.OS !== 'web' guard).
+    const webHoverProps = Platform.OS === 'web'
+      ? { onMouseEnter: showControls, onMouseLeave: scheduleAutoHide }
+      : {};
 
     // ─── Casting ──────────────────────────────────────────────────────────
     const castingEnabled = casting?.enabled === true;
@@ -370,6 +416,21 @@ export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
             testID="core-player-surface"
           />
         )}
+        {debug?.enabled === true ? (
+          <DebugOverlay
+            info={{
+              playbackState,
+              position,
+              duration,
+              buffered,
+              rebufferCount,
+              lastError,
+              quality: debug.quality,
+              audioTrack: debug.audioTrack,
+              subtitleTrack: debug.subtitleTrack,
+            }}
+          />
+        ) : null}
         {!isSettingsOpen ? (
           <Animated.View
             style={[styles.controlsOverlay, isFullscreen && styles.controlsOverlayFullscreen, { opacity: controlsOpacityAnim }]}
@@ -399,13 +460,13 @@ export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
               />
             </View>
 
-            <View style={styles.centerControlsContainer}>
+            <View style={styles.centerControlsContainer} pointerEvents="box-none">
               <PlaybackOptions
                 isPlaying={!resolvedPaused}
                 isFullscreen={isFullscreen}
-                onSeekBack={seekBackward}
+                onSeekBack={doubleTapSeekEnabled ? undefined : seekBackward}
                 onTogglePlayPause={togglePlayPause}
-                onSeekForward={seekForward}
+                onSeekForward={doubleTapSeekEnabled ? undefined : seekForward}
                 onToggleFullscreen={toggleFullscreen}
                 onToggleSettingsMenu={openSettings}
                 showFullscreenButton={false}
@@ -413,7 +474,7 @@ export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
               />
             </View>
 
-            <View style={styles.timelineContainer}>
+            <View style={styles.timelineContainer} pointerEvents="box-none">
               <Timeline
                 duration={duration}
                 position={position}
@@ -440,28 +501,19 @@ export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
           />
         ) : null}
         <BufferingIndicator buffering={isBuffering} />
-        {debug?.enabled === true ? (
-          <DebugOverlay
-            info={{
-              playbackState,
-              position,
-              duration,
-              buffered,
-              rebufferCount,
-              lastError,
-              quality: debug.quality,
-              audioTrack: debug.audioTrack,
-              subtitleTrack: debug.subtitleTrack,
-            }}
-          />
-        ) : null}
       </>
     );
 
     return (
       <>
         {!isFullscreen ? (
-          <View style={[styles.container, style]}>
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          <View
+            style={[styles.container, style]}
+            {...(webHoverProps as any)}
+            onStartShouldSetResponderCapture={debug?.enabled ? onStartShouldSetResponderCapture : undefined}
+            onResponderGrant={debug?.enabled ? onResponderGrant : undefined}
+          >
             {renderPlayer()}
           </View>
         ) : null}
@@ -472,7 +524,13 @@ export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
           onRequestClose={toggleFullscreen}
           statusBarTranslucent
         >
-          <View style={styles.fullscreenContainer}>
+          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+          <View
+            style={styles.fullscreenContainer}
+            {...(webHoverProps as any)}
+            onStartShouldSetResponderCapture={debug?.enabled ? onStartShouldSetResponderCapture : undefined}
+            onResponderGrant={debug?.enabled ? onResponderGrant : undefined}
+          >
             {renderPlayer()}
           </View>
         </Modal>
@@ -511,7 +569,7 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
     paddingTop: 12,
     backgroundColor: 'rgba(0, 0, 0, 0.55)',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-end',
   },
   controlsOverlayFullscreen: {
     paddingBottom: 26,
@@ -533,10 +591,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   centerControlsContainer: {
-    flex: 1,
+    ...StyleSheet.absoluteFillObject,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 8,
+    zIndex: 1,
   },
   timelineContainer: {
     width: '100%',

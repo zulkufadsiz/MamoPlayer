@@ -53,3 +53,27 @@ export function detectSourceType(source: MamoPlayerSource): PlaybackSourceType {
 
   return 'streaming';
 }
+
+/**
+ * Returns a stable string identifier for the source that can be used to detect
+ * when the media content has changed (requiring a full player reset) vs when
+ * only metadata/props have updated.
+ */
+export function getSourceId(source: MamoPlayerSource | undefined): string {
+  if (source === undefined || source === null) {
+    return '';
+  }
+  if (typeof source === 'number') {
+    return String(source);
+  }
+  if (typeof source === 'string') {
+    return source;
+  }
+  if (Array.isArray(source)) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return source.map((s: any) => s.uri).join(',');
+  }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const uri = (source as any).uri;
+  return typeof uri === 'string' ? uri : '';
+}

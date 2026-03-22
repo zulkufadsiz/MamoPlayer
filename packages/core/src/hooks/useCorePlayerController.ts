@@ -1,12 +1,12 @@
 import React from 'react';
 import { Animated, Easing } from 'react-native';
 import type {
-    OnBufferData,
-    OnLoadData,
-    OnProgressData,
-    OnSeekData,
-    OnVideoErrorData,
-    VideoRef,
+  OnBufferData,
+  OnLoadData,
+  OnProgressData,
+  OnSeekData,
+  OnVideoErrorData,
+  VideoRef,
 } from 'react-native-video';
 
 import type { ControlsConfig } from '../MamoPlayer';
@@ -17,6 +17,8 @@ const DEFAULT_AUTO_HIDE_DELAY_MS = 3000;
 export interface UseCorePlayerControllerOptions {
   /** Ref to the underlying `react-native-video` `VideoRef`. */
   videoRef: React.RefObject<VideoRef | null>;
+  /** Unique identifier for the current source. Used to detect source changes. */
+  sourceId: string;
   /** Controls bar auto-hide configuration. */
   controls?: ControlsConfig;
   /** Start playback automatically when the video loads. Defaults to `true`. */
@@ -175,6 +177,7 @@ export function useCorePlayerController(options: UseCorePlayerControllerOptions)
     onScrubStart: onScrubStartProp,
     onScrubMove: onScrubMoveProp,
     onScrubEnd: onScrubEndProp,
+    sourceId,
   } = options;
 
   // ─── UI state ────────────────────────────────────────────────────────────
@@ -201,11 +204,33 @@ export function useCorePlayerController(options: UseCorePlayerControllerOptions)
   const durationRef = React.useRef<number>(0);
   const positionRef = React.useRef<number>(0);
   const isScrubbingRef = React.useRef<boolean>(false);
+  const isSeekingRef = React.useRef<boolean>(false);
   const wasPlayingBeforeScrubRef = React.useRef<boolean>(false);
   const isBufferingRef = React.useRef<boolean>(false);
   const hasLoadedRef = React.useRef<boolean>(false);
   const autoHideTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const controlsOpacityAnim = React.useRef(new Animated.Value(1));
+  const lastSourceIdRef = React.useRef(sourceId);
+
+  // If source changes, reset state.
+  React.useEffect(() => {
+    if (sourceId !== lastSourceIdRef.current) {
+      lastSourceIdRef.current = sourceId;
+      setIsPlaying(false);
+      setIsBuffering(false);
+      setIsMuted(false);
+      setDuration(0);
+      setPosition(0);
+      setBuffered(undefined);
+      durationRef.current = 0;
+      positionRef.current = 0;
+      isSeekingRef.current = false;
+      isScrubbingRef.current = false;
+      wasPlayingBeforeScrubRef.current = false;
+      isBufferingRef.current = false;
+      hasLoadedRef.current = false;
+    }
+  }, [sourceId]);
 
   // ─── Config resolution ────────────────────────────────────────────────────
 
@@ -331,6 +356,13 @@ export function useCorePlayerController(options: UseCorePlayerControllerOptions)
     (data: OnLoadData) => {
       const nextDuration = Number.isFinite(data.duration) ? data.duration : 0;
 
+      if (sourceId === lastSourceIdRef.current && positionRef.current > 0) {
+        // Mark as seeking so progress events (e.g. at 0:00) don't overwrite
+        // our target position before the seek completes.
+        isSeekingRef.current = true;
+        videoRef.current?.seek(positionRef.current);
+      }
+
       durationRef.current = nextDuration;
       setDuration(nextDuration);
       hasLoadedRef.current = true;
@@ -343,19 +375,28 @@ export function useCorePlayerController(options: UseCorePlayerControllerOptions)
         emit({ type: 'play', reason: 'auto' });
       }
     },
-    [autoPlay, emit],
+    [autoPlay, emit, sourceId],
   );
 
   const handleProgress = React.useCallback(
     (data: OnProgressData) => {
+      // Ignore progress events before the video is ready or during seeks/scrubbing
+      // to avoid overwriting the position with transient 0s or stale values.
+      if (!hasLoadedRef.current) {
+        return;
+      }
+
       const nextPosition = Number.isFinite(data.currentTime) ? data.currentTime : 0;
       const nextBuffered =
         typeof data.playableDuration === 'number' && Number.isFinite(data.playableDuration)
           ? data.playableDuration
           : undefined;
 
-      positionRef.current = nextPosition;
-      if (!isScrubbingRef.current) {
+      if (!isScrubbingRef.current && !isSeekingRef.current) {
+        // Only update the ref and state when we are steadily playing.
+        // During seek/scrub, the ref holds the target time and we don't want
+        // to overwrite it with intermediate progress values.
+        positionRef.current = nextPosition;
         setPosition(nextPosition);
       }
       setBuffered(nextBuffered);
@@ -397,6 +438,7 @@ export function useCorePlayerController(options: UseCorePlayerControllerOptions)
 
       positionRef.current = nextPosition;
       setPosition(nextPosition);
+      isSeekingRef.current = false;
 
       emit({ type: 'seek', reason: 'user', position: nextPosition });
     },
@@ -450,6 +492,7 @@ export function useCorePlayerController(options: UseCorePlayerControllerOptions)
       isScrubbingRef.current = false;
       positionRef.current = nextTime;
       setPosition(nextTime);
+      isSeekingRef.current = true;
       videoRef.current?.seek(nextTime);
 
       if (wasPlayingBeforeScrubRef.current) {
@@ -514,6 +557,7 @@ export function useCorePlayerController(options: UseCorePlayerControllerOptions)
       const clamped = Math.max(0, Math.min(durationRef.current > 0 ? durationRef.current : time, time));
       positionRef.current = clamped;
       setPosition(clamped);
+      isSeekingRef.current = true;
       videoRef.current?.seek(clamped);
       emit({ type: 'seek', reason: 'programmatic', position: clamped });
       showControls();
@@ -528,6 +572,7 @@ export function useCorePlayerController(options: UseCorePlayerControllerOptions)
       const nextPosition = Math.min(maxDuration, positionRef.current + seconds);
       positionRef.current = nextPosition;
       setPosition(nextPosition);
+      isSeekingRef.current = true;
       videoRef.current?.seek(nextPosition);
       emit({ type: 'seek', reason: 'user', position: nextPosition });
       showControls();
@@ -541,6 +586,7 @@ export function useCorePlayerController(options: UseCorePlayerControllerOptions)
       const nextPosition = Math.max(0, positionRef.current - seconds);
       positionRef.current = nextPosition;
       setPosition(nextPosition);
+      isSeekingRef.current = true;
       videoRef.current?.seek(nextPosition);
       emit({ type: 'seek', reason: 'user', position: nextPosition });
       showControls();
