@@ -1,12 +1,12 @@
 import React from 'react';
 import { Animated, Easing } from 'react-native';
 import type {
-    OnBufferData,
-    OnLoadData,
-    OnProgressData,
-    OnSeekData,
-    OnVideoErrorData,
-    VideoRef,
+  OnBufferData,
+  OnLoadData,
+  OnProgressData,
+  OnSeekData,
+  OnVideoErrorData,
+  VideoRef,
 } from 'react-native-video';
 
 import type { ControlsConfig } from '../MamoPlayer';
@@ -201,6 +201,7 @@ export function useCorePlayerController(options: UseCorePlayerControllerOptions)
   const durationRef = React.useRef<number>(0);
   const positionRef = React.useRef<number>(0);
   const isScrubbingRef = React.useRef<boolean>(false);
+  const isSeekingRef = React.useRef<boolean>(false);
   const wasPlayingBeforeScrubRef = React.useRef<boolean>(false);
   const isBufferingRef = React.useRef<boolean>(false);
   const hasLoadedRef = React.useRef<boolean>(false);
@@ -355,7 +356,7 @@ export function useCorePlayerController(options: UseCorePlayerControllerOptions)
           : undefined;
 
       positionRef.current = nextPosition;
-      if (!isScrubbingRef.current) {
+      if (!isScrubbingRef.current && !isSeekingRef.current) {
         setPosition(nextPosition);
       }
       setBuffered(nextBuffered);
@@ -397,6 +398,7 @@ export function useCorePlayerController(options: UseCorePlayerControllerOptions)
 
       positionRef.current = nextPosition;
       setPosition(nextPosition);
+      isSeekingRef.current = false;
 
       emit({ type: 'seek', reason: 'user', position: nextPosition });
     },
@@ -450,6 +452,7 @@ export function useCorePlayerController(options: UseCorePlayerControllerOptions)
       isScrubbingRef.current = false;
       positionRef.current = nextTime;
       setPosition(nextTime);
+      isSeekingRef.current = true;
       videoRef.current?.seek(nextTime);
 
       if (wasPlayingBeforeScrubRef.current) {
@@ -514,6 +517,7 @@ export function useCorePlayerController(options: UseCorePlayerControllerOptions)
       const clamped = Math.max(0, Math.min(durationRef.current > 0 ? durationRef.current : time, time));
       positionRef.current = clamped;
       setPosition(clamped);
+      isSeekingRef.current = true;
       videoRef.current?.seek(clamped);
       emit({ type: 'seek', reason: 'programmatic', position: clamped });
       showControls();
@@ -528,6 +532,7 @@ export function useCorePlayerController(options: UseCorePlayerControllerOptions)
       const nextPosition = Math.min(maxDuration, positionRef.current + seconds);
       positionRef.current = nextPosition;
       setPosition(nextPosition);
+      isSeekingRef.current = true;
       videoRef.current?.seek(nextPosition);
       emit({ type: 'seek', reason: 'user', position: nextPosition });
       showControls();
@@ -541,6 +546,7 @@ export function useCorePlayerController(options: UseCorePlayerControllerOptions)
       const nextPosition = Math.max(0, positionRef.current - seconds);
       positionRef.current = nextPosition;
       setPosition(nextPosition);
+      isSeekingRef.current = true;
       videoRef.current?.seek(nextPosition);
       emit({ type: 'seek', reason: 'user', position: nextPosition });
       showControls();

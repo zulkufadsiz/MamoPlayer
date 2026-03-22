@@ -1,5 +1,6 @@
+import MaterialIcons from '@react-native-vector-icons/material-icons';
 import React from 'react';
-import { Animated, StyleSheet, Text, TouchableWithoutFeedback, View } from 'react-native';
+import { Animated, StyleSheet, TouchableWithoutFeedback, View } from 'react-native';
 
 const DOUBLE_TAP_DELAY_MS = 300;
 
@@ -24,7 +25,11 @@ const SeekIndicator = ({ side, animValue }: SeekIndicatorProps) => (
     pointerEvents="none"
   >
     <View style={styles.indicatorPill}>
-      <Text style={styles.indicatorText}>{side === 'left' ? '⏪ 10s' : '⏩ 10s'}</Text>
+      <MaterialIcons
+        name={side === 'left' ? 'fast-rewind' : 'fast-forward'}
+        size={32}
+        color="#FFFFFF"
+      />
     </View>
   </Animated.View>
 );
@@ -176,9 +181,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  indicatorText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
 });
+

@@ -458,13 +458,13 @@ export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
               />
             </View>
 
-            <View style={styles.centerControlsContainer}>
+            <View style={styles.centerControlsContainer} pointerEvents="box-none">
               <PlaybackOptions
                 isPlaying={!resolvedPaused}
                 isFullscreen={isFullscreen}
-                onSeekBack={seekBackward}
+                onSeekBack={doubleTapSeekEnabled ? undefined : seekBackward}
                 onTogglePlayPause={togglePlayPause}
-                onSeekForward={seekForward}
+                onSeekForward={doubleTapSeekEnabled ? undefined : seekForward}
                 onToggleFullscreen={toggleFullscreen}
                 onToggleSettingsMenu={openSettings}
                 showFullscreenButton={false}
@@ -472,7 +472,7 @@ export const MamoPlayerCore = React.forwardRef<VideoRef, MamoPlayerCoreProps>(
               />
             </View>
 
-            <View style={styles.timelineContainer}>
+            <View style={styles.timelineContainer} pointerEvents="box-none">
               <Timeline
                 duration={duration}
                 position={position}
