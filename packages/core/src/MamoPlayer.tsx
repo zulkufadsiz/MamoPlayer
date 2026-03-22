@@ -567,7 +567,7 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
     paddingTop: 12,
     backgroundColor: 'rgba(0, 0, 0, 0.55)',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-end',
   },
   controlsOverlayFullscreen: {
     paddingBottom: 26,
@@ -589,10 +589,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   centerControlsContainer: {
-    flex: 1,
+    ...StyleSheet.absoluteFillObject,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 8,
+    zIndex: 1,
   },
   timelineContainer: {
     width: '100%',
